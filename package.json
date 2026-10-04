@@ -1,0 +1,15 @@
+{
+  "name": "better-dgg",
+  "private": true,
+  "description": "destiny.gg stream and chat web app with a live embed list",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "ws": "^8.22.0"
+  }
+}

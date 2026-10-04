@@ -10,13 +10,17 @@ While the app is open and visible, it holds a [Screen Wake Lock](https://develop
 
 YouTube and Twitch players pause themselves when the page is hidden. Better DGG watches for that pause, and if it happens within a few seconds of the screen locking, it starts the player again. A pause you make later, for example from the lock screen controls, is left alone. Kick and Rumble players don't offer a way to be controlled from outside, so for them it depends on whether their player keeps playing in the background on its own.
 
-You pick the stream from the top-left button. You can paste a Kick, YouTube, Twitch or Rumble embed link, or a DGG chat embed such as `#kick/destiny` or `#youtube/VIDEO_ID`. The URL hash works the same way, so adding `#kick/destiny` to the app's URL opens straight to that stream. The last few streams are kept as one-tap shortcuts.
+You pick the stream from the top-left button. You can paste a Kick, YouTube, Twitch, Rumble or Vimeo link, or a DGG chat embed such as `#kick/destiny`, `#youtube/VIDEO_ID` or `#twitch-vod/ID`. The URL hash works the same way, so adding `#kick/destiny` to the app's URL opens straight to that stream. The last few streams are kept as one-tap shortcuts. Kick VODs, Facebook and AngelThump embeds open on destiny.gg's bigscreen instead.
+
+The **Embeds** button lists what people in DGG chat are embedding, like the list on destiny.gg's bigscreen. The server stays connected to destiny.gg chat as an anonymous reader and counts the `#platform/id` links posted in the last 10, 30 or 60 minutes. Each person counts once per link. Tap an entry to switch to it. YouTube entries show the video title. The list only covers time since the server last started, so it's empty for a little while after each deploy.
+
+Chrome only lets a player start with sound after you tap something on the page, so when the app opens it shows a play button instead of starting muted. The speaker button in the top bar turns the sound back on if a player still comes up muted.
 
 ## Putting it online
 
-It runs on Railway. The `Dockerfile` serves the static files with Caddy on the port Railway assigns, and Railway redeploys whenever the connected branch gets a push.
+It runs on Railway at https://better-dgg.up.railway.app. `server.js` is a small Node server that serves the app from `public/` and keeps the chat connection for the embed list, and the `Dockerfile` builds it. Railway redeploys whenever the connected branch gets a push.
 
-Any static host works too. For GitHub Pages, the repo has to be public on a free account; then set **Settings → Pages → Source** to "Deploy from a branch" with the `/ (root)` folder.
+To run it locally: `npm install`, then `npm start`, then open http://localhost:8080.
 
 ## Installing on Android (Chrome)
 
@@ -32,4 +36,4 @@ Rumble needs the embed link (`rumble.com/embed/…`) or the `#rumble/ID` form fr
 
 ## Files
 
-`index.html`, `app.css` and `app.js` are the app. `manifest.webmanifest` and `sw.js` make it installable. `icons/` holds the app icon. `Dockerfile` and `Caddyfile` are for hosting on Railway.
+`public/` holds the app: `index.html`, `app.css` and `app.js`, plus `manifest.webmanifest`, `sw.js` and `icons/` for installing it. `server.js` serves those files and builds the embed list at `/api/embeds?minutes=30`.
