@@ -1,5 +1,5 @@
 # Weekly pull requests for dependency updates: ws, hls.js (pinned), sharp,
-# the lint tools, the GitHub Actions above and the Docker base image.
+# the lint tools, the GitHub Actions workflow and the Docker base image.
 version: 2
 updates:
   - package-ecosystem: npm

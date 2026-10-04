@@ -1,7 +1,7 @@
 {
   "name": "DGG Remix",
   "short_name": "DGG Remix",
-  "description": "Unofficial fan-made app for watching destiny.gg streams and live embeds with chat. Keeps your screen on and keeps playing when your phone locks.",
+  "description": "Unofficial fan-made app for watching destiny.gg streams and live embeds with chat. Keeps your screen on, and Kick streams keep playing when your phone locks.",
   "id": "./",
   "start_url": "./",
   "scope": "./",

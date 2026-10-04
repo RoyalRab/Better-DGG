@@ -527,7 +527,6 @@ function onPaused(tile) {
   if (tile.player && tile.player.video) return;
   const since = hiddenAt ? Date.now() - hiddenAt : 0;
   if (
-    settings.resumeOnLock &&
     tile.wantPlaying &&
     tile.player &&
     since < RESUME_WINDOW_MS &&

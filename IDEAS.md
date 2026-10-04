@@ -25,7 +25,7 @@ Ways to make DGG Remix better, roughly from most to least useful. Effort: S is a
 | Show the hosted stream (`dggApi:hosting`) as a tab | Same as the bigscreen's host pill | S |
 | Destiny's latest VOD/videos (`dggApi:youtubeVods`, `dggApi:videos`) in the menu when he's offline | Something to watch when nothing's live | M |
 | Preview thumbnails when holding or hovering a tab (the feed has `previewUrl`) | See what's on before switching | M |
-| Kick VODs in the app's own player (currently opens destiny.gg) | Fewer trips out of the app | M |
+| Kick VODs and clips (shared links to them are ignored today) | Watch what someone links without leaving the app | M |
 | Desktop keyboard shortcuts: 1–9 switch, M multi-view, C chat, F fullscreen, P picture-in-picture | Faster on desktop | S |
 | Option to put chat on the left | Fit different tastes and setups | S |
 | Multi-view "focus" layout: one big stream with small ones beside it | Better than equal tiles for one main stream | M |

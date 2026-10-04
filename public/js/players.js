@@ -8,7 +8,6 @@
 
 import { PLATFORM_NAMES } from './sources.js';
 import { state, isCurrent, streamName } from './state.js';
-import { settings } from './util.js';
 
 const scripts = {};
 export function loadScript(src) {
@@ -412,7 +411,7 @@ export async function mountOwn(tile, muted) {
   }
   function enterBackground() {
     if (bg || !hls || !started || v.muted || !playingAtHide || !document.hidden) return;
-    if (!settings.resumeOnLock || Date.now() - userPausedAt < 1500) return;
+    if (Date.now() - userPausedAt < 1500) return;
     if (!isCurrent(tile.src) || !state.tiles.includes(tile)) return;
     startAudioCopy(1);
     hls.stopLoad();

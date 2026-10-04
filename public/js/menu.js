@@ -121,9 +121,15 @@ let tipTimer = null;
 function placeMenuTip() {
   const tip = $('#menu-tip');
   const b = $('#menu-btn').getBoundingClientRect();
+  // The button's tap area reaches 8 px above and below the visible row.
+  const rowTop = b.top + 8;
+  const rowBottom = b.bottom - 8;
   tip.style.right = Math.max(8, window.innerWidth - b.right + 4) + 'px';
-  // The button's top is 8 px above the visible row (its tap area), so this sits just above the row.
-  tip.style.bottom = window.innerHeight - b.top + 2 + 'px';
+  // Above the row, or below it when the row is at the top (beside chat).
+  const below = rowTop < tip.offsetHeight + 16;
+  tip.classList.toggle('below', below);
+  tip.style.top = below ? rowBottom + 10 + 'px' : '';
+  tip.style.bottom = below ? '' : window.innerHeight - rowTop + 10 + 'px';
 }
 
 let tipTries = 0;
@@ -339,6 +345,7 @@ $('#cast-btn').addEventListener('click', () => {
 $('#cast-close').addEventListener('click', () => closeSheet($('#cast-sheet')));
 
 if (isIOS && !standalone) $('#ios-install').hidden = false;
+if (isAndroid) $('#android-tip').hidden = false;
 
 // ---------- Install ----------
 // A bar at the top offers to install the app. Chrome and Edge get a one-tap
@@ -387,10 +394,13 @@ $('#install-no').addEventListener('click', () => {
 });
 window.addEventListener('appinstalled', hideInstallBar);
 
-// No install prompt from the browser: explain how instead.
+// No install prompt from the browser: explain how instead. On Android that
+// means a browser other than Chrome (Firefox, Samsung Internet, or an app's
+// built-in browser); Chrome either offers the prompt or already has the app.
+const ua = navigator.userAgent;
+const androidChrome = isAndroid && /\bChrome\//.test(ua) && !/\bwv\b|Edg|OPR|SamsungBrowser|Firefox/.test(ua);
 setTimeout(() => {
   if (installPrompt || standalone) return;
   if (isIOS) showInstallBar('Install: tap Share, then Add to Home Screen', false);
-  else if (isAndroid)
-    showInstallBar("Install: open Chrome's menu (⋮ at the top right), then Add to home screen", false);
+  else if (isAndroid && !androidChrome) showInstallBar('To install the app, open this page in Chrome', false);
 }, 3000);

@@ -21,7 +21,6 @@ export const store = {
 
 export const settings = {
   keepAwake: store.get('keepAwake', true),
-  resumeOnLock: true,
   ownPlayer: store.get('ownPlayer', true),
   showChat: store.get('showChat', true),
 };
@@ -49,8 +48,6 @@ export function announce(msg) {
     el.textContent = msg;
   });
 }
-
-export const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 const ua = navigator.userAgent;
 export const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);

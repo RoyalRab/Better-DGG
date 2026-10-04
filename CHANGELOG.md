@@ -2,6 +2,15 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.8.0 (2026-10-04)
+
+- Landscape and desktop: the tab row sits above chat, so the stream gets the whole height.
+- The "LIVE" label is gone; only a "Jump to live" button appears, when a Kick stream has fallen behind.
+- The ⋮ tip is in the app's yellow, says Click on desktop, and waits for the install bar.
+- Settings show the app's address with a Share link button.
+- Link previews (title, description and icon) when the address is pasted in Discord, Reddit or messages.
+- The update bar says "Update ready." when a new version is waiting; install hints only appear where they apply.
+
 ## 1.7.0 (2026-10-04)
 
 - A one-time tip points at ⋮ for anyone who hasn't opened it yet.

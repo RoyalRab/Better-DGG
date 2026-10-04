@@ -5,7 +5,6 @@
   --text: #e6e8ee;
   --muted: #8c93a3;
   --accent: #2f7cf6;
-  --danger: #ff6b6b;
   /* The REMIX tag on the app icon */
   --remix: #ffd166;
   --remix-text: #151a23;
@@ -495,9 +494,9 @@ body.no-chat #player[data-count='2'] {
   }
 }
 #actions button {
-  flex: none;
+  flex: 0 1 44px;
+  min-width: 0;
   position: relative;
-  width: 44px;
   height: 44px;
   margin: -8px 0;
   display: grid;
@@ -586,28 +585,30 @@ body.no-chat #player[data-count='2'] {
 }
 
 /* Side by side: landscape phones, tablets, desktops and ultrawides. Keep in
-   sync with rowLayoutQuery in app.js. */
+   sync with rowLayoutQuery in js/util.js. */
 @media (orientation: landscape) and (min-aspect-ratio: 4/3), (min-width: 1000px) and (min-aspect-ratio: 1/1) {
+  /* The stream takes the whole height on the left; the tab row sits on top
+     of chat on the right, so it doesn't cost the stream any room. */
   #stage {
-    flex-direction: row;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto min(var(--chat-w, clamp(300px, 26vw, 440px)), calc(100% - 320px));
+    grid-template-rows: auto minmax(0, 1fr);
   }
   #watch {
-    flex: 1;
-    height: 100%;
+    display: contents;
   }
   #player,
   #player[data-count] {
-    flex: 1;
+    grid-column: 1;
+    grid-row: 1 / 3;
+    min-height: 0;
     aspect-ratio: auto;
     max-height: none;
   }
-  #chat {
-    flex: none;
-    width: min(var(--chat-w, clamp(300px, 26vw, 440px)), calc(100% - 320px));
-  }
   #chat-resizer {
     display: block;
-    flex: none;
+    grid-column: 2;
+    grid-row: 1 / 3;
     position: relative;
     z-index: 2;
     width: 10px;
@@ -630,6 +631,28 @@ body.no-chat #player[data-count='2'] {
     width: 3px;
     background: var(--accent);
   }
+  #tabbar {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  #chat {
+    grid-column: 3;
+    grid-row: 2;
+    width: auto;
+    min-height: 0;
+  }
+  /* Chat hidden: the tab row goes back under the full-width stream. */
+  body.no-chat #stage {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  body.no-chat #player {
+    grid-row: 1;
+  }
+  body.no-chat #tabbar {
+    grid-column: 1;
+    grid-row: 2;
+  }
 }
 
 /* Settings sheet */
@@ -649,12 +672,6 @@ dialog h2 {
   margin: 4px 0 8px;
   font-size: 16px;
 }
-label[for='source-input'] {
-  display: block;
-  color: var(--muted);
-  font-size: 13px;
-  margin-bottom: 8px;
-}
 dialog h2:not(:first-child) {
   margin-top: 20px;
 }
@@ -669,21 +686,7 @@ dialog code {
   justify-content: flex-end;
   margin-top: 16px;
 }
-#source-input {
-  flex: 1;
-  min-width: 0;
-  height: 42px;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--bg);
-}
-#source-input:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: -1px;
-}
-dialog button,
-.links a {
+dialog button {
   height: 42px;
   padding: 0 14px;
   border: 1px solid var(--line);
@@ -699,23 +702,6 @@ dialog button.primary {
   border-color: var(--accent);
   color: #fff;
   font-weight: 600;
-}
-.error {
-  color: var(--danger);
-  margin: 8px 0 0;
-  font-size: 13px;
-}
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 10px;
-}
-.chips button {
-  height: 32px;
-  padding: 0 10px;
-  border-radius: 16px;
-  font-size: 13px;
 }
 .toggle {
   display: flex;
@@ -809,6 +795,10 @@ dialog button.primary {
   height: 12px;
   background: var(--remix);
   transform: rotate(45deg);
+}
+#menu-tip.below::after {
+  top: -6px;
+  bottom: auto;
 }
 @keyframes tip-in {
   from {

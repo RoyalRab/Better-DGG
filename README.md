@@ -14,13 +14,13 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 | --- | --- |
 | Keeps playing when the screen locks | Kick streams keep their sound when you lock the phone or switch apps. Chrome on Android pauses video in the background, so the app switches to an audio-only copy of the stream and back to the video when you return. |
 | Lock screen controls | Play and pause from the lock screen and notification, with the stream's name. |
-| Screen stays on | The phone doesn't dim or sleep while the app is open (can be turned off in the menu). |
-| Installable app | Installs to the home screen with its own icon, opens full screen without the browser bar, and shows an install bar until it's installed. |
-| Picture-in-picture | Pops the stream into a floating window from the menu, and Kick streams pop out on their own when you leave the app where the browser supports it. |
-| Autoplay with sound | Streams start by themselves. In the installed app they usually start with sound; otherwise there's one **Tap for sound** button. |
+| Screen stays on | The phone doesn't dim or sleep while the app is open (can be turned off in settings). |
+| Installable app | Installs to the home screen with its own icon, opens full screen without the browser bar, and shows an install bar until it's installed or dismissed (a dismissed bar comes back after a week). |
+| Picture-in-picture | Pops the stream into a floating window from the ⋮ row, and Kick streams pop out on their own when you leave the app where the browser supports it. |
+| Autoplay with sound | Streams start by themselves. In the installed app they usually start with sound; otherwise there's one **Tap for sound** button (**Click for sound** on desktop). |
 | More room for the stream | No top bar. The player starts at the top of the screen, with a short tab row under it and the ⋮ button at the end of the row. |
 | One-tap switching | Every live embed is a tab under the player. Tap to switch, press and hold to add it to multi-view (a one-time tip says so). A stream starts loading the moment your finger touches its tab. |
-| Phone layouts | Portrait stacks player, tabs and chat. Landscape puts chat on the right. Chat can be hidden to give the stream the whole screen. |
+| Phone layouts | Portrait stacks player, tabs and chat. Landscape puts chat on the right with the tab row above it, so the stream gets the whole height. Chat can be hidden to give the stream the whole screen. |
 | Cast to TV help | Device-specific steps for screen casting (Smart View, Screen cast, AirPlay), plus direct Chromecast casting for Kick streams. |
 | Refresh button | Reloads the installed app, which has no pull-to-refresh. |
 | Compact menu | ⋮ slides a row of icon buttons over the tab row; settings open as a bottom sheet on phones that closes with a swipe down. |
@@ -39,9 +39,9 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 | Kick in the app's own player | Kick streams play in the app's own player ([hls.js](https://github.com/video-dev/hls.js)), which is what makes lock-screen audio, picture-in-picture and Chromecast possible. It falls back to Kick's player if it can't start. |
 | Desktop extras | Mouse wheel scrolls the tab row, right-click a tab to add it to multi-view, and picture-in-picture works for any stream in Chrome and Edge. |
 | Smooth switching | The stream you're leaving stays on screen until the new one starts, with a loading spinner instead of a black box. At startup the player, tabs and chat show placeholders until they're ready. A Kick stream you switch away from keeps running hidden and muted for a minute, so switching back is instant (this uses some data). |
-| Stays live | Kick streams in the app's own player catch back up after buffering (slightly faster playback, or a jump if far behind), and show LIVE, or how many seconds behind they are with a **Jump to live** button. |
-| Resizable chat | In landscape and on desktop, drag the line between the stream and chat (or use the arrow keys on it) to change chat's width. Double-click resets it. |
-| What's new | The menu lists what changed in each version, and a bar mentions it once after an update. |
+| Stays live | Kick streams in the app's own player catch back up after buffering (slightly faster playback, or a jump if far behind). When one is still behind, a button says how many seconds and jumps to live; nothing covers the picture while it's live. |
+| Resizable chat | In landscape and on desktop, drag the line between the stream and chat (or use the arrow keys on it) to change chat's width; the tab row above chat follows. Double-click resets it. |
+| What's new | Settings list what changed in each version, and a bar mentions it once after an update. |
 | Accessible | Visible keyboard focus, a label on every button, stream changes announced to screen readers, and less motion when the system asks for it. |
 | Recovers from errors | A **Try again** button when a player fails to load. A frozen Kick stream reloads itself, and a **Jump to live** button appears when it falls behind. |
 | Remembers multi-view | Offers to restore your last multi-view set when you open the app. |
@@ -51,7 +51,7 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 
 Tap a tab to watch it. To watch more than one stream, press and hold a tab, or choose **Add a stream to multi-view** in the ⋮ menu and then tap a tab. In multi-view, tapping a tab replaces the stream that has the sound.
 
-When an update is ready, a bar at the top offers to refresh into it. The ⋮ button at the end of the tab row slides out a row of icons: Refresh app, Picture-in-picture, Add a stream to multi-view, Cast to TV, Reload chat, Install (when available) and the gear for settings. ✕ puts them away; a one-time tip points it out, and settings list the same actions with their names. Settings has the toggles (keep the screen on, show chat, play Kick in the app's own player), the app's version and what changed in it; older versions are folded under **Earlier versions**. The full history is in `CHANGELOG.md`.
+When an update is ready, a bar at the top offers to refresh into it. The ⋮ button at the end of the tab row slides out a row of icons: Refresh app, Picture-in-picture, Add a stream to multi-view, Cast to TV, Reload chat, Install (when available) and the gear for settings. ✕ puts them away; a one-time tip points it out, and settings list the same actions with their names. Settings has the toggles (keep the screen on, show chat, play Kick in the app's own player), a Chat account section (**Sign in** and **Sign out**, which open destiny.gg), a **Share link** button, the app's version and what changed in it; older versions are folded under **Earlier versions**. The full history is in `CHANGELOG.md`.
 
 ## Installing
 
@@ -75,8 +75,8 @@ The app has no accounts, analytics or tracking, and nothing in it identifies who
 
 The app is plain JavaScript modules in `public/js/` with no build step; `public/js/main.js` lists what each one does.
 
-To run it locally: `npm install`, then `npm start`, then open http://localhost:8080. `npm run check` runs ESLint, Prettier and the unit tests in `test/` (the same checks GitHub Actions runs on every push), and Dependabot opens pull requests for dependency updates. `dev/` has a fake destiny.gg feed, a browser smoke test (`dev/smoke.mjs`) and a screen-size check that screenshots phone, tablet, desktop and ultrawide sizes (`dev/screens.mjs`). `CLAUDE.md` explains how the code is laid out and has the full testing checklist for Chrome, Safari, Firefox and Edge on Android, iPhone, iPad, macOS and Windows, including the installed app. Ideas for what to build next are in `IDEAS.md`.
+To run it locally: `npm install`, then `npm start`, then open http://localhost:8080. `npm run check` runs ESLint, Prettier and the unit tests in `test/` (the same checks GitHub Actions runs on every push), and Dependabot opens pull requests for dependency updates. `dev/` has a fake destiny.gg feed, a browser smoke test (`dev/smoke.mjs`) and a screen-size check (both need Playwright: `npm i -g playwright && npx playwright install chromium`, or set `PLAYWRIGHT` and `CHROMIUM` to your own copies) that screenshots phone, tablet, desktop and ultrawide sizes (`dev/screens.mjs`). `CLAUDE.md` explains how the code is laid out and has the full testing checklist for Chrome, Safari, Firefox and Edge on Android, iPhone, iPad, macOS and Windows, including the installed app. Ideas for what to build next are in `IDEAS.md`.
 
 ## License
 
-MIT, see `LICENSE`. DGG Remix is a fan project and isn't affiliated with destiny.gg; destiny.gg's name and logo belong to their owners.
+MIT, see `LICENSE`. The license covers the code. DGG Remix is a fan project and isn't affiliated with destiny.gg; destiny.gg's name and logo belong to their owners, and the app icons in `public/icons` (derived from that logo) aren't covered by the MIT license.

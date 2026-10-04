@@ -15,7 +15,8 @@ const base = process.argv[2] || 'http://localhost:8769';
 const pwPath = process.env.PLAYWRIGHT || `${execSync('npm root -g').toString().trim()}/playwright/index.mjs`;
 const { chromium } = await import(pwPath);
 const browser = await chromium.launch({
-  executablePath: process.env.CHROMIUM || '/opt/pw-browsers/chromium',
+  // CHROMIUM points at a browser binary; without it Playwright uses its own.
+  ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}),
   args: ['--autoplay-policy=document-user-activation-required'],
 });
 

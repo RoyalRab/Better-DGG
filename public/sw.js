@@ -10,10 +10,6 @@ self.addEventListener('install', (e) => {
     (async () => {
       const cache = await caches.open(CACHE);
       await cache.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' })));
-      // Workers from before 1.1.0 used numbered caches and never wait; take
-      // over right away so those installs move to the new update flow.
-      const keys = await caches.keys();
-      if (keys.some((k) => /^bdgg-v\d+$/.test(k))) self.skipWaiting();
     })(),
   );
 });
