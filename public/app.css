@@ -190,7 +190,7 @@ body.no-chat #player[data-count="2"] { --cols: 1; }
 }
 #menu-btn {
   flex: none;
-  width: 40px;
+  width: 34px;
   display: grid;
   place-items: center;
   border: 0;
@@ -200,21 +200,21 @@ body.no-chat #player[data-count="2"] { --cols: 1; }
   cursor: pointer;
 }
 #menu-btn:hover { color: var(--text); }
-#menu-btn svg { width: 20px; height: 20px; fill: currentColor; }
+#menu-btn svg { width: 17px; height: 17px; fill: currentColor; }
 #tabs::-webkit-scrollbar { display: none; }
 #tabs .tab {
   flex: none;
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 36px;
+  height: 28px;
   max-width: 200px;
-  padding: 0 12px;
+  padding: 0 10px;
   border: 0;
   border-bottom: 2px solid transparent;
   background: none;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   user-select: none;
@@ -223,7 +223,7 @@ body.no-chat #player[data-count="2"] { --cols: 1; }
 }
 #tabs .tab[aria-current="true"] { color: var(--text); border-bottom-color: var(--text); }
 #tabs .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#tabs .platform-icon { flex: none; width: 15px; height: 15px; fill: currentColor; }
+#tabs .platform-icon { flex: none; width: 13px; height: 13px; fill: currentColor; }
 
 /* Side by side: landscape phones, tablets, desktops and ultrawides. Keep in
    sync with rowLayoutQuery in app.js. */
