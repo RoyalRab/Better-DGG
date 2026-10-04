@@ -138,29 +138,24 @@ body.multi .tile-bar { display: flex; }
 .tile-sound[aria-pressed="true"] { color: #ffd166; }
 body.multi .tile.has-sound { outline: 2px solid #ffd166; outline-offset: -2px; z-index: 1; }
 
-#player .tap-to-play {
+.sound-chip {
   position: absolute;
-  inset: 0;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   z-index: 3;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  background: #000;
+  gap: 8px;
+  padding: 10px 16px;
   border: 0;
-  color: var(--text);
+  border-radius: 22px;
+  background: rgb(0 0 0 / .75);
+  color: #fff;
   font-weight: 600;
   cursor: pointer;
 }
-#player .tap-to-play svg {
-  width: 64px;
-  height: 64px;
-  padding: 14px 12px 14px 16px;
-  border-radius: 50%;
-  background: var(--accent);
-  fill: #fff;
-}
+.sound-chip svg { width: 20px; height: 20px; fill: currentColor; }
 
 #chat {
   flex: 1;
@@ -300,3 +295,4 @@ dialog button.primary { background: var(--accent); border-color: var(--accent); 
   transition: opacity .2s;
 }
 #toast.show { opacity: 1; }
+.hint.tagline { margin: -4px 0 8px; }

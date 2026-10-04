@@ -1,4 +1,4 @@
-# Better DGG Remix
+# DGG Remix
 
 An unofficial, fan-made web app for watching destiny.gg's live embeds with chat. It works on Android, iPhone, iPad and other tablets, desktop browsers and ultrawide screens, and it can be installed to the home screen. It isn't affiliated with destiny.gg.
 
@@ -18,7 +18,7 @@ Under the player is a row of tabs with every live stream DGG viewers are embeddi
 
 **Picture-in-picture.** **Picture-in-picture** in the menu pops the stream with sound out into a floating window. Kick streams in the app's own player can do this on Android, iPhone, iPad and desktop, and where the browser supports it they pop out on their own when you leave the app. When that happens the video keeps playing in the floating window until the screen locks, and then the sound carries on from the audio-only copy. Twitch and YouTube players pop out automatically only if they're fullscreen when you press home; that's Chrome's own behavior and the app can't trigger it for them. Other streams play in their sites' players, which the app can't pop out on phones; on desktop Chrome and Edge the button moves the whole player into a floating window instead (it reloads when it moves). The menu item only shows when picture-in-picture is possible for the current stream.
 
-**Sound.** Browsers only let a player start with sound after a tap, so when the app opens it shows a play button instead of starting muted.
+**Autoplay.** Streams start on their own. Browsers only allow sound before your first tap in some cases (installed apps usually are allowed); when sound is blocked the stream plays muted with a **Tap for sound** button over it.
 
 **Cast to TV.** Kick streams in the app's own player can be cast straight to a Chromecast from **⋮ → Cast to TV → Cast this stream**, or from the cast icon in the player's controls, where the browser supports it (Chrome on Android does). Other streams play in their sites' players, so the Cast to TV page lists the options for the device you're on: screen casting (Smart View, Screen cast or AirPlay mirroring) on phones and tablets, Chrome's Cast tab on desktop, or the cast icon inside YouTube and Twitch players.
 

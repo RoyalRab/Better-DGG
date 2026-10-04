@@ -166,7 +166,6 @@ const SPEAKER_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6
 let tiles = []; // { src, el, body, player, token, wantPlaying }
 let current = null; // the stream with sound (the only one in single view)
 let addMode = false; // the next tab tap adds a stream to multi-view instead of switching
-let started = false; // false until the first tap, so streams can start with sound
 
 const scripts = {};
 function loadScript(src) {
@@ -393,7 +392,15 @@ async function mountOwn(tile, muted) {
     updateMediaSession();
   });
   v.addEventListener('pause', () => onPaused(tile));
-  v.play().catch(() => {});
+  v.play().catch((err) => {
+    // No sound allowed yet: play muted and offer a tap for sound.
+    if (err && err.name === 'NotAllowedError' && !v.muted) {
+      v.muted = true;
+      tile.soundBlocked = true;
+      renderSoundChip(tile);
+      v.play().catch(() => {});
+    }
+  });
 
   // While the page is hidden (screen locked, another app open), play the
   // sound from an audio-only copy of the stream, then go back to the video.
@@ -496,7 +503,7 @@ function updateMediaSession() {
   navigator.mediaSession.metadata = new MediaMetadata({
     title: streamName(current),
     artist: PLATFORM_NAMES[current.type] || current.type,
-    album: 'Better DGG Remix',
+    album: 'DGG Remix',
     artwork: [{ src: new URL('icons/icon-512.png', location.href).toString(), sizes: '512x512', type: 'image/png' }],
   });
   const tile = () => tiles.find((t) => key(t.src) === key(current));
@@ -523,13 +530,19 @@ async function mountTile(tile) {
   tile.player = null;
   tile.wantPlaying = false;
   tile.body.replaceChildren();
-  const muted = !current || key(current) !== key(tile.src);
+  const wantSound = !!current && key(current) === key(tile.src);
+  // Other sites' players can't report blocked sound, so they start muted
+  // until the first tap. The app's own player tries with sound and falls
+  // back to muted if Chrome refuses.
+  let muted = !wantSound || !hasTapped();
+  tile.soundBlocked = false;
   let mounted;
   try {
     if (settings.ownPlayer && OWN_PLAYER_TYPES.has(tile.src.type) && !tile.ownFailed) {
-      try { mounted = await mountOwn(tile, muted); } catch { mounted = null; }
+      try { mounted = await mountOwn(tile, !wantSound); } catch { mounted = null; }
       if (token !== tile.token) { mounted?.destroy(); return; }
     }
+    if (!mounted) tile.soundBlocked = wantSound && muted;
     if (mounted) { /* own player */ }
     else if (tile.src.type === 'youtube') mounted = await mountYouTube(tile, muted);
     else if (tile.src.type === 'twitch' || tile.src.type === 'twitch-vod') mounted = await mountTwitch(tile, muted);
@@ -546,6 +559,7 @@ async function mountTile(tile) {
   // The tile was removed or reloaded while this player was loading.
   if (token !== tile.token || !tiles.includes(tile)) { mounted.destroy(); return; }
   tile.player = mounted;
+  renderSoundChip(tile);
   renderPip();
 }
 
@@ -568,8 +582,20 @@ function makeTile(src) {
   close.setAttribute('aria-label', 'Remove from multi-view');
   close.textContent = '✕';
   bar.append(sound, name, close);
-  el.append(body, bar);
-  const tile = { src, el, body, player: null, token: 0, wantPlaying: false };
+  const chip = document.createElement('button');
+  chip.type = 'button';
+  chip.className = 'sound-chip';
+  chip.hidden = true;
+  chip.innerHTML = SPEAKER_SVG + '<span>Tap for sound</span>';
+  el.append(body, bar, chip);
+  const tile = { src, el, body, player: null, token: 0, wantPlaying: false, soundBlocked: false };
+  chip.addEventListener('click', () => {
+    tile.soundBlocked = false;
+    renderSoundChip(tile);
+    if (current && key(current) !== key(tile.src)) setAudio(tile.src);
+    else if (tile.player) tile.player.unmute();
+    else mountTile(tile);
+  });
   sound.addEventListener('click', () => setAudio(tile.src));
   close.addEventListener('click', () => removeTile(tile.src));
   return tile;
@@ -596,18 +622,13 @@ function setTiles(want) {
   if (!current || !tiles.some((t) => key(t.src) === key(current))) current = tiles[0] ? tiles[0].src : null;
 
   const stage = $('#player');
-  stage.querySelector('.tap-to-play')?.remove();
   stage.dataset.count = String(tiles.length);
   tiles.forEach((t, i) => {
     if (stage.children[i] !== t.el) stage.insertBefore(t.el, stage.children[i] || null);
   });
   layoutTiles();
 
-  if (!started && !hasTapped()) showTapToPlay();
-  else {
-    started = true;
-    for (const t of tiles) if (!t.player && !t.token) mountTile(t);
-  }
+  for (const t of tiles) if (!t.player && !t.token) mountTile(t);
   renderStage();
 }
 
@@ -622,8 +643,8 @@ function renderStage() {
   }
   document.body.classList.toggle('multi', tiles.length > 1);
   $('#multi-btn').setAttribute('aria-pressed', String(addMode));
-  const label = tiles.length > 1 ? `${tiles.length} streams` : current ? streamName(current) : 'Better DGG Remix';
-  document.title = current ? `${tiles.length > 1 ? label : streamName(current)} · Better DGG Remix` : 'Better DGG Remix';
+  const label = tiles.length > 1 ? `${tiles.length} streams` : current ? streamName(current) : 'DGG Remix';
+  document.title = current ? `${tiles.length > 1 ? label : streamName(current)} · DGG Remix` : 'DGG Remix';
   const hash = tiles.map((t) => key(t.src)).join(',');
   history.replaceState(null, '', hash ? '#' + hash : location.pathname);
   renderTabs();
@@ -636,20 +657,11 @@ function hasTapped() {
   return !!(navigator.userActivation && navigator.userActivation.hasBeenActive);
 }
 
-function showTapToPlay() {
-  const stage = $('#player');
-  stage.querySelector('.tap-to-play')?.remove();
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.className = 'tap-to-play';
-  b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span></span>';
-  b.querySelector('span').textContent = tiles.length > 1 ? `Tap to play ${tiles.length} streams` : `Tap to play ${streamName(current)}`;
-  b.addEventListener('click', () => {
-    started = true;
-    b.remove();
-    for (const t of tiles) if (!t.player) mountTile(t);
-  });
-  stage.appendChild(b);
+// Streams start on their own. Before the first tap, Chrome may not allow
+// sound (installed apps usually are allowed). When it isn't, the stream plays
+// muted with a "Tap for sound" button over it.
+function renderSoundChip(tile) {
+  tile.el.querySelector('.sound-chip').hidden = !tile.soundBlocked;
 }
 
 // Pick the grid that gives each 16:9 stream the most room. Portrait phones
@@ -678,6 +690,9 @@ if ('ResizeObserver' in window) new ResizeObserver(() => layoutTiles()).observe(
 
 function setAudio(src) {
   current = src;
+  for (const t of tiles) if (t.soundBlocked && key(t.src) !== key(src)) { t.soundBlocked = false; renderSoundChip(t); }
+  const target = tiles.find((t) => key(t.src) === key(src));
+  if (target && target.soundBlocked) { target.soundBlocked = false; renderSoundChip(target); }
   for (const t of tiles) {
     if (t.player) t.player.setMuted(key(t.src) !== key(src));
   }
@@ -1152,7 +1167,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   installPrompt = e;
   $('#install-btn').hidden = false;
-  showInstallBar('Install Better DGG Remix for full screen and quick access', true);
+  showInstallBar('Install DGG Remix for full screen and quick access', true);
 });
 
 async function runInstall() {
