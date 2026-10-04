@@ -6,7 +6,7 @@ Live at https://better-dgg.up.railway.app
 
 ## What it does
 
-The stream sits on top with `destiny.gg/embed/chat` below it. On landscape phones, tablets, desktops and ultrawides, chat moves to the right. The top bar shows what's playing and the ⋮ menu. **Show chat** in the menu hides chat so the stream gets the whole screen, and **Refresh app** reloads it.
+The stream sits on top with `destiny.gg/embed/chat` below it. On landscape phones, tablets, desktops and ultrawides, chat moves to the right. There's no top bar; the ⋮ menu sits at the right end of the tab row. **Show chat** in the menu hides chat so the stream gets the whole screen, and **Refresh app** reloads it.
 
 Under the player is a row of tabs with every live stream DGG viewers are embedding on the bigscreen right now, from Kick, Twitch, YouTube, AngelThump and Rumble, plus Destiny's own stream when he's live. VODs, clips and ordinary videos are left out. The list comes from the same live feed destiny.gg's bigscreen uses (`wss://live.destiny.gg`). The server holds one connection to that feed and pushes every change to open apps right away, so the tabs update as soon as someone embeds something. Tap a tab to switch to it.
 

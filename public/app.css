@@ -31,43 +31,6 @@ body {
 
 button, input { font: inherit; color: inherit; }
 
-/* Top bar */
-#bar {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  height: 44px;
-  padding: 0 4px 0 8px;
-  background: var(--panel);
-  border-bottom: 1px solid var(--line);
-}
-#bar .spacer { flex: 1; }
-#bar button {
-  background: none;
-  border: 0;
-  border-radius: 8px;
-  cursor: pointer;
-}
-#bar svg { width: 22px; height: 22px; fill: currentColor; }
-#bar .icon {
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  color: var(--muted);
-}
-#bar .icon[aria-pressed="true"], #bar .icon.on { color: var(--text); }
-#awake-btn[aria-pressed="true"] { color: #ffd166; }
-#source-label {
-  min-width: 0;
-  padding: 0 8px;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* Install prompt */
 #install-bar {
   flex: none;
@@ -211,16 +174,34 @@ body.no-chat #player { flex: 1; aspect-ratio: auto; max-height: none; }
 body.no-chat #player[data-count="2"] { --cols: 1; }
 
 /* Live embed tabs, like the row under destiny.gg's bigscreen player */
-#tabs {
+#tabbar {
   flex: none;
   display: flex;
-  overflow-x: auto;
-  scrollbar-width: none;
+  align-items: stretch;
   background: var(--panel);
   border-bottom: 1px solid var(--line);
 }
+#tabs {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+#menu-btn {
+  flex: none;
+  width: 40px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+#menu-btn:hover { color: var(--text); }
+#menu-btn svg { width: 20px; height: 20px; fill: currentColor; }
 #tabs::-webkit-scrollbar { display: none; }
-#tabs:empty { display: none; }
 #tabs .tab {
   flex: none;
   display: flex;

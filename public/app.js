@@ -623,7 +623,6 @@ function renderStage() {
   document.body.classList.toggle('multi', tiles.length > 1);
   $('#multi-btn').setAttribute('aria-pressed', String(addMode));
   const label = tiles.length > 1 ? `${tiles.length} streams` : current ? streamName(current) : 'Better DGG Pro';
-  $('#source-label').textContent = label;
   document.title = current ? `${tiles.length > 1 ? label : streamName(current)} · Better DGG Pro` : 'Better DGG Pro';
   const hash = tiles.map((t) => key(t.src)).join(',');
   history.replaceState(null, '', hash ? '#' + hash : location.pathname);

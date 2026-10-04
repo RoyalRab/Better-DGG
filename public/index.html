@@ -17,13 +17,6 @@
   <link rel="stylesheet" href="app.css">
 </head>
 <body>
-  <header id="bar">
-    <span id="source-label" class="title">Better DGG Pro</span>
-    <span class="spacer"></span>
-    <button id="menu-btn" class="icon" type="button" title="Menu" aria-label="Menu">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
-    </button>
-  </header>
 
   <div id="install-bar" hidden>
     <img src="icons/icon-192.png" alt="" width="28" height="28">
@@ -35,7 +28,12 @@
   <main id="stage">
     <div id="watch">
       <section id="player" aria-label="Stream"></section>
-      <nav id="tabs" aria-label="Live embeds"></nav>
+      <div id="tabbar">
+        <nav id="tabs" aria-label="Live embeds"></nav>
+        <button id="menu-btn" type="button" title="Menu" aria-label="Menu">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+        </button>
+      </div>
     </div>
     <section id="chat" aria-label="Chat">
       <iframe id="chat-frame" title="destiny.gg chat" src="https://www.destiny.gg/embed/chat" allow="clipboard-write"></iframe>
