@@ -32,7 +32,7 @@ Chat logins depend on destiny.gg's login cookie. If chat shows you logged out, u
 
 ## Privacy
 
-The app has no accounts, analytics or tracking. Settings stay in your own browser. The server relays destiny.gg's public embed list and serves the app's files; it doesn't log who visits.
+The app has no accounts, analytics or tracking, and nothing in it identifies whoever runs it. Settings stay in each viewer's own browser. The server relays destiny.gg's public embed list and Kick playlists and serves the app's files, and its code doesn't record visitors. Railway, the host, keeps its own request logs (IP address and browser for each request), which only the project's owner can see.
 
 ## Running it
 
