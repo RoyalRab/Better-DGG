@@ -300,6 +300,8 @@ async function mountTwitch(tile, muted) {
 const HLS_JS = 'https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js';
 const OWN_PLAYER_TYPES = new Set(['kick']);
 
+const OWN_START_TIMEOUT_MS = 12000;
+
 async function mountOwn(tile, muted) {
   const url = new URL(`api/stream/${tile.src.type}/${encodeURIComponent(tile.src.id)}.m3u8`, location.href).toString();
   const check = await fetch(url, { cache: 'no-store' });
@@ -314,36 +316,68 @@ async function mountOwn(tile, muted) {
   v.setAttribute('playsinline', '');
   tile.body.appendChild(v);
 
+  // hls.js plays the stream through Media Source in the page. Chrome's
+  // built-in HLS support can't play these playlists, so it's only the
+  // fallback for browsers without Media Source (older iPhones).
   let hls = null;
-  if (v.canPlayType('application/vnd.apple.mpegurl')) {
-    // Native HLS (Safari, Chrome on Android): the plain URL can also be cast.
-    v.src = url;
-  } else {
+  const hasMse = !!(window.MediaSource || window.ManagedMediaSource);
+  if (hasMse) {
     await loadScript(HLS_JS);
     if (!window.Hls || !Hls.isSupported()) { v.remove(); throw new Error('no HLS support'); }
-    hls = new Hls({ lowLatencyMode: true, liveSyncDurationCount: 3 });
+    hls = new Hls({ liveSyncDurationCount: 3 });
     let recoveries = 0;
     hls.on(Hls.Events.ERROR, (_e, data) => {
       if (!data.fatal) return;
-      if (recoveries++ > 3) return;
+      if (recoveries++ >= 3) return giveUp();
       if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
       else setTimeout(() => hls && hls.loadSource(url), 2000);
     });
     hls.loadSource(url);
     hls.attachMedia(v);
+  } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+    v.src = url;
+  } else {
+    v.remove();
+    throw new Error('no HLS support');
   }
-  v.addEventListener('playing', () => { onPlaying(tile); updateMediaSession(); });
+
+  // If it hasn't started in a few seconds, go back to the site's own player.
+  let started = false;
+  let gaveUp = false;
+  function giveUp() {
+    if (started || gaveUp) return;
+    gaveUp = true;
+    tile.ownFailed = true;
+    // Still loading (no player yet) or still this player: swap to the embed.
+    if (tiles.includes(tile) && (!tile.player || tile.player.video === v)) mountTile(tile);
+  }
+  const timer = setTimeout(giveUp, OWN_START_TIMEOUT_MS);
+  v.addEventListener('error', giveUp);
+  v.addEventListener('playing', () => {
+    started = true;
+    clearTimeout(timer);
+    onPlaying(tile);
+    updateMediaSession();
+  });
   v.addEventListener('pause', () => onPaused(tile));
   v.play().catch(() => {});
   return {
     video: v,
+    url,
+    usesHls: () => !!hls,
     play() { v.play().catch(() => {}); },
     setMuted(m) {
       v.muted = m;
       if (!m) v.play().catch(() => {});
     },
     unmute() { this.setMuted(false); },
+    // Casting needs a plain URL on the element, so hand the stream over to it.
+    castSource() {
+      if (hls) { hls.destroy(); hls = null; }
+      v.src = url;
+    },
     destroy() {
+      clearTimeout(timer);
       if (hls) { hls.destroy(); hls = null; }
       v.pause();
       v.removeAttribute('src');
@@ -378,7 +412,7 @@ async function mountTile(tile) {
   const muted = !current || key(current) !== key(tile.src);
   let mounted;
   try {
-    if (settings.ownPlayer && OWN_PLAYER_TYPES.has(tile.src.type)) {
+    if (settings.ownPlayer && OWN_PLAYER_TYPES.has(tile.src.type) && !tile.ownFailed) {
       try { mounted = await mountOwn(tile, muted); } catch { mounted = null; }
       if (token !== tile.token) { mounted?.destroy(); return; }
     }
@@ -719,16 +753,30 @@ window.addEventListener('hashchange', () => {
 // The server relays destiny.gg's live list of embeds (the channel tabs under
 // the bigscreen player). Shown as a scrolling row of tabs under the player.
 
-const BADGE_LETTERS = {
-  kick: 'K', twitch: 'T', 'twitch-vod': 'T', 'twitch-clip': 'T', youtube: 'Y', 'youtube-live': 'Y',
-  rumble: 'R', angelthump: 'A', vimeo: 'V', facebook: 'F', 'kick-vod': 'K', destiny: 'D',
+// Small one-color platform marks, like the tabs on destiny.gg's bigscreen.
+const PLATFORM_ICONS = {
+  kick: 'M4 3h5v5h2V6h2V4h2V3h5v6h-2v2h-2v2h2v2h2v6h-5v-1h-2v-2h-2v-2H9v5H4z',
+  twitch: 'M5 3 3.5 6.5V19h4v2.5H10l2.5-2.5h3.5l4.5-4.5V3zm13.5 10.5-2.5 2.5h-4L9.5 18.5V16H6V5h12.5zM15 7.5h2v5h-2zm-5 0h2v5h-2z',
+  youtube: 'M21.6 7.2a2.5 2.5 0 0 0-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4A2.5 2.5 0 0 0 2.4 7.2 26 26 0 0 0 2 12a26 26 0 0 0 .4 4.8 2.5 2.5 0 0 0 1.8 1.8C5.8 19 12 19 12 19s6.2 0 7.8-.4a2.5 2.5 0 0 0 1.8-1.8A26 26 0 0 0 22 12a26 26 0 0 0-.4-4.8zM10 15V9l5.2 3z',
+  angelthump: 'M10 3h4l6.5 18h-4.4l-1.3-4H9.2l-1.3 4H3.5zm-.1 10.5h4.2L12 7z',
+  rumble: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm-2 5 6 4-6 4z',
 };
-let tabItems = [];
+PLATFORM_ICONS['twitch-vod'] = PLATFORM_ICONS['twitch-clip'] = PLATFORM_ICONS.twitch;
+PLATFORM_ICONS['youtube-live'] = PLATFORM_ICONS.youtube;
+PLATFORM_ICONS['kick-vod'] = PLATFORM_ICONS.kick;
 
-function formatViewers(n) {
-  if (n == null) return '';
-  return n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k' : String(n);
+function platformIcon(type) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.classList.add('platform-icon');
+  const path = document.createElementNS(ns, 'path');
+  path.setAttribute('d', PLATFORM_ICONS[type] || PLATFORM_ICONS.rumble);
+  svg.appendChild(path);
+  return svg;
 }
+let tabItems = [];
 
 function renderTabs() {
   const nav = $('#tabs');
@@ -738,21 +786,10 @@ function renderTabs() {
     b.className = 'tab';
     b.title = [item.name, item.title].filter(Boolean).join(' · ');
     if (tiles.some((t) => key(t.src) === key(item.src))) b.setAttribute('aria-current', 'true');
-    const badge = document.createElement('span');
-    badge.className = 'badge ' + item.badge;
-    badge.textContent = BADGE_LETTERS[item.badge] || '?';
-    badge.setAttribute('aria-hidden', 'true');
     const name = document.createElement('span');
     name.className = 'name';
     name.textContent = item.name;
-    b.append(badge, name);
-    if (item.viewers != null) {
-      const v = document.createElement('span');
-      v.className = 'viewers';
-      v.textContent = formatViewers(item.viewers);
-      v.setAttribute('aria-label', `${item.viewers} watching`);
-      b.appendChild(v);
-    }
+    b.append(platformIcon(item.src.type), name);
     b.addEventListener('click', () => watch(item.src));
     return b;
   });
@@ -834,20 +871,25 @@ function castSteps() {
   return steps;
 }
 
-function castableVideo() {
+function castableTile() {
   const t = tiles.find((x) => current && key(x.src) === key(current));
-  const v = t?.player?.video;
-  return v && v.remote && v.src && !v.src.startsWith('blob:') ? v : null;
+  return t && t.player && t.player.video && t.player.video.remote ? t : null;
 }
 
 $('#cast-now').addEventListener('click', () => {
-  const v = castableVideo();
-  if (!v) return;
-  v.remote.prompt().catch((err) => toast(err && err.name === 'NotFoundError' ? 'No Chromecast found on this network' : "Couldn't start casting"));
+  const t = castableTile();
+  if (!t) return;
+  const p = t.player;
+  const hadHls = p.usesHls();
+  if (hadHls) p.castSource();
+  p.video.remote.prompt().catch((err) => {
+    toast(err && err.name === 'NotFoundError' ? 'No Chromecast found on this network' : "Couldn't start casting");
+    if (hadHls) mountTile(t);
+  });
 });
 
 $('#cast-btn').addEventListener('click', () => {
-  $('#cast-now').hidden = !castableVideo();
+  $('#cast-now').hidden = !castableTile();
   const box = $('#cast-steps');
   box.replaceChildren(...castSteps().map(([title, text]) => {
     const p = document.createElement('p');
@@ -865,20 +907,60 @@ const standalone = window.matchMedia('(display-mode: standalone)').matches || na
 if (isIOS && !standalone) $('#ios-install').hidden = false;
 
 // ---------- Install ----------
+// A bar under the header offers to install the app. Chrome and Edge get a
+// one-tap install; iPhones and in-app browsers get instructions instead.
 
 let installPrompt = null;
+const INSTALL_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
+
+function installSnoozed() {
+  return Date.now() - store.get('installDismissedAt', 0) < INSTALL_SNOOZE_MS;
+}
+
+function showInstallBar(text, withButton) {
+  if (standalone || installSnoozed()) return;
+  $('#install-text').textContent = text;
+  $('#install-yes').hidden = !withButton;
+  $('#install-bar').hidden = false;
+  layoutTiles();
+}
+
+function hideInstallBar() {
+  $('#install-bar').hidden = true;
+  layoutTiles();
+}
+
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   installPrompt = e;
   $('#install-btn').hidden = false;
+  showInstallBar('Install Better DGG Pro for full screen and quick access', true);
 });
-$('#install-btn').addEventListener('click', async () => {
+
+async function runInstall() {
   if (!installPrompt) return;
   installPrompt.prompt();
-  await installPrompt.userChoice;
+  const choice = await installPrompt.userChoice.catch(() => null);
   installPrompt = null;
   $('#install-btn').hidden = true;
+  hideInstallBar();
+  if (choice && choice.outcome === 'dismissed') store.set('installDismissedAt', Date.now());
+}
+
+$('#install-yes').addEventListener('click', runInstall);
+$('#install-btn').addEventListener('click', runInstall);
+$('#install-no').addEventListener('click', () => {
+  store.set('installDismissedAt', Date.now());
+  hideInstallBar();
 });
+window.addEventListener('appinstalled', hideInstallBar);
+
+// No install prompt from the browser: explain how instead.
+setTimeout(() => {
+  if (installPrompt || standalone) return;
+  if (isIOS) showInstallBar('Install: tap Share, then Add to Home Screen', false);
+  else if (isAndroid) showInstallBar('Install: in Chrome, tap ⋮ then Add to home screen', false);
+}, 3000);
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});

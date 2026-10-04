@@ -1,5 +1,5 @@
 // Network first so updates show up right away; the cache only covers going offline.
-const CACHE = 'bdgg-v5';
+const CACHE = 'bdgg-v6';
 const SHELL = [
   './',
   './index.html',

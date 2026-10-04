@@ -68,6 +68,32 @@ button, input { font: inherit; color: inherit; }
   white-space: nowrap;
 }
 
+/* Install prompt */
+#install-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 12px;
+  background: #1a2130;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+#install-bar img { flex: none; border-radius: 6px; }
+#install-text { flex: 1; min-width: 0; }
+#install-bar button {
+  flex: none;
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+#install-bar #install-no { width: 32px; padding: 0; background: none; color: var(--muted); }
+
 /* Player + chat */
 #stage {
   flex: 1;
@@ -198,44 +224,21 @@ body.no-chat #player[data-count="2"] { --cols: 1; }
   flex: none;
   display: flex;
   align-items: center;
-  gap: 5px;
-  height: 32px;
-  max-width: 180px;
-  padding: 0 10px;
+  gap: 6px;
+  height: 36px;
+  max-width: 200px;
+  padding: 0 12px;
   border: 0;
   border-bottom: 2px solid transparent;
   background: none;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
 }
-#tabs .tab[aria-current="true"] { color: var(--text); border-bottom-color: var(--accent); }
+#tabs .tab[aria-current="true"] { color: var(--text); border-bottom-color: var(--text); }
 #tabs .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#tabs .viewers { font-size: 11px; opacity: .8; font-variant-numeric: tabular-nums; }
-#tabs .viewers::before {
-  content: "";
-  display: inline-block;
-  width: 5px;
-  height: 5px;
-  margin: 0 3px 1px 0;
-  border-radius: 50%;
-  background: #c0504d;
-}
-/* Small, muted platform marks: a letter tinted with the platform's color. */
-.badge {
-  flex: none;
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1;
-  color: #8c93a3;
-}
-.badge.kick { color: #7fbf5a; }
-.badge.twitch, .badge.twitch-vod, .badge.twitch-clip { color: #a78bdb; }
-.badge.youtube, .badge.youtube-live { color: #d9706f; }
-.badge.rumble { color: #8fb86a; }
-.badge.angelthump { color: #b8bcc6; }
-.badge.destiny { color: #6fa3ef; }
+#tabs .platform-icon { flex: none; width: 15px; height: 15px; fill: currentColor; }
 
 /* Side by side: landscape phones, tablets, desktops and ultrawides. Keep in
    sync with rowLayoutQuery in app.js. */

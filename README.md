@@ -14,7 +14,7 @@ Under the player is a row of tabs with every live stream DGG viewers are embeddi
 
 **Screen stays on.** While the app is open it holds a [Screen Wake Lock](https://developer.mozilla.org/docs/Web/API/Screen_Wake_Lock_API). The sun icon turns yellow while the lock is held; tap it to turn it off.
 
-**Keeps playing when the phone locks.** Kick streams play in the app's own video player by default. The server gets each channel's stream from Kick's public channel API, and the app plays it directly, so sound keeps going when the screen locks and the lock screen shows play and pause controls. If that fails, the app falls back to Kick's player. YouTube and Twitch players pause themselves when the page is hidden; if that happens within a few seconds of the screen locking, the app starts them again. AngelThump and Rumble players can't be controlled from outside, and AngelThump streams need a token only its own player can get, so for those it depends on their player.
+**Keeps playing when the phone locks.** Kick streams play in the app's own video player by default. The server gets each channel's stream from Kick's public channel API, and the app plays it with [hls.js](https://github.com/video-dev/hls.js), so sound keeps going when the screen locks and the lock screen shows play and pause controls. If it hasn't started within a few seconds, the app falls back to Kick's player. YouTube and Twitch players pause themselves when the page is hidden; if that happens within a few seconds of the screen locking, the app starts them again. AngelThump and Rumble players can't be controlled from outside, and AngelThump streams need a token only its own player can get, so for those it depends on their player.
 
 **Sound.** Browsers only let a player start with sound after a tap, so when the app opens it shows a play button instead of starting muted. If a stream still comes up muted, the speaker button in the top bar turns its sound on.
 
@@ -22,7 +22,7 @@ Under the player is a row of tabs with every live stream DGG viewers are embeddi
 
 ## Installing
 
-Android (Chrome): open the site, tap ⋮, then **Add to home screen → Install**. iPhone and iPad (Safari): tap Share, then **Add to Home Screen**. Desktop Chrome and Edge show an install icon in the address bar.
+The app shows an install bar under the header until it's installed or dismissed (it comes back after a week). In Chrome and Edge its Install button installs in one tap; on iPhone and in in-app browsers it explains how. Android (Chrome): tap ⋮, then **Add to home screen → Install**. iPhone and iPad (Safari): tap Share, then **Add to Home Screen**. Desktop Chrome and Edge show an install icon in the address bar.
 
 For audio with the screen locked on Android, Chrome has to be allowed to run in the background. On Samsung phones, check **Settings → Battery → Background usage limits** and make sure Chrome isn't a sleeping app.
 
