@@ -40,7 +40,7 @@ DGG Remix: an unofficial mobile-first web app (installable PWA) for destiny.gg's
   - Start: a hash link opens directly; otherwise `start()` waits up to 2 s for the live list.
 - `public/index.html`: there's no header. `#watch` holds `#player` and `#tabbar` (`#tabs` plus `#menu-btn`), then `#chat` (iframe `destiny.gg/embed/chat`), then dialogs `#sheet` and `#cast-sheet`.
 - `public/app.css`: portrait stacks the player, tabs and chat. The row layout media query must match `rowLayoutQuery` in app.js.
-- Icons: `scripts/make-icons.mjs` runs in the Docker build stage, composites `icon-src/remix-tag.png` onto destiny.gg's current manifest icon (sharp, devDependency), and keeps the committed icons on failure. Bump `?v=` on the icon URLs in the manifest and index.html when they change.
+- Icons: `scripts/make-icons.mjs` runs in the Docker build stage, composites `icon-src/remix-tag.png` (a large tag across the bottom, readable on a home screen) onto destiny.gg's current manifest icon (sharp, devDependency), and keeps the committed icons on failure. Bump `?v=` on the icon URLs in the manifest and index.html when they change.
 
 ## Decisions already made (don't relitigate)
 - **Lock-screen audio is Kick-only.** Chrome on Android pauses `<video>` in hidden pages but allows audio-only playback; Kick has no audio-only rendition, hence the track-dropping hls.js.

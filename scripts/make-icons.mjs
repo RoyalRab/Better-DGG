@@ -21,21 +21,36 @@ async function fetchBaseIcon() {
   return Buffer.from(await res.arrayBuffer());
 }
 
+// The REMIX tag sits across the bottom of the logo, big enough to read on a
+// home screen. `width` is the tag's width on a 512 px icon.
+async function withTag(logo, { logoSize, width, top }) {
+  const white = { r: 255, g: 255, b: 255, alpha: 0 };
+  const tagImg = await sharp(tag).resize({ width }).toBuffer();
+  const { height } = await sharp(tagImg).metadata();
+  const inner = await sharp(logo).resize(logoSize, logoSize).toBuffer();
+  const offset = Math.round((512 - logoSize) / 2);
+  return sharp({ create: { width: 512, height: 512, channels: 4, background: white } })
+    .composite([
+      { input: inner, left: offset, top: offset },
+      { input: tagImg, left: Math.round((512 - width) / 2), top: Math.min(top, 512 - height) },
+    ])
+    .png()
+    .toBuffer();
+}
+
 try {
   const base = await sharp(await fetchBaseIcon()).resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer();
-  const tagged = await sharp(base).composite([{ input: tag }]).png().toBuffer();
+  const tagged = await withTag(base, { logoSize: 512, width: 380, top: 382 });
   const white = { r: 255, g: 255, b: 255, alpha: 1 };
 
   await sharp(tagged).toFile(path.join(out, 'icon-512.png'));
   await sharp(tagged).resize(192, 192).toFile(path.join(out, 'icon-192.png'));
   // iOS fills transparent areas with black, so flatten onto white.
   await sharp(tagged).flatten({ background: white }).resize(180, 180).toFile(path.join(out, 'apple-touch-icon.png'));
-  // Android masks this one into its own shape, so keep everything well inside.
-  const inner = await sharp(tagged).resize(380, 380).toBuffer();
-  await sharp({ create: { width: 512, height: 512, channels: 4, background: white } })
-    .composite([{ input: inner, left: 66, top: 66 }])
-    .png()
-    .toFile(path.join(out, 'maskable-512.png'));
+  // Android masks this one into its own shape, so the logo and tag stay inside
+  // the middle 80% circle that every mask keeps.
+  const masked = await withTag(base, { logoSize: 400, width: 300, top: 316 });
+  await sharp(masked).flatten({ background: white }).png().toFile(path.join(out, 'maskable-512.png'));
   // Browser tab icon.
   await sharp(tagged).resize(64, 64).toFile(path.join(out, 'favicon-64.png'));
   console.log('icons: built from destiny.gg icon with REMIX tag');
