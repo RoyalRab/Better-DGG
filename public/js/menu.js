@@ -213,6 +213,31 @@ function openDgg(path) {
   document.addEventListener('visibilitychange', back);
 }
 
+// Where to allow third-party cookies, for the browser this is.
+function cookieSteps() {
+  const ua = navigator.userAgent;
+  if (isIOS) {
+    return "Settings → Apps → Safari → turn off Prevent Cross-Site Tracking, sign in on destiny.gg in Safari, and use the app in Safari. The home-screen app keeps its own separate login and may not be able to share Safari's.";
+  }
+  if (/SamsungBrowser/.test(ua)) {
+    return 'Samsung Internet: ☰ → Settings → Privacy → turn off Block third-party cookies (under Smart anti-tracking).';
+  }
+  if (/Firefox/.test(ua)) {
+    return 'Firefox: tap the shield icon in the address bar and turn Enhanced Tracking Protection off for this site.';
+  }
+  if (/Edg\//.test(ua)) {
+    return 'Edge: Settings → Cookies and site permissions → Manage and delete cookies and site data → turn off Block third-party cookies, or add this site under Allow.';
+  }
+  if (/Chrome\//.test(ua)) {
+    return isAndroid
+      ? 'Chrome: ⋮ → Settings → Site settings → Third-party cookies → Allow third-party cookies, or add this site under Sites allowed to use third-party cookies.'
+      : 'Chrome: ⋮ → Settings → Privacy and security → Third-party cookies → Allow third-party cookies, or add this site under Allowed to use third-party cookies.';
+  }
+  if (/Safari/.test(ua)) return 'Safari: Settings → Privacy → turn off Prevent cross-site tracking.';
+  return "Allow third-party cookies (or cookies for all sites) in your browser's privacy settings.";
+}
+$('#cookie-steps').textContent = cookieSteps();
+
 $('#sign-in').addEventListener('click', () => openDgg(DGG_LOGIN));
 $('#sign-out').addEventListener('click', () => openDgg(DGG_LOGOUT));
 

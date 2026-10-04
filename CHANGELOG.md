@@ -2,6 +2,17 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.0.1 (2026-10-04)
+
+- Android: the chat box no longer ends up under the navigation buttons after a refresh.
+- A Kick stream started just before locking the phone keeps playing as audio instead of switching to Kick's player.
+- Holding a tab to add it to multi-view no longer also moves the sound.
+- The "Restore your multi-view?" offer stops once you dismiss it or go back to one stream.
+- AngelThump and Rumble no longer reload when the sound moves in multi-view.
+- Streams kept hidden (warm, or loading ahead of a tap) are skipped by keyboard focus.
+- YouTube offers Try again if its player doesn't load, and the live tabs reconnect after a server restart.
+- Malformed requests no longer crash the server.
+
 ## 1.0.0 (2026-10-04)
 
 - First public version.

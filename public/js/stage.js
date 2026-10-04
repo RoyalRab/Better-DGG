@@ -201,6 +201,7 @@ function park(t) {
   t.el.classList.remove('leaving');
   t.el.classList.add('parked');
   t.el.setAttribute('aria-hidden', 'true');
+  t.el.inert = true;
   parked = { tile: t, timer: setTimeout(dropParked, PARK_MS) };
 }
 
@@ -219,6 +220,7 @@ function takeParked(src) {
   parked = null;
   tile.el.classList.remove('parked');
   tile.el.removeAttribute('aria-hidden');
+  tile.el.inert = false;
   tile.unparked = true;
   return tile;
 }
@@ -238,6 +240,7 @@ export function prepare(src) {
   tile.prepared = true;
   tile.el.classList.add('preparing');
   tile.el.setAttribute('aria-hidden', 'true');
+  tile.el.inert = true;
   $('#player').appendChild(tile.el);
   prepared = { tile, timer: setTimeout(cancelPrepare, 3000) };
   mountTile(tile);
@@ -259,6 +262,7 @@ function takePrepared(src) {
   tile.prepared = false;
   tile.el.classList.remove('preparing');
   tile.el.removeAttribute('aria-hidden');
+  tile.el.inert = false;
   return tile;
 }
 
@@ -271,6 +275,7 @@ let handoff = null; // { old, next, timer }
 function startHandoff(old, next) {
   old.el.classList.add('leaving');
   old.el.setAttribute('aria-hidden', 'true');
+  old.el.inert = true;
   handoff = { old, next, timer: setTimeout(finishHandoff, 10000) };
 }
 
@@ -417,6 +422,8 @@ export function setAudio(src) {
 export function removeTile(src) {
   const rest = state.tiles.filter((t) => key(t.src) !== key(src)).map((t) => t.src);
   if (isCurrent(src) && rest.length) setAudio(rest[0]);
+  // Back to one stream by choice: nothing to offer restoring next time.
+  if (rest.length < 2) store.set('lastMulti', null);
   setTiles(rest);
 }
 

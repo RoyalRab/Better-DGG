@@ -120,6 +120,9 @@ export function offerRestore() {
     state.current = saved[0];
     setTiles(saved);
   };
-  $('#restore-no').onclick = hide;
+  $('#restore-no').onclick = () => {
+    store.set('lastMulti', null);
+    hide();
+  };
   setTimeout(hide, 20000);
 }

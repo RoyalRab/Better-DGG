@@ -12,8 +12,8 @@
 
 import { DEFAULT_SOURCE, key, parseHashList, validate } from './sources.js';
 import { state } from './state.js';
-import { settings, store } from './util.js';
-import { setTiles } from './stage.js';
+import { settings, store, standalone } from './util.js';
+import { setTiles, layoutTiles } from './stage.js';
 import { HLS_JS, hasMse, loadScript } from './players.js';
 import { startTabs } from './tabs.js';
 import { renderChat, loadChat } from './chat.js';
@@ -65,6 +65,42 @@ registerServiceWorker();
 // Point out the ⋮ menu once the first stream has had a moment to start.
 setTimeout(maybeShowMenuTip, 3000);
 loadChangelog();
+
+// ---------- Android's navigation buttons ----------
+// The installed app on Android 15+ draws under the navigation buttons, and
+// Chrome reports their height through env(safe-area-inset-bottom). After an
+// in-app reload Chrome sometimes reports 0 until the app is reopened, which
+// left the chat box under the buttons. So the app remembers the real height
+// whenever Chrome reports one (per orientation) and pads with that whenever
+// Chrome reports 0. A remembered value expires after a month.
+if (standalone) {
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;top:-9999px;height:0;padding-bottom:env(safe-area-inset-bottom)';
+  document.body.appendChild(probe);
+  const key = () => `navInset:${matchMedia('(orientation: landscape)').matches ? 'landscape' : 'portrait'}`;
+  const checkInsets = () => {
+    const reported = parseFloat(getComputedStyle(probe).paddingBottom) || 0;
+    const root = document.documentElement.style;
+    if (reported > 0) {
+      store.set(key(), { px: reported, at: Date.now() });
+      root.removeProperty('--nav-fallback');
+    } else {
+      const saved = store.get(key(), null);
+      if (saved && saved.px > 0 && Date.now() - saved.at < 30 * 24 * 60 * 60 * 1000) {
+        root.setProperty('--nav-fallback', saved.px + 'px');
+      } else {
+        root.removeProperty('--nav-fallback');
+      }
+    }
+    layoutTiles();
+  };
+  checkInsets();
+  for (const ms of [300, 1000, 3000]) setTimeout(checkInsets, ms);
+  window.addEventListener('resize', checkInsets);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) checkInsets();
+  });
+}
 
 // For tests and debugging in the browser console.
 window.dggRemix = { state, key };

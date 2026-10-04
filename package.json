@@ -1,6 +1,6 @@
 {
   "name": "better-dgg",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "destiny.gg stream and chat web app with a live embed list",
   "main": "server.js",

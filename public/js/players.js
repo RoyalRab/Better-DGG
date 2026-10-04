@@ -28,12 +28,20 @@ let ytReady;
 function loadYouTubeApi() {
   ytReady ||= new Promise((resolve, reject) => {
     if (window.YT && window.YT.Player) return resolve();
+    // The API loads a second script itself; if that never arrives, give up so
+    // the tile offers Try again instead of staying black.
+    const timer = setTimeout(() => {
+      ytReady = null;
+      reject(new Error('YouTube API timed out'));
+    }, 15000);
     const prev = window.onYouTubeIframeAPIReady;
     window.onYouTubeIframeAPIReady = () => {
+      clearTimeout(timer);
       if (prev) prev();
       resolve();
     };
     loadScript('https://www.youtube.com/iframe_api').catch((e) => {
+      clearTimeout(timer);
       ytReady = null;
       reject(e);
     });
@@ -85,13 +93,16 @@ export function mountFrame(tile, muted) {
     muted,
     play() {},
     // A plain iframe can only change sound by reloading with a different URL.
+    // Players that can't be muted from outside are left alone either way:
+    // reloading them would join the stream a second time.
     setMuted(m) {
-      if (m === this.muted || (m && !FRAME_CAN_MUTE.has(tile.src.type))) return;
+      if (m === this.muted || !FRAME_CAN_MUTE.has(tile.src.type)) return;
       this.muted = m;
       f.src = frameUrl(tile.src, m);
     },
     // Players that start muted because of autoplay rules need a reload after a tap.
     unmute() {
+      if (!FRAME_CAN_MUTE.has(tile.src.type)) return;
       this.muted = false;
       f.src = frameUrl(tile.src, false);
     },
@@ -257,8 +268,12 @@ export function makeAudioOnlyHls(config) {
 
 export async function mountOwn(tile, muted) {
   const url = new URL(`api/stream/${tile.src.type}/${encodeURIComponent(tile.src.id)}.m3u8`, location.href).toString();
+  // A press that turns into a scroll drops the tile while this is in flight.
+  const token = tile.token;
+  const cancelled = () => token !== tile.token;
   const check = await fetch(url, { cache: 'no-store' });
   if (!check.ok) throw new Error('not playable: ' + check.status);
+  if (cancelled()) throw new Error('cancelled');
 
   const v = document.createElement('video');
   v.className = 'own-player';
@@ -278,8 +293,13 @@ export async function mountOwn(tile, muted) {
   // fallback for browsers without Media Source (older iPhones).
   let hls = null;
   const stillMine = () => state.tiles.includes(tile) && (!tile.player || tile.player.video === v);
+  let bg = null; // { audio, hls }: the audio-only copy while the page is hidden
   if (hasMse()) {
     await loadScript(HLS_JS);
+    if (cancelled()) {
+      v.remove();
+      throw new Error('cancelled');
+    }
     const Hls = window.Hls;
     if (!Hls || !Hls.isSupported()) {
       v.remove();
@@ -307,11 +327,16 @@ export async function mountOwn(tile, muted) {
   let gaveUp = false;
   function giveUp() {
     if (started || gaveUp) return;
+    // A hidden page (screen locked) can't start video; judge it once we're back.
+    if (document.hidden || bg) {
+      timer = setTimeout(giveUp, OWN_START_TIMEOUT_MS);
+      return;
+    }
     gaveUp = true;
     tile.ownFailed = true;
     if (stillMine()) tile.remount();
   }
-  const timer = setTimeout(giveUp, OWN_START_TIMEOUT_MS);
+  let timer = setTimeout(giveUp, OWN_START_TIMEOUT_MS);
   v.addEventListener('error', giveUp);
   v.addEventListener('playing', () => {
     started = true;
@@ -387,7 +412,6 @@ export async function mountOwn(tile, muted) {
 
   // While the page is hidden (screen locked, another app open), play the
   // sound from an audio-only copy of the stream, then go back to the video.
-  let bg = null; // { audio, hls }
   let playingAtHide = false; // the stream was playing with sound when the page was hidden
   let userPausedAt = 0; // last pause from the user (lock screen or picture-in-picture controls)
 
@@ -410,7 +434,7 @@ export async function mountOwn(tile, muted) {
     bg = { audio, hls: h2 };
   }
   function enterBackground() {
-    if (bg || !hls || !started || v.muted || !playingAtHide || !document.hidden) return;
+    if (bg || !hls || v.muted || !playingAtHide || !document.hidden) return;
     if (Date.now() - userPausedAt < 1500) return;
     if (!isCurrent(tile.src) || !state.tiles.includes(tile)) return;
     startAudioCopy(1);
@@ -444,10 +468,12 @@ export async function mountOwn(tile, muted) {
   function onVisibility() {
     clearTimeout(hideTimer);
     if (document.hidden) {
-      playingAtHide = !v.paused && !v.muted;
+      // Playing, or still starting: a locked phone won't start the video, but
+      // it will play the audio-only copy.
+      playingAtHide = !v.muted && (!v.paused || !started);
       // Fallback in case the browser pauses without telling us right away.
       hideTimer = setTimeout(() => {
-        if (v.paused) enterBackground();
+        if (v.paused || !started) enterBackground();
       }, 700);
     } else {
       leaveBackground();

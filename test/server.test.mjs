@@ -95,9 +95,9 @@ test('Kick relay shares one lookup between viewers asking at once', async () => 
 
 test('Kick relay is rate limited per visitor', async () => {
   const statuses = [];
-  for (let i = 0; i < 61; i++) statuses.push((await get('/api/stream/kick/someone.m3u8', '10.2.0.1')).status);
-  assert.equal(statuses.filter((s) => s === 200).length, 60);
-  assert.equal(statuses[60], 429);
+  for (let i = 0; i < 121; i++) statuses.push((await get('/api/stream/kick/someone.m3u8', '10.2.0.1')).status);
+  assert.equal(statuses.filter((s) => s === 200).length, 120);
+  assert.equal(statuses[120], 429);
   assert.equal((await get('/api/stream/kick/someone.m3u8', '10.2.0.2')).status, 200, 'other visitors are unaffected');
 });
 
@@ -136,16 +136,10 @@ test('page uses content-hashed files, and the service worker can cache all of th
   assert.ok(sw.includes(JSON.stringify(srv.ASSETS)));
 });
 
-test('Android gets the page without viewport-fit=cover; others keep it', async () => {
-  const android = await (
-    await get('/', '10.5.0.1', { headers: { 'User-Agent': 'Mozilla/5.0 (Linux; Android 15) Chrome/140' } })
-  ).text();
-  const iphone = await (
-    await get('/', '10.5.0.1', { headers: { 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0)' } })
-  ).text();
-  assert.doesNotMatch(android, /viewport-fit=cover/);
-  assert.match(android, /name="viewport" content="width=device-width, initial-scale=1"/);
-  assert.match(iphone, /viewport-fit=cover/);
+test('malformed requests get a 400 and the server stays up', async () => {
+  assert.equal((await get('//')).status, 400);
+  assert.equal((await get('/api/stream/kick/%E0%A4%A.m3u8')).status, 400);
+  assert.equal(await (await get('/healthz')).text(), 'ok');
 });
 
 test('responses are compressed and carry security headers', async () => {

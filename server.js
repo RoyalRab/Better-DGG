@@ -150,15 +150,6 @@ setText(
     .replace(/const ASSETS = \[\];/, `const ASSETS = ${JSON.stringify(ASSETS)};`),
 );
 
-// Android: Chrome draws a page that asks for viewport-fit=cover behind the
-// navigation buttons, and the installed app doesn't reliably report how tall
-// they are, so the bottom of chat ended up underneath them. Without it,
-// Chrome keeps the page above them. iPhones keep it, for the notch.
-raw.set('/index-android.html', {
-  ...raw.get('/index.html'),
-  body: Buffer.from(raw.get('/index.html').body.toString().replace(', viewport-fit=cover', '')),
-});
-
 const files = new Map();
 for (const [p, f] of raw) {
   const etag = shortHash(f.body);
@@ -172,15 +163,13 @@ for (const [p, f] of raw) {
 files.set('/', files.get('/index.html'));
 
 function serveFile(req, res, url) {
-  const page = url.pathname === '/' || url.pathname === '/index.html';
-  const android = page && /Android/i.test(String(req.headers['user-agent'] || ''));
-  const file = files.get(android ? '/index-android.html' : url.pathname);
+  const file = files.get(url.pathname);
   if (!file) return send(res, 404, 'text/plain; charset=utf-8', 'Not found');
   const v = url.searchParams.get('v');
   // Content-addressed URLs never change, so they can be cached for a year.
   const immutable = url.pathname === HLS_PATH || (!!v && v === versions.get(url.pathname));
   res.setHeader('Cache-Control', immutable ? 'public, max-age=31536000, immutable' : 'no-cache');
-  res.setHeader('Vary', page ? 'Accept-Encoding, User-Agent' : 'Accept-Encoding');
+  res.setHeader('Vary', 'Accept-Encoding');
   const accept = String(req.headers['accept-encoding'] || '');
   const enc = file.br && /\bbr\b/.test(accept) ? 'br' : file.gzip && /\bgzip\b/.test(accept) ? 'gzip' : null;
   const etag = enc ? file.etag.replace(/"$/, `-${enc}"`) : file.etag;
@@ -500,9 +489,9 @@ function kickMaster(slug, url) {
   });
 }
 
-// Each viewer gets a generous number of lookups a minute (a player asks once
+// Each viewer gets a generous number of lookups a minute (a player asks twice
 // per start), so the relay can't be used as a free proxy for Kick's API.
-const kickLimit = makeLimiter(60, 60 * 1000);
+const kickLimit = makeLimiter(120, 60 * 1000);
 
 async function serveKickPlaylist(req, res, slug) {
   res.setHeader('Cache-Control', 'no-store');
@@ -526,6 +515,17 @@ async function serveKickPlaylist(req, res, slug) {
 // ---------- HTTP ----------
 
 const server = http.createServer((req, res) => {
+  try {
+    handle(req, res);
+  } catch {
+    // A malformed request (a bad URL or percent-encoding) must never take
+    // the server down for everyone.
+    if (res.headersSent) res.end();
+    else send(res, 400, 'text/plain; charset=utf-8', 'Bad request');
+  }
+});
+
+function handle(req, res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Content-Security-Policy', CSP);
@@ -547,7 +547,7 @@ const server = http.createServer((req, res) => {
   if (kick) return serveKickPlaylist(req, res, decodeURIComponent(kick[1]));
   if (url.pathname === '/healthz') return send(res, 200, 'text/plain', 'ok');
   serveFile(req, res, url);
-});
+}
 
 function start() {
   server.listen(PORT, () => console.log(`listening on ${PORT}`));

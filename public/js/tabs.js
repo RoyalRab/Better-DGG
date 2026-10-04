@@ -55,6 +55,7 @@ function makeTabButton(src) {
     // Start loading right away; the click (or a long-press) decides what happens to it.
     if (e.button === 0) prepare(src);
     holdTimer = setTimeout(() => {
+      if (held) return; // contextmenu got there first
       held = true;
       cancelPrepare();
       watch(src, { add: true });
@@ -77,8 +78,10 @@ function makeTabButton(src) {
     clearTimeout(holdTimer);
     if (!held) cancelPrepare();
   });
+  // Android fires this at its own long-press time, usually before the timer.
   b.addEventListener('contextmenu', (e) => {
     e.preventDefault();
+    clearTimeout(holdTimer);
     cancelPrepare();
     if (!held) watch(src, { add: true });
     held = true;
@@ -170,21 +173,32 @@ export async function refreshTabs() {
 let lastLiveAt = 0;
 export function startTabs() {
   refreshTabs();
-  if ('EventSource' in window) {
-    const source = new EventSource('api/live');
-    source.onmessage = (e) => {
-      lastLiveAt = Date.now();
-      try {
-        applyLive(JSON.parse(e.data));
-      } catch {}
-    };
-    source.addEventListener('ping', () => {
-      lastLiveAt = Date.now();
-    });
-  }
+  if ('EventSource' in window) openLive();
   setInterval(() => {
     if (!document.hidden && Date.now() - lastLiveAt > 60000) refreshTabs();
   }, 30000);
+}
+// EventSource reconnects by itself after a dropped connection, but gives up
+// for good when the server answers with an error (a restart, or too many
+// connections from one place). Open a new one after a pause in that case.
+let liveBackoff = 2000;
+function openLive() {
+  const source = new EventSource('api/live');
+  source.onmessage = (e) => {
+    lastLiveAt = Date.now();
+    liveBackoff = 2000;
+    try {
+      applyLive(JSON.parse(e.data));
+    } catch {}
+  };
+  source.addEventListener('ping', () => {
+    lastLiveAt = Date.now();
+  });
+  source.onerror = () => {
+    if (source.readyState !== EventSource.CLOSED) return;
+    setTimeout(openLive, liveBackoff);
+    liveBackoff = Math.min(liveBackoff * 2, 60000);
+  };
 }
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) refreshTabs();
