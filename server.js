@@ -64,7 +64,6 @@ function send(res, status, type, body) {
 const live = {
   connected: false,
   embeds: null, // dggApi:embeds data, as sent
-  embedsAt: 0,
   streamInfo: null, // dggApi:streamInfo data, as sent
 };
 
@@ -92,7 +91,6 @@ function connectLive() {
     try { msg = JSON.parse(raw.toString()); } catch { return; }
     if (msg.type === 'dggApi:embeds' && Array.isArray(msg.data)) {
       live.embeds = msg.data;
-      live.embedsAt = Date.now();
       broadcast();
     } else if (msg.type === 'dggApi:streamInfo') {
       live.streamInfo = msg.data;
@@ -112,7 +110,6 @@ function connectLive() {
 }
 
 const str = (v, max = 200) => (typeof v === 'string' ? v.slice(0, max) : null);
-const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
 // Only live channels belong in the list; VODs, clips and ordinary videos don't.
 const LIVE_PLATFORMS = new Set(['kick', 'twitch', 'youtube', 'angelthump', 'rumble']);
@@ -121,23 +118,22 @@ function embedList() {
   return (live.embeds || []).map((e) => {
     const id = e?.mediaItem?.identifier || {};
     const meta = e?.mediaItem?.metadata || {};
+    // Only what the app shows. Viewer counts change constantly and would make
+    // every update look like a new list.
     return {
       platform: str(id.platform || e.platform, 40),
       id: str(id.mediaId || e.id, 120),
-      count: num(e.count),
       name: str(meta.displayName, 80),
       title: str(meta.title),
       live: meta.live === true,
-      viewers: num(meta.viewers),
-      preview: str(meta.previewUrl, 500),
     };
-  }).filter((e) => e.platform && e.id && e.live && LIVE_PLATFORMS.has(e.platform));
+  }).filter((e) => e.platform && e.id && e.live && LIVE_PLATFORMS.has(e.platform))
+    .map(({ live: _live, ...rest }) => rest);
 }
 
 function snapshot() {
   return {
     connected: live.connected,
-    updated: live.embedsAt || null,
     destiny: destinyStreams(),
     embeds: embedList(),
   };
@@ -187,7 +183,6 @@ function destinyStreams() {
       platform,
       id: str(s.id, 120),
       title: str(s.status_text),
-      viewers: num(s.viewers),
     });
   }
   return out;

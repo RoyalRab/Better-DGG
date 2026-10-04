@@ -408,18 +408,29 @@ async function mountOwn(tile, muted) {
   let playingAtHide = false; // the stream was playing with sound when the page was hidden
   let userPausedAt = 0; // last pause from the user (lock screen or picture-in-picture controls)
 
-  function enterBackground() {
-    if (bg || !hls || !started || v.muted || !playingAtHide || !document.hidden) return;
-    if (!settings.resumeOnLock || Date.now() - userPausedAt < 1500) return;
-    if (!current || key(current) !== key(tile.src)) return;
+  function startAudioCopy(retriesLeft) {
     const audio = document.createElement('audio');
     audio.preload = 'auto';
     const h2 = makeAudioOnlyHls({ liveSyncDurationCount: 3 });
-    h2.on(Hls.Events.ERROR, (_e, data) => { if (data.fatal) leaveBackground(); });
+    h2.on(Hls.Events.ERROR, (_e, data) => {
+      if (!data.fatal || !bg || bg.hls !== h2) return;
+      // Rebuild it once before giving up, so a network blip doesn't end the sound.
+      bg = null;
+      h2.destroy();
+      audio.pause();
+      if (retriesLeft > 0 && document.hidden) startAudioCopy(retriesLeft - 1);
+      else resumeVideo();
+    });
     h2.loadSource(url);
     h2.attachMedia(audio);
     audio.play().catch(() => {});
     bg = { audio, hls: h2 };
+  }
+  function enterBackground() {
+    if (bg || !hls || !started || v.muted || !playingAtHide || !document.hidden) return;
+    if (!settings.resumeOnLock || Date.now() - userPausedAt < 1500) return;
+    if (!current || key(current) !== key(tile.src)) return;
+    startAudioCopy(1);
     hls.stopLoad();
     v.pause();
   }
@@ -431,6 +442,9 @@ async function mountOwn(tile, muted) {
     audio.pause();
     audio.removeAttribute('src');
     audio.load();
+    resumeVideo();
+  }
+  function resumeVideo() {
     if (hls) {
       hls.startLoad(-1);
       if (hls.liveSyncPosition) v.currentTime = hls.liveSyncPosition;
@@ -526,6 +540,8 @@ function updateMediaSession() {
 
 async function mountTile(tile) {
   const token = (tile.token = (tile.token || 0) + 1);
+  await soundCheck;
+  if (token !== tile.token) return;
   if (tile.player) tile.player.destroy();
   tile.player = null;
   tile.wantPlaying = false;
@@ -534,7 +550,7 @@ async function mountTile(tile) {
   // Other sites' players can't report blocked sound, so they start muted
   // until the first tap. The app's own player tries with sound and falls
   // back to muted if Chrome refuses.
-  let muted = !wantSound || !hasTapped();
+  let muted = !wantSound || !(hasTapped() || soundAllowed);
   tile.soundBlocked = false;
   let mounted;
   try {
@@ -552,7 +568,14 @@ async function mountTile(tile) {
     if (token !== tile.token) return;
     const msg = document.createElement('div');
     msg.className = 'empty';
-    msg.textContent = 'Could not load the player. Check your connection and try again.';
+    const text = document.createElement('p');
+    text.textContent = "Couldn't load the player. Check your connection.";
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'retry';
+    retry.textContent = 'Try again';
+    retry.addEventListener('click', () => mountTile(tile));
+    msg.append(text, retry);
     tile.body.replaceChildren(msg);
     return;
   }
@@ -601,13 +624,15 @@ function makeTile(src) {
   return tile;
 }
 
+// Display names from the live list, remembered after a stream drops out of it.
+const knownNames = new Map();
 function streamName(src) {
-  const item = tabItems.find((t) => key(t.src) === key(src));
-  return item ? item.name : src.id;
+  return knownNames.get(key(src)) || src.id;
 }
 
 // Rebuild the stage from `want` (a list of sources), keeping players that stay.
 function setTiles(want) {
+  startPending = false; // something was picked, so don't auto-pick at startup
   const keep = new Map(tiles.map((t) => [key(t.src), t]));
   const next = want.map((src) => keep.get(key(src)) || makeTile(src));
   for (const t of tiles) {
@@ -632,10 +657,16 @@ function setTiles(want) {
   renderStage();
 }
 
+// Names on the multi-view labels and in the page title.
+function renderTileNames() {
+  for (const t of tiles) t.el.querySelector('.tile-name').textContent = streamName(t.src);
+  document.title = current ? `${tiles.length > 1 ? `${tiles.length} streams` : streamName(current)} · DGG Remix` : 'DGG Remix';
+}
+
 function renderStage() {
+  renderTileNames();
   for (const t of tiles) {
     const hasSound = current && key(t.src) === key(current);
-    t.el.querySelector('.tile-name').textContent = streamName(t.src);
     const sound = t.el.querySelector('.tile-sound');
     sound.setAttribute('aria-pressed', String(!!hasSound));
     sound.setAttribute('aria-label', hasSound ? 'This stream has the sound' : 'Play sound from this stream');
@@ -643,8 +674,6 @@ function renderStage() {
   }
   document.body.classList.toggle('multi', tiles.length > 1);
   $('#multi-btn').setAttribute('aria-pressed', String(addMode));
-  const label = tiles.length > 1 ? `${tiles.length} streams` : current ? streamName(current) : 'DGG Remix';
-  document.title = current ? `${tiles.length > 1 ? label : streamName(current)} · DGG Remix` : 'DGG Remix';
   const hash = tiles.map((t) => key(t.src)).join(',');
   history.replaceState(null, '', hash ? '#' + hash : location.pathname);
   renderTabs();
@@ -656,6 +685,24 @@ function renderStage() {
 function hasTapped() {
   return !!(navigator.userActivation && navigator.userActivation.hasBeenActive);
 }
+
+// Can players start with sound before the first tap? Chrome usually allows it
+// in the installed app. Ask the browser if it can say, otherwise try a short
+// silent clip.
+const SILENT_WAV = 'data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA';
+let soundAllowed = false;
+const soundCheck = (async () => {
+  try {
+    if (navigator.getAutoplayPolicy) {
+      soundAllowed = navigator.getAutoplayPolicy('mediaelement') === 'allowed';
+      return;
+    }
+    const a = new Audio(SILENT_WAV);
+    await Promise.race([a.play(), new Promise((_, reject) => setTimeout(reject, 1000))]);
+    soundAllowed = true;
+    a.pause();
+  } catch {}
+})();
 
 // Streams start on their own. Before the first tap, Chrome may not allow
 // sound (installed apps usually are allowed). When it isn't, the stream plays
@@ -882,7 +929,7 @@ async function updateWakeLock() {
   if (want && !wakeLock && 'wakeLock' in navigator) {
     try {
       wakeLock = await navigator.wakeLock.request('screen');
-      wakeLock.addEventListener('release', () => { wakeLock = null; renderAwake(); });
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
     } catch {
       wakeLock = null;
     }
@@ -890,10 +937,7 @@ async function updateWakeLock() {
     try { await wakeLock.release(); } catch {}
     wakeLock = null;
   }
-  renderAwake();
 }
-
-function renderAwake() {}
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
@@ -996,39 +1040,68 @@ function platformIcon(type) {
 }
 let tabItems = [];
 
+// Tabs are reused between updates so a scroll or long-press in progress
+// isn't interrupted, and the row only scrolls to the selected tab when the
+// selection changes.
+let tabButtons = new Map(); // key -> button
+let lastSelection = '';
+
+function makeTabButton(src) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'tab';
+  const name = document.createElement('span');
+  name.className = 'name';
+  b.append(platformIcon(src.type), name);
+  let held = false;
+  let holdTimer = null;
+  b.addEventListener('pointerdown', () => {
+    held = false;
+    holdTimer = setTimeout(() => { held = true; watch(src, { add: true }); }, 550);
+  });
+  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => clearTimeout(holdTimer));
+  b.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    if (!held) watch(src, { add: true });
+    held = true;
+  });
+  b.addEventListener('click', () => {
+    if (held) { held = false; return; }
+    watch(src);
+  });
+  return b;
+}
+
 function renderTabs() {
   const nav = $('#tabs');
-  const buttons = tabItems.map((item) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'tab';
+  // A stream on screen that dropped out of the live list keeps a dimmed tab
+  // at the front, so it's still shown as selected.
+  const listed = new Set(tabItems.map((i) => key(i.src)));
+  const offline = tiles
+    .filter((t) => !listed.has(key(t.src)))
+    .map((t) => ({ src: t.src, name: streamName(t.src), title: 'Not in the live list right now', offline: true }));
+  const items = [...offline, ...tabItems];
+  const next = new Map();
+  items.forEach((item, i) => {
+    const k = key(item.src);
+    const b = tabButtons.get(k) || makeTabButton(item.src);
+    b.querySelector('.name').textContent = item.name;
     b.title = [item.name, item.title].filter(Boolean).join(' · ');
-    if (tiles.some((t) => key(t.src) === key(item.src))) b.setAttribute('aria-current', 'true');
-    const name = document.createElement('span');
-    name.className = 'name';
-    name.textContent = item.name;
-    b.append(platformIcon(item.src.type), name);
-    let held = false;
-    let holdTimer = null;
-    b.addEventListener('pointerdown', () => {
-      held = false;
-      holdTimer = setTimeout(() => { held = true; watch(item.src, { add: true }); }, 550);
-    });
-    for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => clearTimeout(holdTimer));
-    b.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      if (!held) watch(item.src, { add: true });
-      held = true;
-    });
-    b.addEventListener('click', () => {
-      if (held) { held = false; return; }
-      watch(item.src);
-    });
-    return b;
+    b.classList.toggle('offline', !!item.offline);
+    if (tiles.some((t) => key(t.src) === k)) b.setAttribute('aria-current', 'true');
+    else b.removeAttribute('aria-current');
+    if (nav.children[i] !== b) nav.insertBefore(b, nav.children[i] || null);
+    next.set(k, b);
   });
-  nav.replaceChildren(...buttons);
-  const selected = nav.querySelector('[aria-current="true"]');
-  if (selected) selected.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  while (nav.children.length > items.length) nav.lastElementChild.remove();
+  tabButtons = next;
+
+  const selection = tiles.map((t) => key(t.src)).join(',');
+  if (selection !== lastSelection) {
+    lastSelection = selection;
+    const selected = nav.querySelector('[aria-current="true"]');
+    if (selected) selected.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
 }
 
 function applyLive(data) {
@@ -1038,16 +1111,18 @@ function applyLive(data) {
     if (d.platform === 'kick') src = { type: 'kick', id: 'destiny' };
     else if (d.platform === 'youtube' && d.id) src = parseSource(`youtube/${d.id}`);
     else if (d.platform === 'rumble' && d.id) src = parseSource(`rumble/${d.id}`);
-    if (src) items.push({ src, badge: 'destiny', name: `Destiny (${PLATFORM_NAMES[d.platform] || d.platform})`, title: d.title, viewers: d.viewers });
+    if (src) items.push({ src, destiny: true, name: `Destiny (${PLATFORM_NAMES[d.platform] || d.platform})`, title: d.title });
   }
   for (const e of data.embeds || []) {
     const src = parseSource(`${e.platform}/${e.id}`);
     if (!src || items.some((i) => key(i.src) === key(src))) continue;
-    items.push({ src, badge: src.type, name: e.name || src.id, title: e.title, viewers: e.viewers });
+    items.push({ src, name: e.name || src.id, title: e.title });
   }
+  for (const i of items) knownNames.set(key(i.src), i.name);
   tabItems = items;
-  if (tiles.length) renderStage();
-  else renderTabs();
+  renderTabs();
+  renderTileNames();
+  if (startPending) start();
 }
 
 async function refreshTabs() {
@@ -1201,11 +1276,33 @@ if ('serviceWorker' in navigator) {
 
 // ---------- Start ----------
 
+// Open what a shared link asks for. Otherwise wait briefly for the live list
+// and open the last stream watched if it's live, then Destiny, then the first
+// tab, so the app doesn't open on a stream that has ended.
+let startPending = false;
+function start() {
+  if (!startPending) return;
+  startPending = false;
+  const saved = store.get('last', null);
+  const last = saved && saved.type ? validate(saved) : null;
+  const live = tabItems;
+  const pick =
+    (last && live.find((i) => key(i.src) === key(last))?.src) ||
+    live.find((i) => i.destiny)?.src ||
+    live[0]?.src ||
+    last ||
+    DEFAULT_SOURCE;
+  current = pick;
+  setTiles([pick]);
+}
+
 renderChat();
-renderAwake();
-startTabs();
 const fromHash = parseHashList(location.hash);
-const last = store.get('last', null);
-const first = fromHash.length ? fromHash : [(last && last.type && validate(last)) || DEFAULT_SOURCE];
-current = first[0];
-setTiles(first);
+if (fromHash.length) {
+  current = fromHash[0];
+  setTiles(fromHash);
+} else {
+  startPending = true;
+  setTimeout(start, 2000);
+}
+startTabs();

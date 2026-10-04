@@ -98,6 +98,17 @@ button, input { font: inherit; color: inherit; }
 .own-player { background: #000; object-fit: contain; }
 .pip-placeholder { display: grid; place-items: center; color: var(--muted); font-size: 13px; }
 #cast-now { margin-top: 12px; }
+.tile-body > .empty p { margin: 0 0 12px; }
+.tile-body > .empty .retry {
+  height: 36px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+}
 .tile-body > .empty {
   display: grid;
   place-items: center;
@@ -217,6 +228,7 @@ body.no-chat #player[data-count="2"] { --cols: 1; }
   -webkit-touch-callout: none;
 }
 #tabs .tab[aria-current="true"] { color: var(--text); border-bottom-color: var(--text); }
+#tabs .tab.offline { opacity: .55; font-style: italic; }
 #tabs .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #tabs .platform-icon { flex: none; width: 13px; height: 13px; fill: currentColor; }
 
