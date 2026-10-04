@@ -14,6 +14,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/favicon-64.png?v=4" type="image/png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=4">
+  <meta name="hls-js" content="vendor/hls.min.js">
   <link rel="stylesheet" href="app.css">
 </head>
 <body>
@@ -23,6 +24,19 @@
     <span id="install-text">Install DGG Remix for full screen and quick access</span>
     <button type="button" id="install-yes">Install</button>
     <button type="button" id="install-no" aria-label="Not now">✕</button>
+  </div>
+
+  <div id="update-bar" class="bar" hidden>
+    <span class="bar-text">DGG Remix has an update.</span>
+    <button type="button" id="update-yes">Refresh</button>
+  </div>
+  <div id="offline-bar" class="bar" hidden>
+    <span class="bar-text">You're offline. Streams pick back up when you reconnect.</span>
+  </div>
+  <div id="restore-bar" class="bar" hidden>
+    <span class="bar-text" id="restore-text">Restore your multi-view?</span>
+    <button type="button" id="restore-yes">Restore</button>
+    <button type="button" id="restore-no" class="bar-close" aria-label="No thanks">✕</button>
   </div>
 
   <main id="stage">
@@ -36,7 +50,7 @@
       </div>
     </div>
     <section id="chat" aria-label="Chat">
-      <iframe id="chat-frame" title="destiny.gg chat" src="https://www.destiny.gg/embed/chat" allow="clipboard-write"></iframe>
+      <iframe id="chat-frame" title="destiny.gg chat" data-src="https://www.destiny.gg/embed/chat" allow="clipboard-write"></iframe>
     </section>
   </main>
 

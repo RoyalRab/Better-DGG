@@ -32,30 +32,6 @@ Ways to make DGG Remix better, roughly from most to least useful. Effort: S is a
 | Remember volume per stream | Some streams are much louder than others | S |
 | Ended-stream screen that suggests the most-embedded live stream | No dead end when a stream ends | S |
 
-## Speed
-
-| Idea | Why | Effort |
-| --- | --- | --- |
-| Serve hls.js from our own server, pinned to one version, instead of jsDelivr | Faster first play, still works if the CDN is slow or blocked, and no surprise breakage from new hls.js releases | S |
-| Preload hls.js at startup when the first stream is Kick | Shaves the script download off the time to first frame | S |
-| Start Kick at a lower quality and let it ramp up (hls.js `startLevel`, ABR settings) | Picture appears sooner on cellular | S |
-| Load chat after the player has started | The chat iframe is heavy; the stream starts faster on slow phones | S |
-| Gzip/Brotli compression for the app files | Smaller downloads; the server sends them uncompressed today | S |
-| Service worker: open from cache first, update in the background, then show "Update ready, tap to refresh" | The app opens instantly even on bad signal, and updates are visible | M |
-| Content-hashed file names with long caching for app.js/app.css | Fewer requests on every open | M |
-| Kick relay: share one lookup between viewers asking for the same channel at once | Fewer Kick API calls when many people switch to the same stream | S |
-
-## Reliability
-
-| Idea | Why | Effort |
-| --- | --- | --- |
-| Railway health check on `/healthz` | New versions only take traffic once they're up, so no blips during deploys | S |
-| On shutdown, tell open apps to reconnect right away | The live tabs come back within a second after a deploy | S |
-| Detect a stalled Kick stream (no progress for ~10 s) and recover automatically | Fixes the occasional frozen picture without a manual reload | S |
-| "Jump to live" button when the Kick player falls behind | Catch up after a stall or a long pause | S |
-| Offline banner when the connection drops, and auto-resume when it's back | Clear feedback on the subway or in elevators | S |
-| Remember the multi-view setup and offer to restore it on launch | Don't rebuild the same 3-stream grid every time | S |
-
 ## Polish
 
 | Idea | Why | Effort |

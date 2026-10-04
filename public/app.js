@@ -296,7 +296,12 @@ async function mountTwitch(tile, muted) {
 
 // Kick streams can play in the app's own <video>, which keeps sound going
 // when the phone locks, shows lock screen controls, and can be cast.
-const HLS_JS = 'https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js';
+// Served by our server at a versioned path (see server.js); the page's meta tag has it.
+const HLS_JS = document.querySelector('meta[name="hls-js"]')?.content || 'vendor/hls.min.js';
+// Start a bit below full quality so the picture appears sooner on mobile
+// data, never fetch more pixels than the player shows, and keep little
+// already-played video around.
+const HLS_CONFIG = { liveSyncDurationCount: 3, capLevelToPlayerSize: true, abrEwmaDefaultEstimate: 1_500_000, backBufferLength: 30 };
 const OWN_PLAYER_TYPES = new Set(['kick']);
 
 const OWN_START_TIMEOUT_MS = 12000;
@@ -356,7 +361,7 @@ async function mountOwn(tile, muted) {
   if (hasMse) {
     await loadScript(HLS_JS);
     if (!window.Hls || !Hls.isSupported()) { v.remove(); throw new Error('no HLS support'); }
-    hls = new Hls({ liveSyncDurationCount: 3 });
+    hls = new Hls(HLS_CONFIG);
     let recoveries = 0;
     hls.on(Hls.Events.ERROR, (_e, data) => {
       if (!data.fatal) return;
@@ -392,6 +397,55 @@ async function mountOwn(tile, muted) {
     updateMediaSession();
   });
   v.addEventListener('pause', () => onPaused(tile));
+
+  // Keep an eye on playback: recover a frozen picture, and offer a jump back
+  // to live when the stream has fallen behind (after a pause or a stall).
+  const liveChip = document.createElement('button');
+  liveChip.type = 'button';
+  liveChip.className = 'live-chip';
+  liveChip.hidden = true;
+  liveChip.textContent = 'Jump to live';
+  tile.el.appendChild(liveChip);
+  function liveEdge() {
+    if (hls && hls.liveSyncPosition) return hls.liveSyncPosition;
+    if (!hls && v.seekable.length) return v.seekable.end(v.seekable.length - 1) - 10;
+    return null;
+  }
+  function jumpToLive() {
+    const edge = liveEdge();
+    if (edge != null) v.currentTime = edge;
+    v.play().catch(() => {});
+    liveChip.hidden = true;
+  }
+  liveChip.addEventListener('click', jumpToLive);
+  let lastTime = -1;
+  let lastProgressAt = Date.now();
+  let stallStage = 0;
+  let stallAt = 0; // where it froze; recovery counts once it plays past this
+  const health = setInterval(() => {
+    if (bg || document.hidden || !started) return;
+    if (v.paused || v.currentTime !== lastTime) {
+      lastTime = v.currentTime;
+      lastProgressAt = Date.now();
+      if (!v.paused && Math.abs(v.currentTime - stallAt) > 3) stallStage = 0;
+    } else if (Date.now() - lastProgressAt > 10000) {
+      // Playing but stuck for 10 s: first reload from the live edge, then
+      // if that doesn't help, start a fresh player.
+      lastProgressAt = Date.now();
+      stallAt = v.currentTime;
+      stallStage++;
+      if (stallStage === 1 && hls) {
+        hls.startLoad(-1);
+        jumpToLive();
+      } else if (tiles.includes(tile) && tile.player && tile.player.video === v) {
+        mountTile(tile);
+        return;
+      }
+    }
+    const edge = liveEdge();
+    liveChip.hidden = !(edge != null && edge - v.currentTime > 15);
+  }, 2000);
+
   v.play().catch((err) => {
     // No sound allowed yet: play muted and offer a tap for sound.
     if (err && err.name === 'NotAllowedError' && !v.muted) {
@@ -411,7 +465,7 @@ async function mountOwn(tile, muted) {
   function startAudioCopy(retriesLeft) {
     const audio = document.createElement('audio');
     audio.preload = 'auto';
-    const h2 = makeAudioOnlyHls({ liveSyncDurationCount: 3 });
+    const h2 = makeAudioOnlyHls({ liveSyncDurationCount: 3, backBufferLength: 30 });
     h2.on(Hls.Events.ERROR, (_e, data) => {
       if (!data.fatal || !bg || bg.hls !== h2) return;
       // Rebuild it once before giving up, so a network blip doesn't end the sound.
@@ -497,8 +551,15 @@ async function mountOwn(tile, muted) {
       if (hls) { hls.destroy(); hls = null; }
       v.src = url;
     },
+    // Back online: pick the stream back up.
+    reconnect() {
+      if (hls) hls.startLoad(-1);
+      v.play().catch(() => {});
+    },
     destroy() {
       clearTimeout(timer);
+      clearInterval(health);
+      liveChip.remove();
       document.removeEventListener('visibilitychange', onVisibility);
       clearTimeout(hideTimer);
       if (bg) { bg.hls.destroy(); bg.audio.pause(); bg = null; }
@@ -676,6 +737,7 @@ function renderStage() {
   $('#multi-btn').setAttribute('aria-pressed', String(addMode));
   const hash = tiles.map((t) => key(t.src)).join(',');
   history.replaceState(null, '', hash ? '#' + hash : location.pathname);
+  if (tiles.length > 1) store.set('lastMulti', tiles.map((t) => key(t.src)));
   renderTabs();
   updateWakeLock();
   updateMediaSession();
@@ -901,6 +963,7 @@ const MAX_RESUMES_PER_LOCK = 4;
 
 function onPlaying(tile) {
   tile.wantPlaying = true;
+  loadChat();
 }
 
 function onPaused(tile) {
@@ -958,6 +1021,16 @@ function renderChat() {
   layoutTiles();
 }
 
+// Chat loads once the first stream is playing (or after a few seconds), so
+// it doesn't compete with the stream for bandwidth at startup.
+let chatLoaded = false;
+function loadChat(force = false) {
+  if (chatLoaded || (!settings.showChat && !force)) return;
+  const f = $('#chat-frame');
+  f.src = f.dataset.src;
+  chatLoaded = true;
+}
+
 function openSheet() {
   $('#opt-awake').checked = settings.keepAwake;
   $('#opt-chat').checked = settings.showChat;
@@ -982,6 +1055,7 @@ $('#opt-awake').addEventListener('change', (e) => {
 $('#opt-chat').addEventListener('change', (e) => {
   saveSetting('showChat', e.target.checked);
   renderChat();
+  loadChat();
 });
 $('#opt-own').addEventListener('change', (e) => {
   saveSetting('ownPlayer', e.target.checked);
@@ -993,12 +1067,13 @@ $('#multi-btn').addEventListener('click', () => {
   setAddMode(true);
 });
 
-// Reloads everything, picking up a new version of the app if there is one.
-$('#refresh-btn').addEventListener('click', () => location.reload());
+// Reloads everything, applying a downloaded update first if there is one.
+$('#refresh-btn').addEventListener('click', applyUpdateOrReload);
 
 $('#reload-chat').addEventListener('click', () => {
   const f = $('#chat-frame');
-  f.src = f.src;
+  if (chatLoaded) f.src = f.dataset.src;
+  else loadChat(true);
   $('#sheet').close();
 });
 
@@ -1278,9 +1353,65 @@ setTimeout(() => {
   else if (isAndroid) showInstallBar('Install: in Chrome, tap ⋮ then Add to home screen', false);
 }, 3000);
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+// ---------- Updates ----------
+// The service worker opens the app from the phone's cache (instant, works on
+// bad signal) and downloads new versions in the background. When one is
+// ready, a bar offers to switch to it.
+
+let waitingWorker = null;
+
+function showUpdateReady(worker) {
+  waitingWorker = worker;
+  $('#update-bar').hidden = false;
+  layoutTiles();
 }
+
+function applyUpdateOrReload() {
+  if (waitingWorker) waitingWorker.postMessage('skipWaiting');
+  else location.reload();
+}
+
+$('#update-yes').addEventListener('click', applyUpdateOrReload);
+
+if ('serviceWorker' in navigator) {
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    // Only when the user asked for the update (not on the very first install).
+    if (reloading || !waitingWorker) return;
+    reloading = true;
+    location.reload();
+  });
+  navigator.serviceWorker.register('sw.js').then((reg) => {
+    if (reg.waiting && navigator.serviceWorker.controller) showUpdateReady(reg.waiting);
+    reg.addEventListener('updatefound', () => {
+      const w = reg.installing;
+      if (!w) return;
+      w.addEventListener('statechange', () => {
+        if (w.state === 'installed' && navigator.serviceWorker.controller) showUpdateReady(w);
+      });
+    });
+    // Check for updates when the app comes back to the front, and every half hour.
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); });
+    setInterval(() => reg.update().catch(() => {}), 30 * 60 * 1000);
+  }).catch(() => {});
+}
+
+// ---------- Offline ----------
+
+function renderOnline() {
+  $('#offline-bar').hidden = navigator.onLine;
+  layoutTiles();
+}
+window.addEventListener('offline', renderOnline);
+window.addEventListener('online', () => {
+  renderOnline();
+  refreshTabs();
+  for (const t of tiles) {
+    if (!t.player) mountTile(t);
+    else if (t.player.reconnect) t.player.reconnect();
+  }
+});
+renderOnline();
 
 // ---------- Start ----------
 
@@ -1302,9 +1433,30 @@ function start() {
     DEFAULT_SOURCE;
   current = pick;
   setTiles([pick]);
+  offerRestore();
+}
+
+// If the last session ended in multi-view, offer to bring it back.
+function offerRestore() {
+  const saved = (store.get('lastMulti', []) || []).map((k) => parseSource(k)).filter(Boolean).slice(0, MAX_TILES);
+  if (saved.length < 2) return;
+  $('#restore-text').textContent = `Restore your multi-view (${saved.length} streams)?`;
+  $('#restore-bar').hidden = false;
+  layoutTiles();
+  const hide = () => { $('#restore-bar').hidden = true; layoutTiles(); };
+  $('#restore-yes').onclick = () => {
+    hide();
+    current = saved[0];
+    setTiles(saved);
+  };
+  $('#restore-no').onclick = hide;
+  setTimeout(hide, 20000);
 }
 
 renderChat();
+// Fetch the player library while the app works out what to play.
+if (settings.ownPlayer && (window.MediaSource || window.ManagedMediaSource)) loadScript(HLS_JS).catch(() => {});
+setTimeout(loadChat, 4000);
 const fromHash = parseHashList(location.hash);
 if (fromHash.length) {
   current = fromHash[0];

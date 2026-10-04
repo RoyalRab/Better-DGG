@@ -13,7 +13,8 @@ DGG Remix: an unofficial mobile-first web app (installable PWA) for destiny.gg's
 - Railway deploys from `main` on every push (about 40 s). Work on a branch if the session gives you one, and push to `main` (`git push origin HEAD:main`) to ship.
 - Railway project `39eb599e-868e-49f2-9d41-3b53a9718181`, service `web` `e3a97c74-8d6c-4415-adca-eb1ba18fafd0`, environment `5dc0d05e-255c-4262-9e85-6e2ff4eb8bb6`, domain better-dgg.up.railway.app (port 8080).
 - To confirm a deploy, use Railway MCP `get-logs` on the service (types `deploy`) and look for `listening on 8080` and `live: connected`. Build logs show `icons: built from destiny.gg icon with REMIX tag`.
-- Bump `CACHE` in `public/sw.js` on every client change.
+- Don't bump anything for caching: the server rewrites `CACHE` in `sw.js` and the `?v=` on app.css/app.js with content hashes at startup.
+- Railway's health check is `/healthz` (60 s timeout); a new deploy only takes traffic once it answers. On SIGTERM the server tells SSE clients to retry in 1 s.
 - Bump `version` in `package.json` for every user-visible change (semver: patch for fixes, minor for features), and update `package-lock.json` with `npm install --package-lock-only`. The menu shows `Version x.y.z (commit)` from `/api/version`, using `RAILWAY_GIT_COMMIT_SHA` for the commit.
 
 ## Sandbox limits
@@ -22,18 +23,20 @@ DGG Remix: an unofficial mobile-first web app (installable PWA) for destiny.gg's
 - Don't use `pkill -f` with a pattern that also appears in the command line: it kills the shell itself. Kill by PID instead: `for p in $(ps aux | grep -E "node (server\.js|dev/fake-live)" | grep -v grep | awk '{print $2}'); do kill $p; done`.
 
 ## Code map
-- `server.js`: serves `public/` from memory with ETags, plus three API routes.
+- `server.js`: serves `public/` from memory, precompressed with Brotli and gzip, with ETags. `index.html` gets hashed `app.css?v=`/`app.js?v=` URLs (cached a year, immutable) and the vendored hls.js at `/vendor/hls-<version>.min.js` (from the exact-pinned `hls.js` dependency; update it with `npm install hls.js@x.y.z --save-exact`). Everything else is `no-cache`. Plus three API routes and `/healthz`.
   - `/api/embeds` (snapshot) and `/api/live` (SSE) relay `wss://live.destiny.gg`: the `dggApi:embeds` and `dggApi:streamInfo` messages. Only live kick/twitch/youtube/angelthump/rumble embeds are sent, with platform, id, name and title. `broadcast()` skips unchanged lists, so don't add fast-changing fields like viewer counts.
-  - `/api/stream/kick/<slug>.m3u8` takes `playback_url` from `kick.com/api/v2/channels/<slug>` (cached 30 s), relays the master playlist with absolute URIs, and returns 404 when the channel isn't live.
+  - `/api/stream/kick/<slug>.m3u8` takes `playback_url` from `kick.com/api/v2/channels/<slug>` (cached 30 s), relays the master playlist with absolute URIs (cached 5 s), and returns 404 when the channel isn't live. Concurrent requests for the same channel share one Kick lookup (`shared()`).
 - `public/app.js`, in section order:
   - Settings: `store` (localStorage `bdgg:*`) and `settings`.
   - Source parsing: `parseSource`/`validate` handle DGG hash links like `#kick/name` and platform URLs; `key(src)` gives `type/id`.
   - Players: tiles; `mountTile` → `mountOwn` (Kick via hls.js) / `mountYouTube` / `mountTwitch` / `mountFrame` (iframes). `current` is the stream with sound; `setTiles`, `renderStage`, `watch` (tap switches, `{add:true}` adds) and `setAudio`.
-  - `mountOwn`: hls.js player, a 12 s start watchdog that falls back to the iframe, and background audio (`enterBackground`/`startAudioCopy`/`resumeVideo`).
+  - `mountOwn`: hls.js player (`HLS_CONFIG`: low starting bitrate, ramps up), a 12 s start watchdog that falls back to the iframe, a 2 s health check (10 s frozen → `startLoad(-1)` at the live edge, still frozen → fresh player; "Jump to live" `.live-chip` when 15 s behind), and background audio (`enterBackground`/`startAudioCopy`/`resumeVideo`).
   - `makeAudioOnlyHls`: wraps `hls.trigger` to drop the video track (BUFFER_CODECS, BUFFER_APPENDING, FRAG_PARSED) so Chrome treats the stream as audio-only.
   - Autoplay: `soundCheck`/`soundAllowed` (silent WAV probe); `tile.soundBlocked` shows the "Tap for sound" `.sound-chip`.
   - Picture-in-picture: the standard API for the own player, Document PiP for iframes on desktop.
-  - Wake lock; menu (`#sheet`); live tabs (`renderTabs` reuses buttons by key, `applyLive`, `startTabs` with EventSource plus polling fallback); cast (`#cast-sheet`, Remote Playback for the own player); install bar.
+  - Wake lock; menu (`#sheet`); live tabs (`renderTabs` reuses buttons by key, `applyLive`, `startTabs` with EventSource plus polling fallback); cast (`#cast-sheet`, Remote Playback for the own player); install bar; update bar (`showUpdateReady`, `applyUpdateOrReload`); offline bar; restore bar (`offerRestore`, `bdgg:lastMulti`).
+  - Chat loads lazily (`loadChat`): when the first player starts, or after 4 s.
+- `public/sw.js`: cache first. Install fetches `./`, caches the hashed files it links plus icons, and waits; the app shows "Update ready" and posts `skipWaiting` when tapped. Old numbered caches (`bdgg-vN`) trigger an immediate takeover once, to migrate old installs.
   - Start: a hash link opens directly; otherwise `start()` waits up to 2 s for the live list.
 - `public/index.html`: there's no header. `#watch` holds `#player` and `#tabbar` (`#tabs` plus `#menu-btn`), then `#chat` (iframe `destiny.gg/embed/chat`), then dialogs `#sheet` and `#cast-sheet`.
 - `public/app.css`: portrait stacks the player, tabs and chat. The row layout media query must match `rowLayoutQuery` in app.js.
@@ -72,7 +75,7 @@ Record anything a platform can't do in README → Limits rather than working aro
 
 ## Local testing
 - `npm install`. Playwright is installed globally (`$(npm root -g)/playwright/index.mjs`); Chromium is at `/opt/pw-browsers/chromium`. Don't run `playwright install`.
-- Fake feed and checks: `node dev/fake-live.js &`, then `LIVE_URL=ws://localhost:9996 PORT=8769 node server.js &`, then `node dev/smoke.mjs` and `node dev/screens.mjs`. The fake feed drops `dariusirl` after 9 s (by design), so later runs show it as a dimmed tab.
-- Headless Chromium has no H.264 or AAC. For own-player playback tests, make a VP9/Opus fMP4 HLS stream: `ffmpeg -f lavfi -i testsrc=size=320x180:rate=25 -f lavfi -i sine=frequency=440 -t 12 -c:v libvpx-vp9 -deadline realtime -b:v 300k -c:a libopus -f hls -hls_segment_type fmp4 -hls_time 2 -hls_playlist_type vod -master_pl_name master.m3u8 media.m3u8`. Add `CODECS="vp09.00.10.08,opus"` to the master, serve it with `npx http-server <dir> --cors`, and route `**/api/stream/kick/*.m3u8` to it in Playwright. Route `cdn.jsdelivr.net/npm/hls.js@1/...` to a local `npm i hls.js` copy.
+- Fake feed and checks: `node dev/fake-live.js &`, then `LIVE_URL=ws://localhost:9996 PORT=8769 node server.js &`, then `node dev/smoke.mjs` and `node dev/screens.mjs`. The fake feed drops `dariusirl` after 9 s (by design), so restart the server (a fresh feed connection) before each smoke run, or the tap check fails.
+- Headless Chromium has no H.264 or AAC. For own-player playback tests, make a VP9/Opus fMP4 HLS stream: `ffmpeg -f lavfi -i testsrc=size=320x180:rate=25 -f lavfi -i sine=frequency=440 -t 12 -c:v libvpx-vp9 -deadline realtime -b:v 300k -c:a libopus -f hls -hls_segment_type fmp4 -hls_time 2 -hls_playlist_type vod -master_pl_name master.m3u8 media.m3u8`. Add `CODECS="vp09.00.10.08,opus"` to the master, serve it with `npx http-server <dir> --cors`, and route `**/api/stream/kick/*.m3u8` to it in Playwright. hls.js is served by the local server. Pass `serviceWorkers: 'block'` to `newContext` when a test routes requests, since the service worker serves cached files.
 - To test the audio-only trick, use an H.264 + MP3 TS stream (`-c:v libx264 -c:a libmp3lame`) with CODECS removed from the master. It only plays if the video track was dropped.
 - To simulate a lock in Playwright, override `document.hidden`/`visibilityState`, dispatch `visibilitychange`, and call `video.pause()` (that's what Chrome does).

@@ -57,6 +57,49 @@ button, input { font: inherit; color: inherit; }
 }
 #install-bar #install-no { width: 32px; padding: 0; background: none; color: var(--muted); }
 
+/* Notice bars: update ready, offline, restore multi-view */
+.bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px 6px 12px;
+  background: #1a2130;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.bar-text { flex: 1; min-width: 0; }
+.bar button {
+  flex: none;
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+.bar .bar-close { width: 30px; padding: 0; background: none; color: var(--muted); }
+#offline-bar { background: #3a2a14; }
+
+/* "Jump to live" on the app's own player */
+.live-chip {
+  position: absolute;
+  right: 8px;
+  bottom: 52px;
+  z-index: 3;
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 15px;
+  background: rgb(0 0 0 / .75);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 /* Player + chat */
 #stage {
   flex: 1;

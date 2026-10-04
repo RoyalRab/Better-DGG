@@ -20,6 +20,14 @@ const LIVE_URL = process.env.LIVE_URL || 'wss://live.destiny.gg';
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
 // ---------- Static files ----------
+// Files are loaded into memory once (the container's files never change while
+// it runs), compressed once, and served with ETags. The page refers to
+// app.js, app.css and hls.js by content hash (app.js?v=…), so those can be
+// cached for a year; a new deploy changes the hash. The service worker's
+// cache name is set from a hash of everything, so any change triggers the
+// app's "update ready" prompt.
+
+const zlib = require('zlib');
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -29,32 +37,69 @@ const TYPES = {
   '.png': 'image/png',
   '.svg': 'image/svg+xml',
 };
+const COMPRESSIBLE = new Set(['.html', '.css', '.js', '.webmanifest', '.svg']);
+const shortHash = (buf) => crypto.createHash('sha1').update(buf).digest('base64url').slice(0, 10);
 
-// The container's files never change while it runs, so load them once.
-const files = new Map();
+const raw = new Map(); // path -> { body, type, ext }
 (function load(dir) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) { load(full); continue; }
-    const type = TYPES[path.extname(entry.name)];
-    if (!type) continue;
-    const body = fs.readFileSync(full);
-    const etag = '"' + crypto.createHash('sha1').update(body).digest('base64url') + '"';
-    files.set('/' + path.relative(PUBLIC_DIR, full).split(path.sep).join('/'), { body, type, etag });
+    const ext = path.extname(entry.name);
+    if (!TYPES[ext]) continue;
+    raw.set('/' + path.relative(PUBLIC_DIR, full).split(path.sep).join('/'), { body: fs.readFileSync(full), type: TYPES[ext], ext });
   }
 })(PUBLIC_DIR);
+
+// hls.js, served from here (pinned in package.json) instead of a CDN.
+const HLS_VERSION = require('hls.js/package.json').version;
+const HLS_PATH = `/vendor/hls-${HLS_VERSION}.min.js`;
+raw.set(HLS_PATH, { body: fs.readFileSync(require.resolve('hls.js/dist/hls.min.js')), type: TYPES['.js'], ext: '.js' });
+
+// Point the page at content-hashed URLs.
+const hashOf = (p) => shortHash(raw.get(p).body);
+const index = raw.get('/index.html');
+index.body = Buffer.from(index.body.toString()
+  .replace('href="app.css"', `href="app.css?v=${hashOf('/app.css')}"`)
+  .replace('src="app.js"', `src="app.js?v=${hashOf('/app.js')}"`)
+  .replace('content="vendor/hls.min.js"', `content="${HLS_PATH.slice(1)}"`));
+// Service worker cache name: changes whenever any file does.
+const buildHash = shortHash(Buffer.concat([...raw.entries()].filter(([p]) => p !== '/sw.js').map(([, f]) => f.body)));
+const sw = raw.get('/sw.js');
+sw.body = Buffer.from(sw.body.toString().replace(/const CACHE = '[^']*';/, `const CACHE = 'bdgg-${buildHash}';`));
+
+const files = new Map();
+for (const [p, f] of raw) {
+  const etag = shortHash(f.body);
+  const file = { ...f, etag: `"${etag}"`, hash: etag };
+  if (COMPRESSIBLE.has(f.ext)) {
+    file.br = zlib.brotliCompressSync(f.body, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 11 } });
+    file.gzip = zlib.gzipSync(f.body, { level: 9 });
+  }
+  files.set(p, file);
+}
 files.set('/', files.get('/index.html'));
 
-function serveFile(req, res, pathname) {
-  const file = files.get(pathname);
+function serveFile(req, res, url) {
+  const file = files.get(url.pathname);
   if (!file) return send(res, 404, 'text/plain; charset=utf-8', 'Not found');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('ETag', file.etag);
-  if (req.headers['if-none-match'] === file.etag) {
+  const v = url.searchParams.get('v');
+  // Content-addressed URLs never change, so they can be cached for a year.
+  const immutable = url.pathname === HLS_PATH || (v && v === file.hash.slice(0, v.length) && v.length >= 6);
+  res.setHeader('Cache-Control', immutable ? 'public, max-age=31536000, immutable' : 'no-cache');
+  res.setHeader('Vary', 'Accept-Encoding');
+  const accept = String(req.headers['accept-encoding'] || '');
+  const enc = file.br && /\bbr\b/.test(accept) ? 'br' : file.gzip && /\bgzip\b/.test(accept) ? 'gzip' : null;
+  const etag = enc ? file.etag.replace(/"$/, `-${enc}"`) : file.etag;
+  res.setHeader('ETag', etag);
+  if (req.headers['if-none-match'] === etag) {
     res.writeHead(304);
     return res.end();
   }
-  send(res, 200, file.type, req.method === 'HEAD' ? '' : file.body);
+  const headers = { 'Content-Type': file.type };
+  if (enc) headers['Content-Encoding'] = enc;
+  res.writeHead(200, headers);
+  res.end(req.method === 'HEAD' ? '' : enc ? file[enc] : file.body);
 }
 
 function send(res, status, type, body) {
@@ -203,10 +248,22 @@ function destinyStreams() {
 
 const KICK_SLUG = /^[A-Za-z0-9_-]{1,64}$/;
 const kickCache = new Map(); // slug -> { at, url }
+const inFlight = new Map(); // key -> promise, so viewers asking at once share one request
 
-async function kickPlaybackUrl(slug) {
+function shared(key, fn) {
+  if (inFlight.has(key)) return inFlight.get(key);
+  const p = fn().finally(() => inFlight.delete(key));
+  inFlight.set(key, p);
+  return p;
+}
+
+function kickPlaybackUrl(slug) {
   const hit = kickCache.get(slug);
-  if (hit && Date.now() - hit.at < 30 * 1000) return hit.url;
+  if (hit && Date.now() - hit.at < 30 * 1000) return Promise.resolve(hit.url);
+  return shared('api:' + slug, () => lookupKick(slug));
+}
+
+async function lookupKick(slug) {
   const r = await fetch(`https://kick.com/api/v2/channels/${slug}`, {
     headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0 (compatible; better-dgg)' },
     signal: AbortSignal.timeout(8000),
@@ -219,23 +276,38 @@ async function kickPlaybackUrl(slug) {
   return url;
 }
 
-async function serveKickPlaylist(res, slug) {
-  res.setHeader('Cache-Control', 'no-store');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  if (!KICK_SLUG.test(slug)) return send(res, 400, 'text/plain; charset=utf-8', 'Bad channel');
-  try {
-    const url = await kickPlaybackUrl(slug.toLowerCase());
-    if (!url) return send(res, 404, 'text/plain; charset=utf-8', 'Not live');
+// The master playlist only lists the quality levels, so a few seconds of
+// sharing between viewers is safe.
+const masterCache = new Map(); // slug -> { at, text }
+function kickMaster(slug, url) {
+  const hit = masterCache.get(slug);
+  if (hit && Date.now() - hit.at < 5000) return Promise.resolve(hit.text);
+  return shared('master:' + slug, async () => {
     const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    if (!r.ok) return send(res, 502, 'text/plain; charset=utf-8', 'Upstream ' + r.status);
+    if (!r.ok) throw new Error('upstream ' + r.status);
     const text = await r.text();
-    if (!text.startsWith('#EXTM3U')) return send(res, 502, 'text/plain; charset=utf-8', 'Bad playlist');
+    if (!text.startsWith('#EXTM3U')) throw new Error('bad playlist');
     // Make every URI absolute so it still resolves when served from here.
     const out = text.split('\n').map((line) => {
       const t = line.trim();
       if (t && !t.startsWith('#')) return new URL(t, url).toString();
       return line.replace(/URI="([^"]+)"/g, (_m, u) => `URI="${new URL(u, url).toString()}"`);
     }).join('\n');
+    masterCache.set(slug, { at: Date.now(), text: out });
+    if (masterCache.size > 500) masterCache.delete(masterCache.keys().next().value);
+    return out;
+  });
+}
+
+async function serveKickPlaylist(res, slug) {
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  if (!KICK_SLUG.test(slug)) return send(res, 400, 'text/plain; charset=utf-8', 'Bad channel');
+  try {
+    const key = slug.toLowerCase();
+    const url = await kickPlaybackUrl(key);
+    if (!url) return send(res, 404, 'text/plain; charset=utf-8', 'Not live');
+    const out = await kickMaster(key, url);
     send(res, 200, 'application/vnd.apple.mpegurl', out);
   } catch (err) {
     send(res, 502, 'text/plain; charset=utf-8', 'Kick unavailable');
@@ -263,8 +335,19 @@ const server = http.createServer((req, res) => {
   const kick = url.pathname.match(/^\/api\/stream\/kick\/([^/]+)\.m3u8$/);
   if (kick) return serveKickPlaylist(res, decodeURIComponent(kick[1]));
   if (url.pathname === '/healthz') return send(res, 200, 'text/plain', 'ok');
-  serveFile(req, res, url.pathname);
+  serveFile(req, res, url);
 });
 
 server.listen(PORT, () => console.log(`listening on ${PORT}`));
+
+// On redeploy Railway sends SIGTERM. Tell open apps to reconnect in a second
+// (to the new server) instead of waiting out their usual retry delay.
+process.on('SIGTERM', () => {
+  console.log('shutting down');
+  for (const res of listeners) {
+    try { res.end('retry: 1000\n\n'); } catch {}
+  }
+  server.close();
+  setTimeout(() => process.exit(0), 2000).unref();
+});
 if (process.env.NO_LIVE !== '1') connectLive();

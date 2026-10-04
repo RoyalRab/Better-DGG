@@ -23,6 +23,9 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 | Phone layouts | Portrait stacks player, tabs and chat. Landscape puts chat on the right. Chat can be hidden to give the stream the whole screen. |
 | Cast to TV help | Device-specific steps for screen casting (Smart View, Screen cast, AirPlay), plus direct Chromecast casting for Kick streams. |
 | Refresh button | Reloads the installed app, which has no pull-to-refresh. |
+| Opens instantly | The app opens from the phone's cache, even on bad signal, and downloads new versions in the background. An **Update ready** bar appears when one is ready. |
+| Offline banner | Shows when the connection drops; the tabs and stream come back on their own when it returns. |
+| Faster start on cellular | Kick starts at a lower quality and sharpens as the connection allows, and chat loads after the stream has started. |
 
 ### Everywhere
 
@@ -33,13 +36,15 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 | Multi-view | Up to four streams at once, with a speaker button on each to move the sound and an ✕ to remove it. The grid is sized to give each stream the most room, including on ultrawides. The address bar link reopens the same set. |
 | Kick in the app's own player | Kick streams play in the app's own player ([hls.js](https://github.com/video-dev/hls.js)), which is what makes lock-screen audio, picture-in-picture and Chromecast possible. It falls back to Kick's player if it can't start. |
 | Desktop extras | Mouse wheel scrolls the tab row, right-click a tab to add it to multi-view, and picture-in-picture works for any stream in Chrome and Edge. |
-| Recovers from errors | A **Try again** button when a player fails to load. |
+| Recovers from errors | A **Try again** button when a player fails to load. A frozen Kick stream reloads itself, and a **Jump to live** button appears when it falls behind. |
+| Remembers multi-view | Offers to restore your last multi-view set when you open the app. |
+| Smooth deploys | New versions only take over once they're running, and open apps reconnect to the live tabs within a second. |
 
 ## Using it
 
 Tap a tab to watch it. To watch more than one stream, press and hold a tab, or choose **Add a stream to multi-view** in the ⋮ menu and then tap a tab. In multi-view, tapping a tab replaces the stream that has the sound.
 
-The ⋮ menu has the settings (keep the screen on, show chat, play Kick in the app's own player) and Refresh app, Picture-in-picture, Add a stream to multi-view, Cast to TV and Reload chat. The app's version is at the bottom of the menu.
+When an update is ready, a bar at the top offers to refresh into it; Refresh app in the menu does the same. The ⋮ menu has the settings (keep the screen on, show chat, play Kick in the app's own player) and Refresh app, Picture-in-picture, Add a stream to multi-view, Cast to TV and Reload chat. The app's version is at the bottom of the menu.
 
 ## Installing
 
@@ -59,7 +64,7 @@ The app has no accounts, analytics or tracking, and nothing in it identifies who
 
 ## Development
 
-`server.js` is a small Node server. It serves the app from `public/`, relays destiny.gg's live embed list at `/api/embeds` (a snapshot) and `/api/live` (server-sent events), and relays Kick stream playlists at `/api/stream/kick/<channel>.m3u8`. The `Dockerfile` builds it, and Railway redeploys on every push to the connected branch. The build also makes the app icons: `scripts/make-icons.mjs` downloads destiny.gg's current icon and adds the REMIX tag from `icon-src/remix-tag.png`, keeping the committed icons if the download fails.
+`server.js` is a small Node server. It serves the app from `public/`, relays destiny.gg's live embed list at `/api/embeds` (a snapshot) and `/api/live` (server-sent events), and relays Kick stream playlists at `/api/stream/kick/<channel>.m3u8`. It serves the app's files compressed, with content-hashed URLs, and serves its own pinned copy of hls.js. The `Dockerfile` builds it, and Railway redeploys on every push to the connected branch. The build also makes the app icons: `scripts/make-icons.mjs` downloads destiny.gg's current icon and adds the REMIX tag from `icon-src/remix-tag.png`, keeping the committed icons if the download fails.
 
 To run it locally: `npm install`, then `npm start`, then open http://localhost:8080. `dev/` has a fake destiny.gg feed, a browser smoke test (`dev/smoke.mjs`) and a screen-size check that screenshots phone, tablet, desktop and ultrawide sizes (`dev/screens.mjs`). `CLAUDE.md` explains how the code is laid out and has the full testing checklist for Chrome, Safari, Firefox and Edge on Android, iPhone, iPad, macOS and Windows, including the installed app. Ideas for what to build next are in `IDEAS.md`.
 
