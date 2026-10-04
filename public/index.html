@@ -17,10 +17,6 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg>
     </button>
     <span class="spacer"></span>
-    <button id="embeds-btn" class="pill" type="button" title="Embeds people are watching in chat">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h2v2H4zm4 0h12v2H8zm-4 5h2v2H4zm4 0h12v2H8zm-4 5h2v2H4zm4 0h12v2H8z"/></svg>
-      Embeds
-    </button>
     <button id="sound-btn" class="icon on" type="button" title="Turn sound on">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>
     </button>
@@ -36,7 +32,10 @@
   </header>
 
   <main id="stage">
-    <section id="player" aria-label="Stream"></section>
+    <div id="watch">
+      <section id="player" aria-label="Stream"></section>
+      <nav id="tabs" aria-label="Live embeds"></nav>
+    </div>
     <section id="chat" aria-label="Chat">
       <iframe id="chat-frame" title="destiny.gg chat" src="https://www.destiny.gg/embed/chat" allow="clipboard-write"></iframe>
     </section>
@@ -64,20 +63,6 @@
       </div>
       <div class="row end"><button type="submit" value="close">Close</button></div>
     </form>
-  </dialog>
-
-  <dialog id="embeds-sheet" aria-labelledby="embeds-title">
-    <div class="sheet-head">
-      <h2 id="embeds-title">Embeds in chat</h2>
-      <button type="button" id="embeds-close" class="plain" aria-label="Close">✕</button>
-    </div>
-    <div class="chips" id="embeds-range" role="radiogroup" aria-label="Time range">
-      <button type="button" data-minutes="10" role="radio">10 min</button>
-      <button type="button" data-minutes="30" role="radio">30 min</button>
-      <button type="button" data-minutes="60" role="radio">1 hour</button>
-    </div>
-    <ul id="embeds-list" class="embed-list"></ul>
-    <p id="embeds-note" class="note"></p>
   </dialog>
 
   <div id="toast" role="status" aria-live="polite"></div>

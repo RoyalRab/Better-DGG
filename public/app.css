@@ -58,19 +58,6 @@ button, input { font: inherit; color: inherit; }
 }
 #bar .icon[aria-pressed="true"], #bar .icon.on { color: var(--text); }
 #awake-btn[aria-pressed="true"] { color: #ffd166; }
-#bar .pill {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  height: 32px;
-  margin-right: 2px;
-  padding: 0 10px 0 8px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  font-size: 13px;
-  font-weight: 600;
-}
-#bar .pill svg { width: 18px; height: 18px; }
 #bar .source {
   display: flex;
   align-items: center;
@@ -88,6 +75,12 @@ button, input { font: inherit; color: inherit; }
   min-height: 0;
   display: flex;
   flex-direction: column;
+}
+#watch {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 #player {
   flex: none;
@@ -139,11 +132,70 @@ button, input { font: inherit; color: inherit; }
 }
 #chat iframe { display: block; width: 100%; height: 100%; border: 0; }
 body.no-chat #chat { display: none; }
+body.no-chat #watch { flex: 1; min-height: 0; }
 body.no-chat #player { flex: 1; aspect-ratio: auto; max-height: none; }
+
+/* Live embed tabs, like the row under destiny.gg's bigscreen player */
+#tabs {
+  flex: none;
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+#tabs::-webkit-scrollbar { display: none; }
+#tabs:empty { display: none; }
+#tabs .tab {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 46px;
+  max-width: 220px;
+  padding: 0 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--muted);
+  font-weight: 600;
+  cursor: pointer;
+}
+#tabs .tab[aria-current="true"] { color: var(--text); border-bottom-color: var(--accent); }
+#tabs .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#tabs .viewers { font-weight: 400; font-size: 12px; font-variant-numeric: tabular-nums; }
+#tabs .viewers::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin: 0 4px 1px 0;
+  border-radius: 50%;
+  background: #ff4d4d;
+}
+.badge {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff;
+  background: #555c6b;
+}
+.badge.kick { background: #53fc18; color: #000; }
+.badge.twitch, .badge.twitch-vod, .badge.twitch-clip { background: #9146ff; }
+.badge.youtube, .badge.youtube-live { background: #ff0033; }
+.badge.rumble { background: #85c742; color: #000; }
+.badge.angelthump { background: #e6e8ee; color: #000; }
+.badge.destiny { background: var(--accent); }
 
 @media (orientation: landscape) and (min-aspect-ratio: 4/3) {
   #stage { flex-direction: row; }
-  #player { flex: 1; aspect-ratio: auto; height: 100%; max-height: none; }
+  #watch { flex: 1; height: 100%; }
+  #player { flex: 1; aspect-ratio: auto; max-height: none; }
   #chat { flex: none; width: min(360px, 40vw); border-left: 1px solid var(--line); }
   body { padding-bottom: env(safe-area-inset-bottom); }
 }
@@ -193,28 +245,6 @@ dialog button.primary { background: var(--accent); border-color: var(--accent); 
 .toggle { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; }
 .toggle input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
 .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-
-.sheet-head { display: flex; align-items: center; justify-content: space-between; }
-.sheet-head h2 { margin: 0; }
-dialog button.plain { border: 0; background: none; height: 36px; width: 36px; justify-content: center; padding: 0; color: var(--muted); }
-#embeds-range button[aria-checked="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
-.embed-list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.embed-list button {
-  width: 100%;
-  height: auto;
-  min-height: 56px;
-  padding: 8px 12px;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 2px 10px;
-  text-align: left;
-}
-.embed-list button[aria-current="true"] { border-color: var(--accent); }
-.embed-list .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.embed-list .meta { grid-column: 1; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.embed-list .count { grid-row: 1 / span 2; grid-column: 2; align-self: center; font-weight: 700; font-variant-numeric: tabular-nums; }
-.embed-list .count small { display: block; font-weight: 400; font-size: 11px; color: var(--muted); text-align: center; }
-.note { color: var(--muted); font-size: 13px; margin: 12px 0 0; }
 
 #toast {
   position: fixed;

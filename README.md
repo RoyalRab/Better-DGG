@@ -10,15 +10,15 @@ While the app is open and visible, it holds a [Screen Wake Lock](https://develop
 
 YouTube and Twitch players pause themselves when the page is hidden. Better DGG watches for that pause, and if it happens within a few seconds of the screen locking, it starts the player again. A pause you make later, for example from the lock screen controls, is left alone. Kick and Rumble players don't offer a way to be controlled from outside, so for them it depends on whether their player keeps playing in the background on its own.
 
-You pick the stream from the top-left button. You can paste a Kick, YouTube, Twitch, Rumble or Vimeo link, or a DGG chat embed such as `#kick/destiny`, `#youtube/VIDEO_ID` or `#twitch-vod/ID`. The URL hash works the same way, so adding `#kick/destiny` to the app's URL opens straight to that stream. The last few streams are kept as one-tap shortcuts. Kick VODs, Facebook and AngelThump embeds open on destiny.gg's bigscreen instead.
+Under the player is a scrolling row of tabs with the embeds that are live on destiny.gg's bigscreen right now, each with its viewer count, plus Destiny's own stream when he's live. Tap a tab to switch to it. The list comes from the same live feed destiny.gg's bigscreen uses (`wss://live.destiny.gg`), relayed by the server, and refreshes every 30 seconds.
 
-The **Embeds** button lists what people in DGG chat are embedding, like the list on destiny.gg's bigscreen. The server stays connected to destiny.gg chat as an anonymous reader and counts the `#platform/id` links posted in the last 10, 30 or 60 minutes. Each person counts once per link. Tap an entry to switch to it. YouTube entries show the video title. The list only covers time since the server last started, so it's empty for a little while after each deploy.
+You can also pick a stream from the top-left button. You can paste a Kick, YouTube, Twitch, Rumble or Vimeo link, or a DGG chat embed such as `#kick/destiny`, `#youtube/VIDEO_ID` or `#angelthump/name`. The URL hash works the same way, so adding `#kick/destiny` to the app's URL opens straight to that stream. The last few streams are kept as one-tap shortcuts. Kick VODs and Facebook embeds open on destiny.gg's bigscreen instead.
 
 Chrome only lets a player start with sound after you tap something on the page, so when the app opens it shows a play button instead of starting muted. The speaker button in the top bar turns the sound back on if a player still comes up muted.
 
 ## Putting it online
 
-It runs on Railway at https://better-dgg.up.railway.app. `server.js` is a small Node server that serves the app from `public/` and keeps the chat connection for the embed list, and the `Dockerfile` builds it. Railway redeploys whenever the connected branch gets a push.
+It runs on Railway at https://better-dgg.up.railway.app. `server.js` is a small Node server that serves the app from `public/` and relays destiny.gg's live embed list, and the `Dockerfile` builds it. Railway redeploys whenever the connected branch gets a push.
 
 To run it locally: `npm install`, then `npm start`, then open http://localhost:8080.
 
@@ -36,4 +36,4 @@ Rumble needs the embed link (`rumble.com/embed/…`) or the `#rumble/ID` form fr
 
 ## Files
 
-`public/` holds the app: `index.html`, `app.css` and `app.js`, plus `manifest.webmanifest`, `sw.js` and `icons/` for installing it. `server.js` serves those files and builds the embed list at `/api/embeds?minutes=30`.
+`public/` holds the app: `index.html`, `app.css` and `app.js`, plus `manifest.webmanifest`, `sw.js` and `icons/` for installing it. `server.js` serves those files and the live embed list at `/api/embeds`.

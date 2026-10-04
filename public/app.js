@@ -61,7 +61,7 @@ const PLATFORM_NAMES = {
   facebook: 'Facebook',
 };
 // Platforms this app can't play itself; picking one opens destiny.gg's bigscreen.
-const OPEN_ON_DGG = new Set(['kick-vod', 'facebook', 'angelthump']);
+const OPEN_ON_DGG = new Set(['kick-vod', 'facebook']);
 
 function parseSource(raw) {
   let s = (raw || '').trim();
@@ -147,7 +147,7 @@ function validate(src) {
     case 'vimeo':
       return DIGITS.test(src.id) ? out : null;
     case 'kick-vod':
-      return /^[\w-]{1,64}\/videos\/[\w-]{1,64}$/.test(src.id) ? out : null;
+      return /^[\w-]{1,64}\/(videos\/)?[\w-]{1,64}$/.test(src.id) ? out : null;
     default:
       return NAME.test(src.id) ? out : null;
   }
@@ -255,6 +255,7 @@ function watch(src, { remember = true } = {}) {
   $('#source-label').textContent = key(src);
   document.title = `${key(src)} · Better DGG`;
   history.replaceState(null, '', '#' + key(src));
+  renderTabs();
 
   if (remember) {
     store.set('last', src);
@@ -318,6 +319,7 @@ async function mountCurrent() {
       case 'kick': mounted = mountFrame(`https://player.kick.com/${id}?autoplay=true&muted=false`); break;
       case 'rumble': mounted = mountFrame(`https://rumble.com/embed/${id}/`); break;
       case 'vimeo': mounted = mountFrame(`https://player.vimeo.com/video/${id}?autoplay=1`); break;
+      case 'angelthump': mounted = mountFrame(`https://player.angelthump.com/?channel=${id}`); break;
       default: throw new Error('Unsupported platform ' + src.type);
     }
   } catch (err) {
@@ -485,114 +487,85 @@ window.addEventListener('hashchange', () => {
   if (src) watch(src);
 });
 
-// ---------- Embed list ----------
-// The server reads destiny.gg chat and counts the #platform/id embed links
-// people post, like the list on destiny.gg's bigscreen.
+// ---------- Live embed tabs ----------
+// The server relays destiny.gg's live list of embeds (the channel tabs under
+// the bigscreen player). Shown as a scrolling row of tabs under the player.
 
-let embedsMinutes = store.get('embedsMinutes', 30);
-let embedsTimer = null;
+const BADGE_LETTERS = {
+  kick: 'K', twitch: 'T', 'twitch-vod': 'T', 'twitch-clip': 'T', youtube: 'Y', 'youtube-live': 'Y',
+  rumble: 'R', angelthump: 'A', vimeo: 'V', facebook: 'F', 'kick-vod': 'K', destiny: 'D',
+};
+let tabItems = [];
+let tabsTimer = null;
 
-function timeAgo(ms) {
-  const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
-  if (s < 60) return 'just now';
-  const m = Math.round(s / 60);
-  return m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`;
+function formatViewers(n) {
+  if (n == null) return '';
+  return n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k' : String(n);
 }
 
-function embedRow(src, name, meta, count) {
-  const li = document.createElement('li');
-  const b = document.createElement('button');
-  b.type = 'button';
-  if (current && key(current) === key(src)) b.setAttribute('aria-current', 'true');
-  const n = document.createElement('span');
-  n.className = 'name';
-  n.textContent = name;
-  const m = document.createElement('span');
-  m.className = 'meta';
-  m.textContent = meta;
-  b.append(n, m);
-  if (count != null) {
-    const c = document.createElement('span');
-    c.className = 'count';
-    c.textContent = count;
-    const small = document.createElement('small');
-    small.textContent = count === 1 ? 'person' : 'people';
-    c.appendChild(small);
-    b.appendChild(c);
-  }
-  b.addEventListener('click', () => {
-    $('#embeds-sheet').close();
-    watch(src);
+function renderTabs() {
+  const nav = $('#tabs');
+  const buttons = tabItems.map((item) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tab';
+    b.title = [item.name, item.title].filter(Boolean).join(' · ');
+    if (current && key(current) === key(item.src)) b.setAttribute('aria-current', 'true');
+    const badge = document.createElement('span');
+    badge.className = 'badge ' + item.badge;
+    badge.textContent = BADGE_LETTERS[item.badge] || '?';
+    badge.setAttribute('aria-hidden', 'true');
+    const name = document.createElement('span');
+    name.className = 'name';
+    name.textContent = item.name;
+    b.append(badge, name);
+    if (item.viewers != null) {
+      const v = document.createElement('span');
+      v.className = 'viewers';
+      v.textContent = formatViewers(item.viewers);
+      v.setAttribute('aria-label', `${item.viewers} watching`);
+      b.appendChild(v);
+    }
+    b.addEventListener('click', () => watch(item.src));
+    return b;
   });
-  li.appendChild(b);
-  return li;
+  nav.replaceChildren(...buttons);
+  const selected = nav.querySelector('[aria-current="true"]');
+  if (selected) selected.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 
-async function refreshEmbeds() {
-  const list = $('#embeds-list');
-  const note = $('#embeds-note');
-  for (const b of document.querySelectorAll('#embeds-range button')) {
-    b.setAttribute('aria-checked', String(Number(b.dataset.minutes) === embedsMinutes));
-  }
+async function refreshTabs() {
   let data;
   try {
-    const res = await fetch(`api/embeds?minutes=${embedsMinutes}`, { cache: 'no-store' });
-    if (!res.ok) throw new Error(res.status);
+    const res = await fetch('api/embeds', { cache: 'no-store' });
+    if (!res.ok) return;
     data = await res.json();
   } catch {
-    note.textContent = "Couldn't load the embed list. Check your connection.";
     return;
   }
-
-  const rows = [embedRow(DEFAULT_SOURCE, 'Destiny', 'Kick · destiny', null)];
-  for (const e of data.embeds) {
-    const src = parseSource(e.key);
-    if (!src || key(src) === key(DEFAULT_SOURCE)) continue;
-    const platform = PLATFORM_NAMES[src.type] || src.type;
-    const name = e.title || src.id;
-    const meta = `${platform}${e.title ? ' · ' + src.id : ''} · ${timeAgo(e.lastPosted)}`;
-    rows.push(embedRow(src, name, meta, e.count));
+  const items = [];
+  for (const d of data.destiny || []) {
+    let src = null;
+    if (d.platform === 'kick') src = { type: 'kick', id: 'destiny' };
+    else if (d.platform === 'youtube' && d.id) src = parseSource(`youtube/${d.id}`);
+    else if (d.platform === 'rumble' && d.id) src = parseSource(`rumble/${d.id}`);
+    if (src) items.push({ src, badge: 'destiny', name: `Destiny (${PLATFORM_NAMES[d.platform] || d.platform})`, title: d.title, viewers: d.viewers });
   }
-  list.replaceChildren(...rows);
-
-  if (!data.chatConnected) {
-    note.textContent = 'Not connected to destiny.gg chat right now, so this list may be out of date.';
-  } else if (!data.embeds.length) {
-    const since = data.watchingSince && Date.now() - data.watchingSince < embedsMinutes * 60000;
-    note.textContent = since
-      ? 'No embeds posted since the list started watching chat ' + timeAgo(data.watchingSince) + '.'
-      : `Nobody has posted an embed in the last ${embedsMinutes} minutes.`;
-  } else {
-    note.textContent = 'Counts are how many different people posted each link. Updates every 20 seconds.';
+  for (const e of data.embeds || []) {
+    const src = parseSource(`${e.platform}/${e.id}`);
+    if (!src) continue;
+    items.push({ src, badge: src.type, name: e.name || src.id, title: e.title, viewers: e.live ? e.viewers : null });
   }
+  tabItems = items;
+  renderTabs();
 }
 
-function openEmbeds() {
-  $('#embeds-list').replaceChildren();
-  $('#embeds-note').textContent = 'Loading…';
-  $('#embeds-sheet').showModal();
-  refreshEmbeds();
-  clearInterval(embedsTimer);
-  embedsTimer = setInterval(refreshEmbeds, 20000);
+function startTabs() {
+  clearInterval(tabsTimer);
+  refreshTabs();
+  tabsTimer = setInterval(() => { if (!document.hidden) refreshTabs(); }, 30000);
 }
-
-$('#embeds-btn').addEventListener('click', openEmbeds);
-$('#embeds-close').addEventListener('click', () => $('#embeds-sheet').close());
-$('#embeds-sheet').addEventListener('close', () => clearInterval(embedsTimer));
-// Tapping the dimmed area outside the sheet closes it.
-$('#embeds-sheet').addEventListener('click', (e) => {
-  if (e.target !== e.currentTarget) return;
-  const r = e.currentTarget.getBoundingClientRect();
-  const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
-  if (!inside) e.currentTarget.close();
-});
-for (const b of document.querySelectorAll('#embeds-range button')) {
-  b.addEventListener('click', () => {
-    embedsMinutes = Number(b.dataset.minutes);
-    store.set('embedsMinutes', embedsMinutes);
-    refreshEmbeds();
-  });
-}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshTabs(); });
 
 // ---------- Install ----------
 
@@ -618,5 +591,6 @@ if ('serviceWorker' in navigator) {
 
 renderChat();
 renderAwake();
+startTabs();
 const last = store.get('last', null);
 watch(parseSource(location.hash) || (last && last.type && validate(last)) || DEFAULT_SOURCE);

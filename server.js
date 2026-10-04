@@ -1,8 +1,7 @@
 'use strict';
 
-// Serves the app from ./public and keeps a live list of the embeds people
-// are posting in destiny.gg chat (the #kick/name style links), which the app
-// shows as its embed list.
+// Serves the app from ./public and relays destiny.gg's live list of embeds
+// (the channel tabs under the bigscreen player) to the app.
 
 const http = require('http');
 const fs = require('fs');
@@ -11,9 +10,8 @@ const crypto = require('crypto');
 const WebSocket = require('ws');
 
 const PORT = Number(process.env.PORT) || 8080;
-const CHAT_URL = process.env.CHAT_URL || 'wss://chat.destiny.gg/ws';
+const LIVE_URL = process.env.LIVE_URL || 'wss://live.destiny.gg';
 const PUBLIC_DIR = path.join(__dirname, 'public');
-const KEEP_MS = 2 * 60 * 60 * 1000;
 
 // ---------- Static files ----------
 
@@ -58,76 +56,23 @@ function send(res, status, type, body) {
   res.end(body);
 }
 
-// ---------- Chat embed collector ----------
+// ---------- destiny.gg live feed ----------
+// destiny.gg's bigscreen gets its list of embeds from this websocket. Each
+// message is JSON like { type: 'dggApi:embeds', data: [...] }. We keep the
+// latest of the types we use and hand them to the app over plain HTTP.
 
-// Same pattern destiny.gg chat uses to turn #platform/id into bigscreen links.
-const EMBED_RE =
-  /(?:^|\s)#(kick|kick-vod|twitch|twitch-vod|twitch-clip|youtube|youtube-live|facebook|rumble|vimeo|angelthump)\/([\w\d]{3,64}\/videos\/\d{10,20}|[\w-]{3,64}\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}|[\w-]{3,64}|\w{7}\/\?pub=\w{5})(?:\?t=(\d+)s?)?\b/g;
-const CASE_INSENSITIVE = new Set(['kick', 'twitch', 'angelthump']);
-
-const posts = []; // { at, key, platform, id, nick }
-const chat = { connected: false, since: 0, lastMessageAt: 0 };
-
-function normalize(platform, id) {
-  if (platform === 'rumble') id = id.replace(/\/\?pub=\w+$/, '');
-  if (CASE_INSENSITIVE.has(platform)) id = id.toLowerCase();
-  return id;
-}
-
-function recordMessage(msg) {
-  if (!msg || typeof msg.data !== 'string') return;
-  const at = Date.now();
-  const seen = new Set();
-  for (const m of msg.data.matchAll(EMBED_RE)) {
-    const platform = m[1];
-    const id = normalize(platform, m[2]);
-    const key = `${platform}/${id}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    posts.push({ at, key, platform, id, nick: String(msg.nick || '') });
-  }
-}
-
-function prune() {
-  const cutoff = Date.now() - KEEP_MS;
-  let i = 0;
-  while (i < posts.length && posts[i].at < cutoff) i++;
-  if (i) posts.splice(0, i);
-}
-setInterval(prune, 60 * 1000).unref();
-
-function topEmbeds(minutes, limit) {
-  const cutoff = Date.now() - minutes * 60 * 1000;
-  const byKey = new Map();
-  for (const p of posts) {
-    if (p.at < cutoff) continue;
-    let e = byKey.get(p.key);
-    if (!e) {
-      e = { key: p.key, platform: p.platform, id: p.id, users: new Set(), posts: 0, lastPosted: 0 };
-      byKey.set(p.key, e);
-    }
-    e.users.add(p.nick.toLowerCase());
-    e.posts++;
-    e.lastPosted = Math.max(e.lastPosted, p.at);
-  }
-  return [...byKey.values()]
-    .map((e) => ({
-      key: e.key,
-      platform: e.platform,
-      id: e.id,
-      count: e.users.size,
-      posts: e.posts,
-      lastPosted: e.lastPosted,
-      title: titles.get(e.key) || null,
-    }))
-    .sort((a, b) => b.count - a.count || b.lastPosted - a.lastPosted)
-    .slice(0, limit);
-}
+const live = {
+  connected: false,
+  embeds: null, // dggApi:embeds data, as sent
+  embedsAt: 0,
+  streamInfo: null, // dggApi:streamInfo data, as sent
+};
 
 let retryMs = 1000;
-function connectChat() {
-  // No Origin header: the chat server only checks it when one is sent.
-  const ws = new WebSocket(CHAT_URL, { headers: { 'User-Agent': 'better-dgg (embed list)' } });
+function connectLive() {
+  // The browser version sends no special headers, and the server accepts a
+  // connection without an Origin header.
+  const ws = new WebSocket(LIVE_URL, { headers: { 'User-Agent': 'better-dgg' } });
   let alive = true;
   const heartbeat = setInterval(() => {
     if (!alive) return ws.terminate();
@@ -136,50 +81,67 @@ function connectChat() {
   }, 30 * 1000);
 
   ws.on('open', () => {
-    chat.connected = true;
-    chat.since = Date.now();
+    live.connected = true;
     retryMs = 1000;
-    console.log('chat: connected');
+    console.log('live: connected');
   });
   ws.on('pong', () => { alive = true; });
   ws.on('message', (raw) => {
     alive = true;
-    chat.lastMessageAt = Date.now();
-    const text = raw.toString();
-    const space = text.indexOf(' ');
-    if (space < 0 || text.slice(0, space) !== 'MSG') return;
-    try { recordMessage(JSON.parse(text.slice(space + 1))); } catch {}
+    let msg;
+    try { msg = JSON.parse(raw.toString()); } catch { return; }
+    if (msg.type === 'dggApi:embeds' && Array.isArray(msg.data)) {
+      live.embeds = msg.data;
+      live.embedsAt = Date.now();
+    } else if (msg.type === 'dggApi:streamInfo') {
+      live.streamInfo = msg.data;
+    }
   });
-  ws.on('unexpected-response', (_req, res) => {
-    console.log('chat: refused with HTTP', res.statusCode);
-  });
-  ws.on('error', (err) => console.log('chat: error', err.message));
+  ws.on('unexpected-response', (_req, res) => console.log('live: refused with HTTP', res.statusCode));
+  ws.on('error', (err) => console.log('live: error', err.message));
   ws.on('close', () => {
     clearInterval(heartbeat);
-    chat.connected = false;
-    console.log(`chat: closed, retrying in ${retryMs / 1000}s`);
-    setTimeout(connectChat, retryMs);
+    live.connected = false;
+    console.log(`live: closed, retrying in ${retryMs / 1000}s`);
+    setTimeout(connectLive, retryMs);
     retryMs = Math.min(retryMs * 2, 60 * 1000);
   });
 }
 
-// ---------- Titles (YouTube only; it has a public oEmbed endpoint) ----------
+const str = (v, max = 200) => (typeof v === 'string' ? v.slice(0, max) : null);
+const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
-const titles = new Map();
-const titleLookups = new Set();
+function embedList() {
+  return (live.embeds || []).map((e) => {
+    const id = e?.mediaItem?.identifier || {};
+    const meta = e?.mediaItem?.metadata || {};
+    return {
+      platform: str(id.platform || e.platform, 40),
+      id: str(id.mediaId || e.id, 120),
+      count: num(e.count),
+      name: str(meta.displayName, 80),
+      title: str(meta.title),
+      live: meta.live === true,
+      viewers: num(meta.viewers),
+      preview: str(meta.previewUrl, 500),
+    };
+  }).filter((e) => e.platform && e.id);
+}
 
-function lookupTitles(list) {
-  for (const e of list) {
-    if (e.platform !== 'youtube' || titles.has(e.key) || titleLookups.has(e.key)) continue;
-    titleLookups.add(e.key);
-    const url = 'https://www.youtube.com/oembed?format=json&url=' +
-      encodeURIComponent('https://www.youtube.com/watch?v=' + e.id);
-    fetch(url, { signal: AbortSignal.timeout(5000) })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => { if (j && j.title) titles.set(e.key, String(j.title).slice(0, 200)); })
-      .catch(() => {})
-      .finally(() => titleLookups.delete(e.key));
+// Destiny's own streams, from dggApi:streamInfo: { streams: { kick, youtube, ... } }.
+function destinyStreams() {
+  const streams = live.streamInfo?.streams || {};
+  const out = [];
+  for (const [platform, s] of Object.entries(streams)) {
+    if (!s || s.live !== true) continue;
+    out.push({
+      platform,
+      id: str(s.id, 120),
+      title: str(s.status_text),
+      viewers: num(s.viewers),
+    });
   }
+  return out;
 }
 
 // ---------- HTTP ----------
@@ -190,15 +152,12 @@ const server = http.createServer((req, res) => {
     return send(res, 405, 'text/plain; charset=utf-8', 'Method not allowed');
   }
   if (url.pathname === '/api/embeds') {
-    const minutes = Math.min(Math.max(Number(url.searchParams.get('minutes')) || 30, 1), 120);
-    const list = topEmbeds(minutes, 20);
-    lookupTitles(list);
     res.setHeader('Cache-Control', 'no-store');
     return send(res, 200, 'application/json', JSON.stringify({
-      minutes,
-      chatConnected: chat.connected,
-      watchingSince: chat.since || null,
-      embeds: list,
+      connected: live.connected,
+      updated: live.embedsAt || null,
+      destiny: destinyStreams(),
+      embeds: embedList(),
     }));
   }
   if (url.pathname === '/healthz') return send(res, 200, 'text/plain', 'ok');
@@ -206,6 +165,4 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => console.log(`listening on ${PORT}`));
-if (process.env.NO_CHAT !== '1') connectChat();
-
-module.exports = { recordMessage, topEmbeds, posts };
+if (process.env.NO_LIVE !== '1') connectLive();
