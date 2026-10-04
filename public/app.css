@@ -36,7 +36,9 @@ body {
   flex-direction: column;
   height: 100dvh;
   overflow: hidden;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  /* Keep clear of the notch and of Android's navigation buttons: the
+     installed app draws behind them (viewport-fit=cover). */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 button,
@@ -536,9 +538,6 @@ body.no-chat #player[data-count='2'] {
     left: 3px;
     width: 3px;
     background: var(--accent);
-  }
-  body {
-    padding-bottom: env(safe-area-inset-bottom);
   }
 }
 

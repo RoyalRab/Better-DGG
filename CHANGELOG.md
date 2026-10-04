@@ -2,6 +2,11 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's ⋮ menu, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.3.1 (2026-10-04)
+
+- The chat box is no longer hidden behind Android's navigation buttons in the installed app.
+- Kick streams in the app's own player no longer drift further and further behind live: after a stall they play slightly faster until caught up, and jump to live if they fall far behind.
+
 ## 1.3.0 (2026-10-04)
 
 - Streams start loading the moment you touch a tab, before you lift your finger.

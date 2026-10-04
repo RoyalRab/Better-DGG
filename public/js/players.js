@@ -209,8 +209,12 @@ export const HLS_JS = document.querySelector('meta[name="hls-js"]')?.content || 
 // Start a bit below full quality so the picture appears sooner on mobile
 // data, never fetch more pixels than the player shows, and keep little
 // already-played video around.
+// Stay near live: every stall adds delay, so when it has fallen behind it
+// plays up to 15% faster (hard to notice) until it's back, and jumps
+// straight to live when it's more than six segments behind.
+const LIVE_CATCH_UP = { liveSyncDurationCount: 3, liveMaxLatencyDurationCount: 6, maxLiveSyncPlaybackRate: 1.15 };
 const HLS_CONFIG = {
-  liveSyncDurationCount: 3,
+  ...LIVE_CATCH_UP,
   capLevelToPlayerSize: true,
   abrEwmaDefaultEstimate: 1_500_000,
   backBufferLength: 30,
@@ -396,7 +400,7 @@ export async function mountOwn(tile, muted) {
   function startAudioCopy(retriesLeft) {
     const audio = document.createElement('audio');
     audio.preload = 'auto';
-    const h2 = makeAudioOnlyHls({ liveSyncDurationCount: 3, backBufferLength: 30 });
+    const h2 = makeAudioOnlyHls({ ...LIVE_CATCH_UP, backBufferLength: 30 });
     h2.on(window.Hls.Events.ERROR, (_e, data) => {
       if (!data.fatal || !bg || bg.hls !== h2) return;
       // Rebuild it once before giving up, so a network blip doesn't end the sound.

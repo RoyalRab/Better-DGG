@@ -39,7 +39,7 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 | Kick in the app's own player | Kick streams play in the app's own player ([hls.js](https://github.com/video-dev/hls.js)), which is what makes lock-screen audio, picture-in-picture and Chromecast possible. It falls back to Kick's player if it can't start. |
 | Desktop extras | Mouse wheel scrolls the tab row, right-click a tab to add it to multi-view, and picture-in-picture works for any stream in Chrome and Edge. |
 | Smooth switching | The stream you're leaving stays on screen until the new one starts, with a loading spinner instead of a black box. |
-| LIVE indicator | Kick streams in the app's own player show LIVE, or how many seconds behind they are with a **Jump to live** button. |
+| Stays live | Kick streams in the app's own player catch back up after buffering (slightly faster playback, or a jump if far behind), and show LIVE, or how many seconds behind they are with a **Jump to live** button. |
 | Resizable chat | In landscape and on desktop, drag the line between the stream and chat (or use the arrow keys on it) to change chat's width. Double-click resets it. |
 | What's new | The menu lists what changed in each version, and a bar mentions it once after an update. |
 | Accessible | Visible keyboard focus, a label on every button, stream changes announced to screen readers, and less motion when the system asks for it. |
