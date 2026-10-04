@@ -1,5 +1,5 @@
 // Network first so updates show up right away; the cache only covers going offline.
-const CACHE = 'bdgg-v3';
+const CACHE = 'bdgg-v4';
 const SHELL = [
   './',
   './index.html',
@@ -9,6 +9,7 @@ const SHELL = [
   './icons/icon.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',
+  './icons/apple-touch-icon.png',
 ];
 
 self.addEventListener('install', (e) => {

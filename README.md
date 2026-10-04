@@ -1,39 +1,41 @@
-# Better DGG
+# Better DGG Pro
 
-An installable web app that shows a stream with destiny.gg chat underneath it (or beside it in landscape). It keeps the phone screen on while it's open, and it tries to keep the stream's audio playing after the phone locks.
+An unofficial, fan-made web app for watching destiny.gg's live embeds with chat. It works on Android, iPhone, iPad and other tablets, desktop browsers and ultrawide screens, and it can be installed to the home screen. It isn't affiliated with destiny.gg.
+
+Live at https://better-dgg.up.railway.app
 
 ## What it does
 
-The stream player sits on top and `destiny.gg/embed/chat` fills the rest of the screen. Turn the phone sideways and chat moves to the right. The chat bubble button hides chat so the player gets the whole screen.
+The stream sits on top with `destiny.gg/embed/chat` below it. On landscape phones, tablets, desktops and ultrawides, chat moves to the right. The chat button in the top bar hides chat so the stream gets the whole screen.
 
-While the app is open and visible, it holds a [Screen Wake Lock](https://developer.mozilla.org/docs/Web/API/Screen_Wake_Lock_API), so the screen doesn't dim or sleep. The sun icon in the top bar turns yellow while the lock is held. Tap it to turn it off.
+Under the player is a row of tabs with every live stream DGG viewers are embedding on the bigscreen right now, from Kick, Twitch, YouTube, AngelThump and Rumble, plus Destiny's own stream when he's live. VODs, clips and ordinary videos are left out. The list comes from the same live feed destiny.gg's bigscreen uses (`wss://live.destiny.gg`). The server holds one connection to that feed and pushes every change to open apps right away, so the tabs update as soon as someone embeds something. Tap a tab to switch to it.
 
-YouTube and Twitch players pause themselves when the page is hidden. Better DGG watches for that pause, and if it happens within a few seconds of the screen locking, it starts the player again. A pause you make later, for example from the lock screen controls, is left alone. Kick and Rumble players don't offer a way to be controlled from outside, so for them it depends on whether their player keeps playing in the background on its own.
+**Multi-view.** The grid button turns on multi-view. Tap tabs to add up to four streams; tap one again to take it out. Each stream gets a small label with a speaker button that moves the sound to that stream, and an ✕ to remove it. On wide screens the app picks the grid that gives each stream the most room. The address bar lists the streams on screen (for example `#kick/destiny,twitch/name`), so a multi-view setup can be shared as a link.
 
-Under the player is a scrolling row of tabs with the embeds that are live on destiny.gg's bigscreen right now, each with its viewer count, plus Destiny's own stream when he's live. Tap a tab to switch to it. The list comes from the same live feed destiny.gg's bigscreen uses (`wss://live.destiny.gg`), relayed by the server, and refreshes every 30 seconds.
+**Screen stays on.** While the app is open it holds a [Screen Wake Lock](https://developer.mozilla.org/docs/Web/API/Screen_Wake_Lock_API). The sun icon turns yellow while the lock is held; tap it to turn it off.
 
-You can also pick a stream from the top-left button. You can paste a Kick, YouTube, Twitch, Rumble or Vimeo link, or a DGG chat embed such as `#kick/destiny`, `#youtube/VIDEO_ID` or `#angelthump/name`. The URL hash works the same way, so adding `#kick/destiny` to the app's URL opens straight to that stream. The last few streams are kept as one-tap shortcuts. Kick VODs and Facebook embeds open on destiny.gg's bigscreen instead.
+**Keeps playing when the phone locks.** YouTube and Twitch players pause themselves when the page is hidden. If that happens within a few seconds of the screen locking, the app starts them again. A pause made later, for example from the lock screen controls, is left alone. Kick, AngelThump and Rumble players can't be controlled from outside, so for them it depends on their player.
 
-Chrome only lets a player start with sound after you tap something on the page, so when the app opens it shows a play button instead of starting muted. The speaker button in the top bar turns the sound back on if a player still comes up muted.
+**Sound.** Browsers only let a player start with sound after a tap, so when the app opens it shows a play button instead of starting muted. If a stream still comes up muted, the speaker button in the top bar turns its sound on.
 
-## Putting it online
+**Cast to TV.** Streams come from other sites' players, and only those players can send video to a Chromecast, so the app can't cast by itself. The ⋮ menu has a Cast to TV page with the options for the device you're on: screen casting (Smart View, Screen cast or AirPlay mirroring) on phones and tablets, Chrome's Cast tab on desktop, or the cast icon inside YouTube and Twitch players.
 
-It runs on Railway at https://better-dgg.up.railway.app. `server.js` is a small Node server that serves the app from `public/` and relays destiny.gg's live embed list, and the `Dockerfile` builds it. Railway redeploys whenever the connected branch gets a push.
+## Installing
 
-To run it locally: `npm install`, then `npm start`, then open http://localhost:8080.
+Android (Chrome): open the site, tap ⋮, then **Add to home screen → Install**. iPhone and iPad (Safari): tap Share, then **Add to Home Screen**. Desktop Chrome and Edge show an install icon in the address bar.
 
-## Installing on Android (Chrome)
-
-Open the app's URL in Chrome, tap the ⋮ menu, then **Add to home screen → Install**. It gets its own icon and opens full screen without the browser bar. Chrome also lets installed apps autoplay with sound, which saves a tap when it opens.
-
-For audio with the screen locked, Android has to be allowed to keep Chrome running. On Samsung phones, go to **Settings → Battery → Background usage limits** and make sure Chrome isn't in "Sleeping apps" or "Deep sleeping apps". Setting Chrome's battery usage to **Unrestricted** (long-press Chrome → App info → Battery) also helps.
+For audio with the screen locked on Android, Chrome has to be allowed to run in the background. On Samsung phones, check **Settings → Battery → Background usage limits** and make sure Chrome isn't a sleeping app.
 
 ## Known limits
 
-Chat logins depend on how destiny.gg sets its login cookie. If chat shows you as logged out inside the app, use **Log in to destiny.gg** in the menu, then **Reload chat**. If it still shows you logged out, destiny.gg isn't sending its login cookie to embedded chat, and chat inside this app will be read-only.
+Chat logins depend on destiny.gg's login cookie. If chat shows you logged out, use **Log in to destiny.gg** in the menu, then **Reload chat**. If you're still logged out, chat inside the app will be read-only.
 
-Rumble needs the embed link (`rumble.com/embed/…`) or the `#rumble/ID` form from DGG chat. A normal Rumble video page link uses a different ID and won't work.
+## Privacy
 
-## Files
+The app has no accounts, analytics or tracking. Settings stay in your own browser. The server relays destiny.gg's public embed list and serves the app's files; it doesn't log who visits.
 
-`public/` holds the app: `index.html`, `app.css` and `app.js`, plus `manifest.webmanifest`, `sw.js` and `icons/` for installing it. `server.js` serves those files and the live embed list at `/api/embeds`.
+## Running it
+
+`server.js` is a small Node server that serves the app from `public/` and relays the live embed list at `/api/embeds` (a snapshot) and `/api/live` (server-sent events). The `Dockerfile` builds it, and Railway redeploys on every push to the connected branch.
+
+To run it locally: `npm install`, then `npm start`, then open http://localhost:8080.

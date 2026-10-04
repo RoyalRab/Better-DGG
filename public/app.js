@@ -156,12 +156,16 @@ function validate(src) {
 const key = (src) => `${src.type}/${src.id}`;
 
 // ---------- Players ----------
-// YouTube and Twitch are loaded through their JS APIs so we can see when they
-// pause and start them again. Kick and Rumble are plain iframes.
+// The stage shows one stream, or up to four in multi-view. Each one is a
+// "tile". YouTube and Twitch are loaded through their JS APIs so we can mute
+// them and see when they pause; the rest are plain iframes.
 
-let player = null; // { play(), destroy() }
-let current = null;
-let mountToken = 0;
+const MAX_TILES = 4;
+const SPEAKER_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>';
+let tiles = []; // { src, el, body, player, token, wantPlaying }
+let current = null; // the stream with sound (the only one in single view)
+let multi = store.get('multi', false);
+let started = false; // false until the first tap, so streams can start with sound
 
 const scripts = {};
 function loadScript(src) {
@@ -186,35 +190,71 @@ function loadYouTubeApi() {
   return ytReady;
 }
 
-function mountFrame(src) {
+function frameUrl(src, muted) {
+  const id = encodeURIComponent(src.id);
+  const parent = encodeURIComponent(location.hostname);
+  switch (src.type) {
+    case 'twitch-clip': return `https://clips.twitch.tv/embed?clip=${id}&parent=${parent}&autoplay=true&muted=${muted}`;
+    case 'youtube-live': return `https://www.youtube.com/embed/live_stream?channel=${id}&autoplay=1&playsinline=1&mute=${muted ? 1 : 0}`;
+    case 'kick': return `https://player.kick.com/${id}?autoplay=true&muted=${muted}`;
+    case 'rumble': return `https://rumble.com/embed/${id}/`;
+    case 'vimeo': return `https://player.vimeo.com/video/${id}?autoplay=1&muted=${muted ? 1 : 0}`;
+    case 'angelthump': return `https://player.angelthump.com/?channel=${id}`;
+    default: return null;
+  }
+}
+// Plain iframes whose URL can ask for muted playback; the others can't be muted from outside.
+const FRAME_CAN_MUTE = new Set(['twitch-clip', 'youtube-live', 'kick', 'vimeo']);
+
+function mountFrame(tile, muted) {
   const f = document.createElement('iframe');
-  f.src = src;
+  f.src = frameUrl(tile.src, muted);
   f.allow = 'autoplay; fullscreen; picture-in-picture; encrypted-media';
   f.allowFullscreen = true;
   f.referrerPolicy = 'strict-origin-when-cross-origin';
-  $('#player').appendChild(f);
-  // No API to unmute a plain iframe; reloading it after a tap starts it with sound.
-  return { play() {}, unmute() { remountCurrent(); }, destroy() { f.remove(); } };
+  tile.body.appendChild(f);
+  return {
+    muted,
+    play() {},
+    // A plain iframe can only change sound by reloading with a different URL.
+    setMuted(m) {
+      if (m === this.muted || (m && !FRAME_CAN_MUTE.has(tile.src.type))) return;
+      this.muted = m;
+      f.src = frameUrl(tile.src, m);
+    },
+    // Players that start muted because of autoplay rules need a reload after a tap.
+    unmute() {
+      this.muted = false;
+      f.src = frameUrl(tile.src, false);
+    },
+    destroy() { f.remove(); },
+  };
 }
 
-async function mountYouTube(id, start) {
+async function mountYouTube(tile, muted) {
   await loadYouTubeApi();
   const holder = document.createElement('div');
-  holder.id = 'yt-' + Date.now();
-  $('#player').appendChild(holder);
+  holder.id = 'yt-' + Math.random().toString(36).slice(2);
+  tile.body.appendChild(holder);
   const yt = new YT.Player(holder, {
-    videoId: id,
-    playerVars: { autoplay: 1, playsinline: 1, rel: 0, ...(start ? { start } : {}) },
+    videoId: tile.src.id,
+    playerVars: { autoplay: 1, playsinline: 1, rel: 0, mute: muted ? 1 : 0, ...(tile.src.t ? { start: tile.src.t } : {}) },
     events: {
       onStateChange(e) {
-        if (e.data === YT.PlayerState.PLAYING) onPlaying();
-        else if (e.data === YT.PlayerState.PAUSED) onPaused();
+        if (e.data === YT.PlayerState.PLAYING) onPlaying(tile);
+        else if (e.data === YT.PlayerState.PAUSED) onPaused(tile);
       },
     },
   });
   return {
     play() { try { yt.playVideo(); } catch {} },
-    unmute() { try { yt.unMute(); yt.setVolume(100); yt.playVideo(); } catch {} },
+    setMuted(m) {
+      try {
+        if (m) yt.mute();
+        else { yt.unMute(); yt.setVolume(100); yt.playVideo(); }
+      } catch {}
+    },
+    unmute() { this.setMuted(false); },
     destroy() {
       try { yt.destroy(); } catch {}
       const el = document.getElementById(holder.id);
@@ -223,51 +263,141 @@ async function mountYouTube(id, start) {
   };
 }
 
-async function mountTwitch(what) {
+async function mountTwitch(tile, muted) {
   await loadScript('https://player.twitch.tv/js/embed/v1.js');
   const holder = document.createElement('div');
-  holder.id = 'twitch-' + Date.now();
-  $('#player').appendChild(holder);
+  holder.id = 'tw-' + Math.random().toString(36).slice(2);
+  tile.body.appendChild(holder);
+  const what = tile.src.type === 'twitch-vod'
+    ? { video: tile.src.id, ...(tile.src.t ? { time: `${tile.src.t}s` } : {}) }
+    : { channel: tile.src.id };
   const tw = new Twitch.Player(holder.id, {
     ...what,
     width: '100%',
     height: '100%',
     autoplay: true,
-    muted: false,
+    muted,
     parent: [location.hostname],
   });
-  tw.addEventListener(Twitch.Player.PLAYING, onPlaying);
-  tw.addEventListener(Twitch.Player.PAUSE, onPaused);
+  tw.addEventListener(Twitch.Player.PLAYING, () => onPlaying(tile));
+  tw.addEventListener(Twitch.Player.PAUSE, () => onPaused(tile));
   return {
     play() { try { tw.play(); } catch {} },
-    unmute() { try { tw.setMuted(false); tw.setVolume(1); tw.play(); } catch {} },
+    setMuted(m) {
+      try {
+        tw.setMuted(m);
+        if (!m) { tw.setVolume(1); tw.play(); }
+      } catch {}
+    },
+    unmute() { this.setMuted(false); },
     destroy() { holder.remove(); },
   };
 }
 
-function watch(src, { remember = true } = {}) {
-  if (OPEN_ON_DGG.has(src.type)) {
-    window.open('https://www.destiny.gg/bigscreen#' + key(src), '_blank', 'noopener');
+async function mountTile(tile) {
+  const token = (tile.token = (tile.token || 0) + 1);
+  if (tile.player) tile.player.destroy();
+  tile.player = null;
+  tile.wantPlaying = false;
+  tile.body.replaceChildren();
+  const muted = !current || key(current) !== key(tile.src);
+  let mounted;
+  try {
+    if (tile.src.type === 'youtube') mounted = await mountYouTube(tile, muted);
+    else if (tile.src.type === 'twitch' || tile.src.type === 'twitch-vod') mounted = await mountTwitch(tile, muted);
+    else if (frameUrl(tile.src, muted)) mounted = mountFrame(tile, muted);
+    else throw new Error('Unsupported platform ' + tile.src.type);
+  } catch {
+    if (token !== tile.token) return;
+    const msg = document.createElement('div');
+    msg.className = 'empty';
+    msg.textContent = 'Could not load the player. Check your connection and try again.';
+    tile.body.replaceChildren(msg);
     return;
   }
-  if (current && key(current) === key(src) && player) return;
-  current = src;
-  $('#source-label').textContent = key(src);
-  document.title = `${key(src)} · Better DGG`;
-  history.replaceState(null, '', '#' + key(src));
-  renderTabs();
+  // The tile was removed or reloaded while this player was loading.
+  if (token !== tile.token || !tiles.includes(tile)) { mounted.destroy(); return; }
+  tile.player = mounted;
+}
 
-  if (remember) {
-    store.set('last', src);
-    const recent = store.get('recent', []).filter((r) => key(r) !== key(src));
-    recent.unshift(src);
-    store.set('recent', recent.slice(0, 6));
+function makeTile(src) {
+  const el = document.createElement('div');
+  el.className = 'tile';
+  const body = document.createElement('div');
+  body.className = 'tile-body';
+  const bar = document.createElement('div');
+  bar.className = 'tile-bar';
+  const name = document.createElement('span');
+  name.className = 'tile-name';
+  const sound = document.createElement('button');
+  sound.type = 'button';
+  sound.className = 'tile-sound';
+  sound.innerHTML = SPEAKER_SVG;
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'tile-close';
+  close.setAttribute('aria-label', 'Remove from multi-view');
+  close.textContent = '✕';
+  bar.append(sound, name, close);
+  el.append(body, bar);
+  const tile = { src, el, body, player: null, token: 0, wantPlaying: false };
+  sound.addEventListener('click', () => setAudio(tile.src));
+  close.addEventListener('click', () => removeTile(tile.src));
+  return tile;
+}
+
+function streamName(src) {
+  const item = tabItems.find((t) => key(t.src) === key(src));
+  return item ? item.name : src.id;
+}
+
+// Rebuild the stage from `want` (a list of sources), keeping players that stay.
+function setTiles(want) {
+  const keep = new Map(tiles.map((t) => [key(t.src), t]));
+  const next = want.map((src) => keep.get(key(src)) || makeTile(src));
+  for (const t of tiles) {
+    if (!next.includes(t)) {
+      t.token++;
+      if (t.player) t.player.destroy();
+      t.el.remove();
+    }
   }
+  tiles = next;
+  if (!current || !tiles.some((t) => key(t.src) === key(current))) current = tiles[0] ? tiles[0].src : null;
 
-  // Chrome only lets a player start with sound after the user has tapped
-  // something on the page. Until then, wait for a tap instead of starting muted.
-  if (hasTapped()) mountCurrent();
-  else showTapToPlay();
+  const stage = $('#player');
+  stage.querySelector('.tap-to-play')?.remove();
+  stage.dataset.count = String(tiles.length);
+  tiles.forEach((t, i) => {
+    if (stage.children[i] !== t.el) stage.insertBefore(t.el, stage.children[i] || null);
+  });
+  layoutTiles();
+
+  if (!started && !hasTapped()) showTapToPlay();
+  else {
+    started = true;
+    for (const t of tiles) if (!t.player && !t.token) mountTile(t);
+  }
+  renderStage();
+}
+
+function renderStage() {
+  for (const t of tiles) {
+    const hasSound = current && key(t.src) === key(current);
+    t.el.querySelector('.tile-name').textContent = streamName(t.src);
+    const sound = t.el.querySelector('.tile-sound');
+    sound.setAttribute('aria-pressed', String(!!hasSound));
+    sound.setAttribute('aria-label', hasSound ? 'This stream has the sound' : 'Play sound from this stream');
+    t.el.classList.toggle('has-sound', !!hasSound);
+  }
+  document.body.classList.toggle('multi', multi);
+  $('#multi-btn').setAttribute('aria-pressed', String(multi));
+  const label = tiles.length > 1 ? `${tiles.length} streams` : current ? streamName(current) : 'Better DGG Pro';
+  $('#source-label').textContent = label;
+  document.title = current ? `${tiles.length > 1 ? label : streamName(current)} · Better DGG Pro` : 'Better DGG Pro';
+  const hash = tiles.map((t) => key(t.src)).join(',');
+  history.replaceState(null, '', hash ? '#' + hash : location.pathname);
+  renderTabs();
   updateWakeLock();
 }
 
@@ -275,64 +405,93 @@ function hasTapped() {
   return !!(navigator.userActivation && navigator.userActivation.hasBeenActive);
 }
 
-function clearPlayer() {
-  if (player) player.destroy();
-  player = null;
-  wantPlaying = false;
-  $('#player').replaceChildren();
-}
-
 function showTapToPlay() {
-  clearPlayer();
-  mountToken++;
+  const stage = $('#player');
+  stage.querySelector('.tap-to-play')?.remove();
   const b = document.createElement('button');
   b.type = 'button';
   b.className = 'tap-to-play';
   b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span></span>';
-  b.querySelector('span').textContent = 'Tap to play ' + key(current);
-  b.addEventListener('click', mountCurrent);
-  $('#player').replaceChildren(b);
+  b.querySelector('span').textContent = tiles.length > 1 ? `Tap to play ${tiles.length} streams` : `Tap to play ${streamName(current)}`;
+  b.addEventListener('click', () => {
+    started = true;
+    b.remove();
+    for (const t of tiles) if (!t.player) mountTile(t);
+  });
+  stage.appendChild(b);
 }
 
-function remountCurrent() {
-  if (!current) return;
-  clearPlayer();
-  mountCurrent();
+// Pick the grid that gives each 16:9 stream the most room. Portrait phones
+// use fixed stacks from the stylesheet instead, since their height follows width.
+function layoutTiles() {
+  const stage = $('#player');
+  const n = tiles.length;
+  stage.style.removeProperty('--cols');
+  if (n < 2 || !isRowLayout()) return;
+  const w = stage.clientWidth;
+  const h = stage.clientHeight;
+  let best = 1;
+  let bestArea = 0;
+  for (let cols = 1; cols <= n; cols++) {
+    const rows = Math.ceil(n / cols);
+    const tw = w / cols;
+    const th = h / rows;
+    const vw = Math.min(tw, (th * 16) / 9);
+    if (vw * (vw * 9) / 16 > bestArea + 1) { bestArea = vw * (vw * 9) / 16; best = cols; }
+  }
+  stage.style.setProperty('--cols', String(best));
+}
+const rowLayoutQuery = window.matchMedia('(orientation: landscape) and (min-aspect-ratio: 4/3), (min-width: 1000px) and (min-aspect-ratio: 1/1)');
+const isRowLayout = () => rowLayoutQuery.matches;
+if ('ResizeObserver' in window) new ResizeObserver(() => layoutTiles()).observe($('#player'));
+
+function setAudio(src) {
+  current = src;
+  for (const t of tiles) {
+    if (t.player) t.player.setMuted(key(t.src) !== key(src));
+  }
+  store.set('last', src);
+  renderStage();
 }
 
-async function mountCurrent() {
-  const src = current;
-  if (!src) return;
-  clearPlayer();
-  const token = ++mountToken;
+function removeTile(src) {
+  const rest = tiles.filter((t) => key(t.src) !== key(src)).map((t) => t.src);
+  if (current && key(current) === key(src) && rest.length) setAudio(rest[0]);
+  setTiles(rest);
+}
 
-  let mounted;
-  try {
-    const id = encodeURIComponent(src.id);
-    const parent = encodeURIComponent(location.hostname);
-    switch (src.type) {
-      case 'youtube': mounted = await mountYouTube(src.id, src.t); break;
-      case 'twitch': mounted = await mountTwitch({ channel: src.id }); break;
-      case 'twitch-vod': mounted = await mountTwitch({ video: src.id, ...(src.t ? { time: `${src.t}s` } : {}) }); break;
-      case 'twitch-clip': mounted = mountFrame(`https://clips.twitch.tv/embed?clip=${id}&parent=${parent}&autoplay=true`); break;
-      case 'youtube-live': mounted = mountFrame(`https://www.youtube.com/embed/live_stream?channel=${id}&autoplay=1&playsinline=1`); break;
-      case 'kick': mounted = mountFrame(`https://player.kick.com/${id}?autoplay=true&muted=false`); break;
-      case 'rumble': mounted = mountFrame(`https://rumble.com/embed/${id}/`); break;
-      case 'vimeo': mounted = mountFrame(`https://player.vimeo.com/video/${id}?autoplay=1`); break;
-      case 'angelthump': mounted = mountFrame(`https://player.angelthump.com/?channel=${id}`); break;
-      default: throw new Error('Unsupported platform ' + src.type);
-    }
-  } catch (err) {
-    if (token !== mountToken) return;
-    const msg = document.createElement('div');
-    msg.className = 'empty';
-    msg.textContent = 'Could not load the player. Check your connection and try again.';
-    $('#player').replaceChildren(msg);
+function watch(src) {
+  if (OPEN_ON_DGG.has(src.type)) {
+    window.open('https://www.destiny.gg/bigscreen#' + key(src), '_blank', 'noopener');
     return;
   }
-  // Another stream was picked while this one was loading.
-  if (token !== mountToken) { mounted.destroy(); return; }
-  player = mounted;
+  const inGrid = tiles.some((t) => key(t.src) === key(src));
+  if (!multi) {
+    if (inGrid && tiles.length === 1) return;
+    current = src;
+    store.set('last', src);
+    setTiles([src]);
+    return;
+  }
+  // Multi-view: tapping a stream adds it, tapping it again removes it.
+  if (inGrid) {
+    if (tiles.length > 1) removeTile(src);
+    return;
+  }
+  if (tiles.length >= MAX_TILES) {
+    toast(`Multi-view holds up to ${MAX_TILES} streams. Remove one first.`);
+    return;
+  }
+  if (!tiles.length) { current = src; store.set('last', src); }
+  setTiles([...tiles.map((t) => t.src), src]);
+}
+
+function setMulti(on) {
+  multi = on;
+  store.set('multi', on);
+  if (!on && tiles.length > 1) setTiles([current || tiles[0].src]);
+  else renderStage();
+  toast(on ? 'Multi-view on: tap streams below to add up to 4' : 'Multi-view off');
 }
 
 // ---------- Keep playing when the screen locks ----------
@@ -341,26 +500,25 @@ async function mountCurrent() {
 // playing, start it again. Pauses outside that window are treated as the
 // user's choice (for example from the lock screen media controls).
 
-let wantPlaying = false;
 let hiddenAt = 0;
 let resumesThisLock = 0;
 const RESUME_WINDOW_MS = 8000;
 const MAX_RESUMES_PER_LOCK = 4;
 
-function onPlaying() {
-  wantPlaying = true;
+function onPlaying(tile) {
+  tile.wantPlaying = true;
 }
 
-function onPaused() {
+function onPaused(tile) {
   if (!document.hidden) {
-    wantPlaying = false;
+    tile.wantPlaying = false;
     return;
   }
   const since = hiddenAt ? Date.now() - hiddenAt : 0;
-  if (settings.resumeOnLock && wantPlaying && player &&
-      since < RESUME_WINDOW_MS && resumesThisLock < MAX_RESUMES_PER_LOCK) {
+  if (settings.resumeOnLock && tile.wantPlaying && tile.player &&
+      since < RESUME_WINDOW_MS && resumesThisLock < MAX_RESUMES_PER_LOCK * MAX_TILES) {
     resumesThisLock++;
-    setTimeout(() => player && player.play(), 300);
+    setTimeout(() => tile.player && tile.player.play(), 300);
   }
 }
 
@@ -408,48 +566,13 @@ function renderChat() {
   $('#chat-btn').setAttribute('aria-pressed', String(settings.showChat));
 }
 
-function renderRecent() {
-  const box = $('#recent');
-  box.replaceChildren();
-  const list = store.get('recent', []);
-  if (!list.some((r) => key(r) === key(DEFAULT_SOURCE))) list.push(DEFAULT_SOURCE);
-  for (const src of list) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.textContent = key(src);
-    b.addEventListener('click', () => { $('#sheet').close(); watch(src); });
-    box.appendChild(b);
-  }
-}
-
 function openSheet() {
-  $('#source-input').value = '';
-  $('#source-error').hidden = true;
   $('#opt-awake').checked = settings.keepAwake;
   $('#opt-resume').checked = settings.resumeOnLock;
-  renderRecent();
   $('#sheet').showModal();
 }
 
-$('#source-btn').addEventListener('click', openSheet);
 $('#menu-btn').addEventListener('click', openSheet);
-
-$('#source-form').addEventListener('submit', (e) => {
-  if (e.submitter && e.submitter.value === 'close') return;
-  const raw = $('#source-input').value;
-  if (!raw.trim()) return;
-  const src = parseSource(raw);
-  if (!src) {
-    e.preventDefault();
-    const err = $('#source-error');
-    err.textContent = /rumble\.com\/v/i.test(raw)
-      ? 'For Rumble, use the embed link (rumble.com/embed/…) or #rumble/ID from DGG chat.'
-      : "That link isn't one I recognise. Try kick.com/name, a YouTube link, twitch.tv/name, or #kick/name.";
-    err.hidden = false;
-    return;
-  }
-  watch(src);
-});
 
 $('#opt-awake').addEventListener('change', (e) => {
   saveSetting('keepAwake', e.target.checked);
@@ -467,9 +590,15 @@ $('#awake-btn').addEventListener('click', () => {
 
 $('#sound-btn').addEventListener('click', () => {
   if (!current) return;
-  if (!player) mountCurrent();
-  else player.unmute();
+  const tap = $('#player .tap-to-play');
+  if (tap) return tap.click();
+  const tile = tiles.find((t) => key(t.src) === key(current));
+  if (!tile) return;
+  if (tile.player) tile.player.unmute();
+  else mountTile(tile);
 });
+
+$('#multi-btn').addEventListener('click', () => setMulti(!multi));
 
 $('#chat-btn').addEventListener('click', () => {
   saveSetting('showChat', !settings.showChat);
@@ -482,9 +611,22 @@ $('#reload-chat').addEventListener('click', () => {
   $('#sheet').close();
 });
 
+// The hash lists what's on screen, e.g. #kick/destiny or #kick/a,twitch/b for multi-view.
+function parseHashList(hash) {
+  const list = [];
+  for (const part of hash.replace(/^#/, '').split(',')) {
+    const src = parseSource(part);
+    if (src && !OPEN_ON_DGG.has(src.type) && !list.some((s) => key(s) === key(src))) list.push(src);
+  }
+  return list.slice(0, MAX_TILES);
+}
+
 window.addEventListener('hashchange', () => {
-  const src = parseSource(location.hash);
-  if (src) watch(src);
+  const list = parseHashList(location.hash);
+  if (!list.length || list.map(key).join(',') === tiles.map((t) => key(t.src)).join(',')) return;
+  if (list.length > 1 && !multi) { multi = true; store.set('multi', true); }
+  current = list[0];
+  setTiles(multi ? list : [list[0]]);
 });
 
 // ---------- Live embed tabs ----------
@@ -496,7 +638,6 @@ const BADGE_LETTERS = {
   rumble: 'R', angelthump: 'A', vimeo: 'V', facebook: 'F', 'kick-vod': 'K', destiny: 'D',
 };
 let tabItems = [];
-let tabsTimer = null;
 
 function formatViewers(n) {
   if (n == null) return '';
@@ -510,7 +651,7 @@ function renderTabs() {
     b.type = 'button';
     b.className = 'tab';
     b.title = [item.name, item.title].filter(Boolean).join(' · ');
-    if (current && key(current) === key(item.src)) b.setAttribute('aria-current', 'true');
+    if (tiles.some((t) => key(t.src) === key(item.src))) b.setAttribute('aria-current', 'true');
     const badge = document.createElement('span');
     badge.className = 'badge ' + item.badge;
     badge.textContent = BADGE_LETTERS[item.badge] || '?';
@@ -534,15 +675,7 @@ function renderTabs() {
   if (selected) selected.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 
-async function refreshTabs() {
-  let data;
-  try {
-    const res = await fetch('api/embeds', { cache: 'no-store' });
-    if (!res.ok) return;
-    data = await res.json();
-  } catch {
-    return;
-  }
+function applyLive(data) {
   const items = [];
   for (const d of data.destiny || []) {
     let src = null;
@@ -553,19 +686,84 @@ async function refreshTabs() {
   }
   for (const e of data.embeds || []) {
     const src = parseSource(`${e.platform}/${e.id}`);
-    if (!src) continue;
-    items.push({ src, badge: src.type, name: e.name || src.id, title: e.title, viewers: e.live ? e.viewers : null });
+    if (!src || items.some((i) => key(i.src) === key(src))) continue;
+    items.push({ src, badge: src.type, name: e.name || src.id, title: e.title, viewers: e.viewers });
   }
   tabItems = items;
-  renderTabs();
+  if (tiles.length) renderStage();
+  else renderTabs();
 }
 
+async function refreshTabs() {
+  try {
+    const res = await fetch('api/embeds', { cache: 'no-store' });
+    if (res.ok) applyLive(await res.json());
+  } catch {}
+}
+
+// The server pushes the list the moment destiny.gg changes it. EventSource
+// reconnects by itself; polling covers browsers or networks where it fails.
+let liveSource = null;
+let lastLiveAt = 0;
 function startTabs() {
-  clearInterval(tabsTimer);
   refreshTabs();
-  tabsTimer = setInterval(() => { if (!document.hidden) refreshTabs(); }, 30000);
+  if ('EventSource' in window) {
+    liveSource = new EventSource('api/live');
+    liveSource.onmessage = (e) => {
+      lastLiveAt = Date.now();
+      try { applyLive(JSON.parse(e.data)); } catch {}
+    };
+    liveSource.addEventListener('ping', () => { lastLiveAt = Date.now(); });
+  }
+  setInterval(() => {
+    if (!document.hidden && Date.now() - lastLiveAt > 60000) refreshTabs();
+  }, 30000);
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshTabs(); });
+
+// Mouse wheels scroll the tab row sideways on desktop.
+$('#tabs').addEventListener('wheel', (e) => {
+  if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+    e.preventDefault();
+    $('#tabs').scrollBy({ left: e.deltaY });
+  }
+}, { passive: false });
+
+// ---------- Cast to TV ----------
+
+const ua = navigator.userAgent;
+const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isAndroid = /Android/.test(ua);
+
+function castSteps() {
+  const steps = [];
+  if (isAndroid) {
+    steps.push(['Whole screen, with chat', 'Swipe down for quick settings and tap Smart View (Samsung) or Screen cast, then pick your TV.']);
+  } else if (isIOS) {
+    steps.push(['Whole screen, with chat', 'Open Control Center, tap Screen Mirroring and pick an AirPlay TV. Chromecast doesn\'t support AirPlay.']);
+  } else {
+    steps.push(['This tab, with chat', 'In Chrome or Edge, open the ⋮ menu, choose Cast, save, and share, then Cast…, set Sources to Cast tab and pick your TV.']);
+  }
+  steps.push(['Just the video', 'If the player shows a cast icon (YouTube and Twitch often do), tap it to send only the stream to your Chromecast.']);
+  return steps;
+}
+
+$('#cast-btn').addEventListener('click', () => {
+  const box = $('#cast-steps');
+  box.replaceChildren(...castSteps().map(([title, text]) => {
+    const p = document.createElement('p');
+    const b = document.createElement('b');
+    b.textContent = title + '. ';
+    p.append(b, text);
+    return p;
+  }));
+  $('#sheet').close();
+  $('#cast-sheet').showModal();
+});
+$('#cast-close').addEventListener('click', () => $('#cast-sheet').close());
+
+const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+if (isIOS && !standalone) $('#ios-install').hidden = false;
 
 // ---------- Install ----------
 
@@ -592,5 +790,9 @@ if ('serviceWorker' in navigator) {
 renderChat();
 renderAwake();
 startTabs();
+const fromHash = parseHashList(location.hash);
 const last = store.get('last', null);
-watch(parseSource(location.hash) || (last && last.type && validate(last)) || DEFAULT_SOURCE);
+if (fromHash.length > 1) { multi = true; store.set('multi', true); }
+const first = fromHash.length ? fromHash : [(last && last.type && validate(last)) || DEFAULT_SOURCE];
+current = first[0];
+setTiles(multi ? first : [first[0]]);

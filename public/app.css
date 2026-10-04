@@ -58,16 +58,14 @@ button, input { font: inherit; color: inherit; }
 }
 #bar .icon[aria-pressed="true"], #bar .icon.on { color: var(--text); }
 #awake-btn[aria-pressed="true"] { color: #ffd166; }
-#bar .source {
-  display: flex;
-  align-items: center;
-  gap: 2px;
+#source-label {
   min-width: 0;
-  height: 36px;
-  padding: 0 6px 0 8px;
+  padding: 0 8px;
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-#source-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Player + chat */
 #stage {
@@ -83,28 +81,74 @@ button, input { font: inherit; color: inherit; }
   min-width: 0;
 }
 #player {
+  --cols: 1;
   flex: none;
   width: 100%;
   aspect-ratio: 16 / 9;
   max-height: 60dvh;
   background: #000;
   position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 2px;
 }
-#player > *, #player iframe {
+/* Portrait: two streams stack, three or four make a 2x2 grid. */
+#player[data-count="2"] { aspect-ratio: 8 / 9; max-height: 72dvh; }
+#player[data-count="3"], #player[data-count="4"] { --cols: 2; }
+
+.tile { position: relative; min-width: 0; min-height: 0; background: #000; }
+.tile-body, .tile-body > *, .tile-body iframe {
   position: absolute;
   inset: 0;
   width: 100% !important;
   height: 100% !important;
   border: 0;
 }
-#player .empty {
+.tile-body > .empty {
   display: grid;
   place-items: center;
   padding: 16px;
   color: var(--muted);
   text-align: center;
 }
+.tile-bar {
+  display: none;
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 2;
+  max-width: calc(100% - 12px);
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: rgb(0 0 0 / .65);
+  font-size: 12px;
+  font-weight: 600;
+}
+body.multi .tile-bar { display: flex; }
+.tile-name { min-width: 0; padding: 0 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile-bar button {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.tile-bar svg { width: 16px; height: 16px; fill: currentColor; }
+.tile-sound[aria-pressed="true"] { color: #ffd166; }
+body.multi .tile.has-sound { outline: 2px solid #ffd166; outline-offset: -2px; z-index: 1; }
+
 #player .tap-to-play {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -134,6 +178,7 @@ button, input { font: inherit; color: inherit; }
 body.no-chat #chat { display: none; }
 body.no-chat #watch { flex: 1; min-height: 0; }
 body.no-chat #player { flex: 1; aspect-ratio: auto; max-height: none; }
+body.no-chat #player[data-count="2"] { --cols: 1; }
 
 /* Live embed tabs, like the row under destiny.gg's bigscreen player */
 #tabs {
@@ -150,53 +195,52 @@ body.no-chat #player { flex: 1; aspect-ratio: auto; max-height: none; }
   flex: none;
   display: flex;
   align-items: center;
-  gap: 7px;
-  height: 46px;
-  max-width: 220px;
-  padding: 0 14px;
+  gap: 5px;
+  height: 32px;
+  max-width: 180px;
+  padding: 0 10px;
   border: 0;
   border-bottom: 2px solid transparent;
   background: none;
   color: var(--muted);
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
 }
 #tabs .tab[aria-current="true"] { color: var(--text); border-bottom-color: var(--accent); }
 #tabs .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#tabs .viewers { font-weight: 400; font-size: 12px; font-variant-numeric: tabular-nums; }
+#tabs .viewers { font-size: 11px; opacity: .8; font-variant-numeric: tabular-nums; }
 #tabs .viewers::before {
   content: "";
   display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin: 0 4px 1px 0;
+  width: 5px;
+  height: 5px;
+  margin: 0 3px 1px 0;
   border-radius: 50%;
-  background: #ff4d4d;
+  background: #c0504d;
 }
+/* Small, muted platform marks: a letter tinted with the platform's color. */
 .badge {
   flex: none;
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 5px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
-  color: #fff;
-  background: #555c6b;
+  line-height: 1;
+  color: #8c93a3;
 }
-.badge.kick { background: #53fc18; color: #000; }
-.badge.twitch, .badge.twitch-vod, .badge.twitch-clip { background: #9146ff; }
-.badge.youtube, .badge.youtube-live { background: #ff0033; }
-.badge.rumble { background: #85c742; color: #000; }
-.badge.angelthump { background: #e6e8ee; color: #000; }
-.badge.destiny { background: var(--accent); }
+.badge.kick { color: #7fbf5a; }
+.badge.twitch, .badge.twitch-vod, .badge.twitch-clip { color: #a78bdb; }
+.badge.youtube, .badge.youtube-live { color: #d9706f; }
+.badge.rumble { color: #8fb86a; }
+.badge.angelthump { color: #b8bcc6; }
+.badge.destiny { color: #6fa3ef; }
 
-@media (orientation: landscape) and (min-aspect-ratio: 4/3) {
+/* Side by side: landscape phones, tablets, desktops and ultrawides. Keep in
+   sync with rowLayoutQuery in app.js. */
+@media (orientation: landscape) and (min-aspect-ratio: 4/3), (min-width: 1000px) and (min-aspect-ratio: 1/1) {
   #stage { flex-direction: row; }
   #watch { flex: 1; height: 100%; }
-  #player { flex: 1; aspect-ratio: auto; max-height: none; }
-  #chat { flex: none; width: min(360px, 40vw); border-left: 1px solid var(--line); }
+  #player, #player[data-count] { flex: 1; aspect-ratio: auto; max-height: none; }
+  #chat { flex: none; width: clamp(300px, 26vw, 440px); border-left: 1px solid var(--line); }
   body { padding-bottom: env(safe-area-inset-bottom); }
 }
 
@@ -245,6 +289,10 @@ dialog button.primary { background: var(--accent); border-color: var(--accent); 
 .toggle { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; }
 .toggle input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
 .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+.hint { color: var(--muted); font-size: 13px; margin: 12px 0 0; }
+#cast-steps p { margin: 12px 0 0; }
+#tabs .tab:hover { color: var(--text); }
 
 #toast {
   position: fixed;

@@ -4,19 +4,25 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#11151d">
-  <title>Better DGG</title>
+  <meta name="description" content="Watch destiny.gg streams and live embeds with chat. Unofficial fan-made app.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DGG Pro">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Better DGG Pro</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="stylesheet" href="app.css">
 </head>
 <body>
   <header id="bar">
-    <button id="source-btn" class="source" type="button" aria-label="Change stream">
-      <span id="source-label">Pick a stream</span>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg>
-    </button>
+    <span id="source-label" class="title">Better DGG Pro</span>
     <span class="spacer"></span>
+    <button id="multi-btn" class="icon" type="button" title="Multi-view: watch up to 4 streams" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm10 0h8v8h-8z"/></svg>
+    </button>
     <button id="sound-btn" class="icon on" type="button" title="Turn sound on">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>
     </button>
@@ -43,15 +49,6 @@
 
   <dialog id="sheet">
     <form method="dialog" id="source-form">
-      <h2>Stream</h2>
-      <label for="source-input">Paste a Kick, YouTube, Twitch or Rumble link, or a DGG embed like <code>#kick/destiny</code></label>
-      <div class="row">
-        <input id="source-input" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="kick.com/destiny">
-        <button type="submit" value="go" class="primary">Watch</button>
-      </div>
-      <p id="source-error" class="error" hidden></p>
-      <div id="recent" class="chips"></div>
-
       <h2>Settings</h2>
       <label class="toggle"><input type="checkbox" id="opt-awake"> Keep screen on while the app is open</label>
       <label class="toggle"><input type="checkbox" id="opt-resume"> Keep audio going when the screen locks (YouTube and Twitch)</label>
@@ -60,9 +57,19 @@
         <button type="button" id="reload-chat">Reload chat</button>
         <a href="https://www.destiny.gg/login" target="_blank" rel="noopener">Log in to destiny.gg</a>
         <button type="button" id="install-btn" hidden>Install app</button>
+        <button type="button" id="cast-btn">Cast to TV</button>
       </div>
+      <p id="ios-install" class="hint" hidden>To install on iPhone or iPad: tap Share, then <b>Add to Home Screen</b>.</p>
+      <p class="hint">Better DGG Pro is an unofficial fan-made app and isn't affiliated with destiny.gg.</p>
       <div class="row end"><button type="submit" value="close">Close</button></div>
     </form>
+  </dialog>
+
+  <dialog id="cast-sheet" aria-labelledby="cast-title">
+    <h2 id="cast-title">Cast to TV</h2>
+    <p class="hint">Streams here come from Kick, YouTube, Twitch and others, and only their own players can send video to a Chromecast. These are the ways that work:</p>
+    <div id="cast-steps"></div>
+    <div class="row end"><button type="button" id="cast-close">Close</button></div>
   </dialog>
 
   <div id="toast" role="status" aria-live="polite"></div>

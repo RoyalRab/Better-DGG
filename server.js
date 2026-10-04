@@ -93,8 +93,10 @@ function connectLive() {
     if (msg.type === 'dggApi:embeds' && Array.isArray(msg.data)) {
       live.embeds = msg.data;
       live.embedsAt = Date.now();
+      broadcast();
     } else if (msg.type === 'dggApi:streamInfo') {
       live.streamInfo = msg.data;
+      broadcast();
     }
   });
   ws.on('unexpected-response', (_req, res) => console.log('live: refused with HTTP', res.statusCode));
@@ -102,6 +104,7 @@ function connectLive() {
   ws.on('close', () => {
     clearInterval(heartbeat);
     live.connected = false;
+    broadcast();
     console.log(`live: closed, retrying in ${retryMs / 1000}s`);
     setTimeout(connectLive, retryMs);
     retryMs = Math.min(retryMs * 2, 60 * 1000);
@@ -110,6 +113,9 @@ function connectLive() {
 
 const str = (v, max = 200) => (typeof v === 'string' ? v.slice(0, max) : null);
 const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+
+// Only live channels belong in the list; VODs, clips and ordinary videos don't.
+const LIVE_PLATFORMS = new Set(['kick', 'twitch', 'youtube', 'angelthump', 'rumble']);
 
 function embedList() {
   return (live.embeds || []).map((e) => {
@@ -125,8 +131,51 @@ function embedList() {
       viewers: num(meta.viewers),
       preview: str(meta.previewUrl, 500),
     };
-  }).filter((e) => e.platform && e.id);
+  }).filter((e) => e.platform && e.id && e.live && LIVE_PLATFORMS.has(e.platform));
 }
+
+function snapshot() {
+  return {
+    connected: live.connected,
+    updated: live.embedsAt || null,
+    destiny: destinyStreams(),
+    embeds: embedList(),
+  };
+}
+
+// ---------- Server-sent events: push the list to every open app ----------
+
+const MAX_LISTENERS = 5000;
+const listeners = new Set();
+let lastSent = '';
+
+function broadcast() {
+  const body = JSON.stringify(snapshot());
+  if (body === lastSent) return;
+  lastSent = body;
+  for (const res of listeners) res.write(`data: ${body}\n\n`);
+}
+
+function openStream(req, res) {
+  if (listeners.size >= MAX_LISTENERS) {
+    return send(res, 503, 'text/plain; charset=utf-8', 'Busy, try again later');
+  }
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream; charset=utf-8',
+    'Cache-Control': 'no-store',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+  res.write('retry: 5000\n');
+  res.write(`data: ${JSON.stringify(snapshot())}\n\n`);
+  listeners.add(res);
+  req.on('close', () => listeners.delete(res));
+}
+
+// Keep idle connections from being closed by proxies along the way.
+setInterval(() => {
+  for (const res of listeners) res.write('event: ping\ndata: {}\n\n');
+}, 25 * 1000).unref();
 
 // Destiny's own streams, from dggApi:streamInfo: { streams: { kick, youtube, ... } }.
 function destinyStreams() {
@@ -147,19 +196,17 @@ function destinyStreams() {
 // ---------- HTTP ----------
 
 const server = http.createServer((req, res) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   const url = new URL(req.url, 'http://localhost');
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     return send(res, 405, 'text/plain; charset=utf-8', 'Method not allowed');
   }
   if (url.pathname === '/api/embeds') {
     res.setHeader('Cache-Control', 'no-store');
-    return send(res, 200, 'application/json', JSON.stringify({
-      connected: live.connected,
-      updated: live.embedsAt || null,
-      destiny: destinyStreams(),
-      embeds: embedList(),
-    }));
+    return send(res, 200, 'application/json', JSON.stringify(snapshot()));
   }
+  if (url.pathname === '/api/live') return openStream(req, res);
   if (url.pathname === '/healthz') return send(res, 200, 'text/plain', 'ok');
   serveFile(req, res, url.pathname);
 });
