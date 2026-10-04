@@ -2,7 +2,7 @@
 // and the install bar.
 
 import { state, isCurrent } from './state.js';
-import { $, settings, saveSetting, store, toast, isIOS, isAndroid, standalone } from './util.js';
+import { $, settings, saveSetting, store, toast, isIOS, isAndroid, isTouch, standalone } from './util.js';
 import { OWN_PLAYER_TYPES } from './players.js';
 import { mountTile, setAddMode, updateWakeLock, layoutTiles, dropParked } from './stage.js';
 import { renderChat, loadChat, reloadChat } from './chat.js';
@@ -126,9 +126,16 @@ function placeMenuTip() {
   tip.style.bottom = window.innerHeight - b.top + 2 + 'px';
 }
 
+let tipTries = 0;
 export function maybeShowMenuTip() {
   if (store.get('menuTipShown', false) || !$('#actions').hidden) return;
+  // Not on top of the install bar: wait for it to be answered (up to a minute).
+  if (!$('#install-bar').hidden && tipTries++ < 20) {
+    setTimeout(maybeShowMenuTip, 3000);
+    return;
+  }
   store.set('menuTipShown', true);
+  $('#menu-tip-verb').textContent = isTouch ? 'Tap' : 'Click';
   $('#menu-tip').hidden = false;
   placeMenuTip();
   window.addEventListener('resize', placeMenuTip);
@@ -211,6 +218,27 @@ fetch('api/version', { cache: 'no-store' })
   })
   .catch(() => {});
 
+// ---------- Share ----------
+// The installed app has no address bar, so settings show the address and a
+// Share button (the phone's share sheet, or copy the link where there's none).
+
+$('#app-address').textContent = location.host;
+$('#share-btn').addEventListener('click', async () => {
+  const url = location.origin + '/';
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'DGG Remix', text: "destiny.gg's live embeds and chat, made for phones", url });
+    } catch {}
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    toast('Link copied');
+  } catch {
+    toast(url, 5000);
+  }
+});
+
 // ---------- Change log ----------
 // From CHANGELOG.md, which the server turns into changelog.json. The latest
 // version is listed in the menu, older ones are folded underneath.
@@ -267,7 +295,7 @@ function castSteps() {
   } else {
     steps.push([
       'This tab, with chat',
-      'In Chrome or Edge, open the ⋮ menu, choose Cast, save, and share, then Cast…, set Sources to Cast tab and pick your TV.',
+      'In Chrome or Edge, open the browser menu (⋮ or … at the top right), choose Cast, save, and share, then Cast…, set Sources to Cast tab and pick your TV.',
     ]);
   }
   steps.push([
@@ -363,5 +391,6 @@ window.addEventListener('appinstalled', hideInstallBar);
 setTimeout(() => {
   if (installPrompt || standalone) return;
   if (isIOS) showInstallBar('Install: tap Share, then Add to Home Screen', false);
-  else if (isAndroid) showInstallBar('Install: in Chrome, tap ⋮ then Add to home screen', false);
+  else if (isAndroid)
+    showInstallBar("Install: open Chrome's menu (⋮ at the top right), then Add to home screen", false);
 }, 3000);

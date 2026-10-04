@@ -6,6 +6,9 @@
   --muted: #8c93a3;
   --accent: #2f7cf6;
   --danger: #ff6b6b;
+  /* The REMIX tag on the app icon */
+  --remix: #ffd166;
+  --remix-text: #151a23;
   color-scheme: dark;
 }
 
@@ -120,35 +123,20 @@ input {
   background: #3a2a14;
 }
 
-/* LIVE, or how far behind with a jump back, on the app's own player */
+/* "Ns behind · Jump to live" on the app's own player, only when it has fallen behind */
 .live-chip {
   position: absolute;
   top: 8px;
   right: 8px;
   z-index: 3;
-  height: 22px;
-  padding: 0 8px;
-  border: 0;
-  border-radius: 11px;
-  background: rgb(0 0 0 / 0.5);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  opacity: 0.8;
-}
-.live-chip:disabled {
-  cursor: default;
-}
-.live-chip.behind {
   height: 30px;
   padding: 0 12px;
+  border: 0;
   border-radius: 15px;
   background: rgb(0 0 0 / 0.75);
+  color: #fff;
   font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0;
-  opacity: 1;
   cursor: pointer;
 }
 
@@ -323,10 +311,10 @@ body.multi .tile-bar {
   fill: currentColor;
 }
 .tile-sound[aria-pressed='true'] {
-  color: #ffd166;
+  color: var(--remix);
 }
 body.multi .tile.has-sound {
-  outline: 2px solid #ffd166;
+  outline: 2px solid var(--remix);
   outline-offset: -2px;
   z-index: 1;
 }
@@ -803,9 +791,10 @@ dialog button.primary {
   max-width: min(260px, calc(100vw - 16px));
   padding: 10px 12px;
   border-radius: 10px;
-  background: var(--accent);
-  color: #fff;
+  background: var(--remix);
+  color: var(--remix-text);
   font-size: 13px;
+  font-weight: 500;
   line-height: 1.35;
   box-shadow: 0 4px 20px rgb(0 0 0 / 0.5);
   cursor: pointer;
@@ -818,7 +807,7 @@ dialog button.primary {
   bottom: -6px;
   width: 12px;
   height: 12px;
-  background: var(--accent);
+  background: var(--remix);
   transform: rotate(45deg);
 }
 @keyframes tip-in {

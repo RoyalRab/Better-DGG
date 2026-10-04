@@ -55,7 +55,7 @@ When an update is ready, a bar at the top offers to refresh into it. The ⋮ but
 
 ## Installing
 
-Android (Chrome): use the Install button in the bar at the top, or tap ⋮ then **Add to home screen → Install**. iPhone and iPad (Safari): tap Share, then **Add to Home Screen**. Desktop Chrome and Edge show an install icon in the address bar.
+Android (Chrome): use the Install button in the bar at the top, or open Chrome's menu (⋮ at the top right) and tap **Add to home screen → Install**. iPhone and iPad (Safari): tap Share, then **Add to Home Screen**. Desktop Chrome and Edge show an install icon in the address bar.
 
 For sound with the screen locked on Android, Chrome has to be allowed to run in the background. On Samsung phones, check **Settings → Battery → Background usage limits** and make sure Chrome isn't a sleeping app.
 

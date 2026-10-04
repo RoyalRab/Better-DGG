@@ -3,7 +3,7 @@
 
 import { MAX_TILES, OPEN_ON_DGG, PLATFORM_NAMES, key } from './sources.js';
 import { state, isCurrent, streamName } from './state.js';
-import { $, settings, store, toast, announce, isRowLayout } from './util.js';
+import { $, settings, store, toast, announce, isRowLayout, isTouch } from './util.js';
 import {
   OWN_PLAYER_TYPES,
   canControlSound,
@@ -144,7 +144,7 @@ function makeTile(src) {
   chip.type = 'button';
   chip.className = 'sound-chip';
   chip.hidden = true;
-  chip.innerHTML = SPEAKER_SVG + '<span>Tap for sound</span>';
+  chip.innerHTML = SPEAKER_SVG + `<span>${isTouch ? 'Tap' : 'Click'} for sound</span>`;
   const spinner = document.createElement('div');
   spinner.className = 'spinner';
   spinner.setAttribute('role', 'progressbar');

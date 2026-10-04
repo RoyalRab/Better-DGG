@@ -321,8 +321,8 @@ export async function mountOwn(tile, muted) {
   });
   v.addEventListener('pause', () => tile.onPaused());
 
-  // How far behind live: "LIVE" at the edge; when it has fallen behind (after
-  // a pause or a stall), the chip says how far and jumps back to live.
+  // When it has fallen behind live (after a pause or a stall), a chip says
+  // how far and jumps back to live.
   const liveChip = document.createElement('button');
   liveChip.type = 'button';
   liveChip.className = 'live-chip';
@@ -333,19 +333,14 @@ export async function mountOwn(tile, muted) {
     if (!hls && v.seekable.length) return v.seekable.end(v.seekable.length - 1) - 10;
     return null;
   }
+  // Shown only when the stream has fallen behind; nothing covers it while live.
   function renderLiveChip() {
     const edge = liveEdge();
-    if (edge == null || !started) {
-      liveChip.hidden = true;
-      return;
-    }
-    const behind = Math.round(edge - v.currentTime);
-    const far = behind > BEHIND_SECONDS;
-    liveChip.hidden = false;
-    liveChip.classList.toggle('behind', far);
-    liveChip.disabled = !far;
-    liveChip.textContent = far ? `${behind}s behind · Jump to live` : 'LIVE';
-    liveChip.setAttribute('aria-label', far ? `${behind} seconds behind live. Jump to live` : 'Playing live');
+    const behind = edge == null || !started ? 0 : Math.round(edge - v.currentTime);
+    liveChip.hidden = behind <= BEHIND_SECONDS;
+    if (liveChip.hidden) return;
+    liveChip.textContent = `${behind}s behind · Jump to live`;
+    liveChip.setAttribute('aria-label', `${behind} seconds behind live. Jump to live`);
   }
   function jumpToLive() {
     const edge = liveEdge();
