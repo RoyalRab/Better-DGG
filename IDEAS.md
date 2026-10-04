@@ -31,6 +31,7 @@ Ways to make DGG Remix better, roughly from most to least useful. Effort: S is a
 | Multi-view "focus" layout: one big stream with small ones beside it | Better than equal tiles for one main stream | M |
 | Remember volume per stream | Some streams are much louder than others | S |
 | Ended-stream screen that suggests the most-embedded live stream | No dead end when a stream ends | S |
+| Keep the last Kick stream warm for a minute after switching away, so switching back is instant | Fast back-and-forth between two streams (uses data while hidden) | S |
 
 ## Polish
 

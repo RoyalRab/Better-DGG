@@ -5,7 +5,7 @@
 import { key, liveItems } from './sources.js';
 import { state, knownNames, streamName } from './state.js';
 import { $, store, toast, isTouch } from './util.js';
-import { watch, renderTileNames } from './stage.js';
+import { watch, renderTileNames, prepare, cancelPrepare } from './stage.js';
 
 // Small one-color platform marks, like the tabs on destiny.gg's bigscreen.
 const PLATFORM_ICONS = {
@@ -47,18 +47,39 @@ function makeTabButton(src) {
   name.className = 'name';
   b.append(platformIcon(src.type), name);
   let held = false;
+  let pressed = false;
   let holdTimer = null;
-  b.addEventListener('pointerdown', () => {
+  b.addEventListener('pointerdown', (e) => {
     held = false;
+    pressed = true;
+    // Start loading right away; the click (or a long-press) decides what happens to it.
+    if (e.button === 0) prepare(src);
     holdTimer = setTimeout(() => {
       held = true;
+      cancelPrepare();
       watch(src, { add: true });
     }, 550);
   });
-  for (const ev of ['pointerup', 'pointerleave', 'pointercancel'])
-    b.addEventListener(ev, () => clearTimeout(holdTimer));
+  b.addEventListener('pointerup', () => {
+    pressed = false;
+    clearTimeout(holdTimer);
+  });
+  // Scrolling the row, or sliding off the tab while pressing, isn't a tap.
+  // (Touch also "leaves" right after lifting the finger, before the click.)
+  b.addEventListener('pointercancel', () => {
+    pressed = false;
+    clearTimeout(holdTimer);
+    cancelPrepare();
+  });
+  b.addEventListener('pointerleave', () => {
+    if (!pressed) return;
+    pressed = false;
+    clearTimeout(holdTimer);
+    if (!held) cancelPrepare();
+  });
   b.addEventListener('contextmenu', (e) => {
     e.preventDefault();
+    cancelPrepare();
     if (!held) watch(src, { add: true });
     held = true;
   });

@@ -4,7 +4,15 @@
 import { MAX_TILES, OPEN_ON_DGG, PLATFORM_NAMES, key } from './sources.js';
 import { state, isCurrent, streamName } from './state.js';
 import { $, settings, store, toast, announce, isRowLayout } from './util.js';
-import { OWN_PLAYER_TYPES, frameUrl, mountFrame, mountOwn, mountTwitch, mountYouTube } from './players.js';
+import {
+  OWN_PLAYER_TYPES,
+  canControlSound,
+  frameUrl,
+  mountFrame,
+  mountOwn,
+  mountTwitch,
+  mountYouTube,
+} from './players.js';
 import { renderTabs } from './tabs.js';
 import { renderPip, closeDocPipFor, inDocPip } from './pip.js';
 import { loadChat } from './chat.js';
@@ -61,7 +69,8 @@ export async function mountTile(tile) {
   tile.wantPlaying = false;
   tile.body.replaceChildren();
   setLoading(tile, true);
-  const wantSound = isCurrent(tile.src);
+  // A tile loading ahead of a tap (see prepare) is about to have the sound.
+  const wantSound = isCurrent(tile.src) || !!tile.prepared;
   // Other sites' players can't report blocked sound, so they start muted
   // until the first tap. The app's own player tries with sound and falls
   // back to muted if Chrome refuses.
@@ -80,7 +89,7 @@ export async function mountTile(tile) {
         return;
       }
     }
-    if (!mounted) tile.soundBlocked = wantSound && muted;
+    if (!mounted) tile.soundBlocked = wantSound && muted && canControlSound(tile.src);
     if (mounted) {
       // the app's own player
     } else if (tile.src.type === 'youtube') mounted = await mountYouTube(tile, muted);
@@ -104,7 +113,7 @@ export async function mountTile(tile) {
     return;
   }
   // The tile was removed or reloaded while this player was loading.
-  if (token !== tile.token || !state.tiles.includes(tile)) {
+  if (token !== tile.token || !(state.tiles.includes(tile) || tile.prepared)) {
     mounted.destroy();
     return;
   }
@@ -170,6 +179,44 @@ function dropTile(t) {
   t.el.remove();
 }
 
+// ---------- Start loading on press ----------
+// A tab starts loading its stream the moment it's pressed, hidden behind the
+// current one; the tap that follows takes it over. A scroll, a long-press, or
+// no tap within 3 s throws it away.
+
+let prepared = null; // { tile, timer }
+
+export function prepare(src) {
+  cancelPrepare();
+  if (state.addMode || OPEN_ON_DGG.has(src.type) || state.tiles.some((t) => key(t.src) === key(src))) return;
+  const tile = makeTile(src);
+  tile.prepared = true;
+  tile.el.classList.add('preparing');
+  tile.el.setAttribute('aria-hidden', 'true');
+  $('#player').appendChild(tile.el);
+  prepared = { tile, timer: setTimeout(cancelPrepare, 3000) };
+  mountTile(tile);
+}
+
+export function cancelPrepare() {
+  if (!prepared) return;
+  clearTimeout(prepared.timer);
+  const { tile } = prepared;
+  prepared = null;
+  dropTile(tile);
+}
+
+function takePrepared(src) {
+  if (!prepared || key(prepared.tile.src) !== key(src)) return null;
+  clearTimeout(prepared.timer);
+  const { tile } = prepared;
+  prepared = null;
+  tile.prepared = false;
+  tile.el.classList.remove('preparing');
+  tile.el.removeAttribute('aria-hidden');
+  return tile;
+}
+
 // ---------- Switching without a black flash ----------
 // When one stream replaces another, the old one stays on screen (on top)
 // until the new one starts playing underneath, or for at most 10 s.
@@ -205,7 +252,7 @@ export function setTiles(want) {
   finishHandoff();
   const before = state.tiles;
   const keep = new Map(before.map((t) => [key(t.src), t]));
-  const next = want.map((src) => keep.get(key(src)) || makeTile(src));
+  const next = want.map((src) => keep.get(key(src)) || takePrepared(src) || makeTile(src));
   const removed = before.filter((t) => !next.includes(t));
   const swap =
     before.length === 1 &&
@@ -229,6 +276,7 @@ export function setTiles(want) {
   layoutTiles();
 
   for (const t of next) if (!t.player && !t.token) mountTile(t);
+  cancelPrepare();
   renderStage();
 }
 

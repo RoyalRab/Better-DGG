@@ -2,6 +2,11 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's ⋮ menu, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.3.0 (2026-10-04)
+
+- Streams start loading the moment you touch a tab, before you lift your finger.
+- AngelThump and Rumble no longer reload (and rejoin the stream) for Tap for sound; use the player's own speaker button instead.
+
 ## 1.2.0 (2026-10-04)
 
 - What's new: the menu lists what changed in each version, and a bar mentions it once after an update.

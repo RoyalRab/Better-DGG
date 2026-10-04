@@ -67,6 +67,12 @@ export function frameUrl(src, muted) {
 // Plain iframes whose URL can ask for muted playback; the others can't be muted from outside.
 const FRAME_CAN_MUTE = new Set(['twitch-clip', 'youtube-live', 'kick', 'vimeo']);
 
+// Players the app can turn the sound on for. The others (AngelThump, Rumble)
+// handle sound themselves; reloading them for sound would join the stream a
+// second time, so their own speaker button is used instead.
+export const canControlSound = (src) =>
+  ['youtube', 'twitch', 'twitch-vod'].includes(src.type) || FRAME_CAN_MUTE.has(src.type);
+
 export function mountFrame(tile, muted) {
   const f = document.createElement('iframe');
   f.src = frameUrl(tile.src, muted);

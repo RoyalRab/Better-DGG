@@ -175,6 +175,15 @@ input {
   }
 }
 
+/* A stream loading ahead of a tap, hidden until the tap takes it over */
+.tile.preparing {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* The stream being replaced stays on top until the new one plays */
 .tile.leaving {
   position: absolute;
