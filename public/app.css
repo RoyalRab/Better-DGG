@@ -236,6 +236,9 @@ body.no-chat #player[data-count="2"] { --cols: 1; }
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 #tabs .tab[aria-current="true"] { color: var(--text); border-bottom-color: var(--text); }
 #tabs .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

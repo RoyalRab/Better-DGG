@@ -165,7 +165,7 @@ const MAX_TILES = 4;
 const SPEAKER_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>';
 let tiles = []; // { src, el, body, player, token, wantPlaying }
 let current = null; // the stream with sound (the only one in single view)
-let multi = store.get('multi', false);
+let addMode = false; // the next tab tap adds a stream to multi-view instead of switching
 let started = false; // false until the first tap, so streams can start with sound
 
 const scripts = {};
@@ -302,6 +302,36 @@ const OWN_PLAYER_TYPES = new Set(['kick']);
 
 const OWN_START_TIMEOUT_MS = 12000;
 
+// Chrome on Android pauses any video when the page goes to the background,
+// but lets audio-only playback continue. Kick streams have no audio-only
+// version, so this hls.js instance drops the video track before it reaches
+// the browser, which then sees an audio-only stream.
+function makeAudioOnlyHls(config) {
+  const h = new Hls(config);
+  const trigger = h.trigger.bind(h);
+  // Forget that fragments had video, so hls.js doesn't wait for video
+  // buffering that will never happen before loading the next one.
+  const dropVideo = (data) => {
+    for (const f of [data && data.frag, data && data.part]) {
+      if (f && f.elementaryStreams && f.elementaryStreams.video) f.elementaryStreams.video = null;
+    }
+  };
+  h.trigger = (event, data) => {
+    if (event === Hls.Events.BUFFER_CODECS && data && data.video) {
+      const rest = { ...data };
+      delete rest.video;
+      return Object.keys(rest).length ? trigger(event, rest) : false;
+    }
+    if (event === Hls.Events.BUFFER_APPENDING && data && data.type === 'video') {
+      dropVideo(data);
+      return false;
+    }
+    if (event === Hls.Events.FRAG_PARSED) dropVideo(data);
+    return trigger(event, data);
+  };
+  return h;
+}
+
 async function mountOwn(tile, muted) {
   const url = new URL(`api/stream/${tile.src.type}/${encodeURIComponent(tile.src.id)}.m3u8`, location.href).toString();
   const check = await fetch(url, { cache: 'no-store' });
@@ -364,11 +394,58 @@ async function mountOwn(tile, muted) {
   });
   v.addEventListener('pause', () => onPaused(tile));
   v.play().catch(() => {});
+
+  // While the page is hidden (screen locked, another app open), play the
+  // sound from an audio-only copy of the stream, then go back to the video.
+  let bg = null; // { audio, hls }
+  function enterBackground() {
+    if (bg || !hls || !started || v.muted || v.paused) return;
+    if (!settings.resumeOnLock || document.pictureInPictureElement === v) return;
+    if (!current || key(current) !== key(tile.src)) return;
+    const audio = document.createElement('audio');
+    audio.preload = 'auto';
+    const h2 = makeAudioOnlyHls({ liveSyncDurationCount: 3 });
+    h2.on(Hls.Events.ERROR, (_e, data) => { if (data.fatal) leaveBackground(); });
+    h2.loadSource(url);
+    h2.attachMedia(audio);
+    audio.play().catch(() => {});
+    bg = { audio, hls: h2 };
+    hls.stopLoad();
+    v.pause();
+  }
+  function leaveBackground() {
+    if (!bg) return;
+    const { audio, hls: h2 } = bg;
+    bg = null;
+    h2.destroy();
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
+    if (hls) {
+      hls.startLoad(-1);
+      if (hls.liveSyncPosition) v.currentTime = hls.liveSyncPosition;
+    }
+    v.play().catch(() => {});
+  }
+  function onVisibility() {
+    if (document.hidden) enterBackground();
+    else leaveBackground();
+  }
+  document.addEventListener('visibilitychange', onVisibility);
+
   return {
     video: v,
     url,
     usesHls: () => !!hls,
-    play() { v.play().catch(() => {}); },
+    inBackground: () => !!bg,
+    play() {
+      if (bg) bg.audio.play().catch(() => {});
+      else v.play().catch(() => {});
+    },
+    pause() {
+      if (bg) bg.audio.pause();
+      else v.pause();
+    },
     setMuted(m) {
       v.muted = m;
       if (!m) v.play().catch(() => {});
@@ -381,6 +458,8 @@ async function mountOwn(tile, muted) {
     },
     destroy() {
       clearTimeout(timer);
+      document.removeEventListener('visibilitychange', onVisibility);
+      if (bg) { bg.hls.destroy(); bg.audio.pause(); bg = null; }
       if (hls) { hls.destroy(); hls = null; }
       v.pause();
       v.removeAttribute('src');
@@ -402,7 +481,11 @@ function updateMediaSession() {
   const tile = () => tiles.find((t) => key(t.src) === key(current));
   try {
     navigator.mediaSession.setActionHandler('play', () => tile()?.player?.play());
-    navigator.mediaSession.setActionHandler('pause', () => tile()?.player?.video?.pause());
+    navigator.mediaSession.setActionHandler('pause', () => {
+      const p = tile()?.player;
+      if (p?.pause) p.pause();
+      else p?.video?.pause();
+    });
   } catch {}
   // Chrome calls this to pop the playing video out automatically when you switch away.
   try {
@@ -516,8 +599,8 @@ function renderStage() {
     sound.setAttribute('aria-label', hasSound ? 'This stream has the sound' : 'Play sound from this stream');
     t.el.classList.toggle('has-sound', !!hasSound);
   }
-  document.body.classList.toggle('multi', multi);
-  $('#multi-btn').setAttribute('aria-pressed', String(multi));
+  document.body.classList.toggle('multi', tiles.length > 1);
+  $('#multi-btn').setAttribute('aria-pressed', String(addMode));
   const label = tiles.length > 1 ? `${tiles.length} streams` : current ? streamName(current) : 'Better DGG Pro';
   $('#source-label').textContent = label;
   document.title = current ? `${tiles.length > 1 ? label : streamName(current)} · Better DGG Pro` : 'Better DGG Pro';
@@ -588,38 +671,43 @@ function removeTile(src) {
   setTiles(rest);
 }
 
-function watch(src) {
+// Tapping a stream switches the one you're watching (the one with sound).
+// To watch several at once, add them: grid button then a tab, or press and
+// hold a tab.
+function watch(src, { add = false } = {}) {
   if (OPEN_ON_DGG.has(src.type)) {
     window.open('https://www.destiny.gg/bigscreen#' + key(src), '_blank', 'noopener');
     return;
   }
-  const inGrid = tiles.some((t) => key(t.src) === key(src));
-  if (!multi) {
-    if (inGrid && tiles.length === 1) return;
-    current = src;
-    store.set('last', src);
-    setTiles([src]);
+  const list = tiles.map((t) => t.src);
+  const inGrid = list.some((s) => key(s) === key(src));
+  if (add || addMode) {
+    setAddMode(false);
+    if (inGrid) { setAudio(src); return; }
+    if (list.length >= MAX_TILES) {
+      toast(`Multi-view holds up to ${MAX_TILES} streams. Remove one first.`);
+      return;
+    }
+    if (!list.length) { current = src; store.set('last', src); }
+    setTiles([...list, src]);
     return;
   }
-  // Multi-view: tapping a stream adds it, tapping it again removes it.
   if (inGrid) {
-    if (tiles.length > 1) removeTile(src);
+    if (list.length > 1) setAudio(src);
     return;
   }
-  if (tiles.length >= MAX_TILES) {
-    toast(`Multi-view holds up to ${MAX_TILES} streams. Remove one first.`);
-    return;
-  }
-  if (!tiles.length) { current = src; store.set('last', src); }
-  setTiles([...tiles.map((t) => t.src), src]);
+  const i = list.findIndex((s) => current && key(s) === key(current));
+  if (i >= 0) list[i] = src;
+  else list.splice(0, list.length, src);
+  current = src;
+  store.set('last', src);
+  setTiles(list);
 }
 
-function setMulti(on) {
-  multi = on;
-  store.set('multi', on);
-  if (!on && tiles.length > 1) setTiles([current || tiles[0].src]);
-  else renderStage();
-  toast(on ? 'Multi-view on: tap streams below to add up to 4' : 'Multi-view off');
+function setAddMode(on) {
+  addMode = on;
+  $('#multi-btn').setAttribute('aria-pressed', String(on));
+  if (on) toast(`Tap a stream below to add it to multi-view (up to ${MAX_TILES})`);
 }
 
 // ---------- Picture-in-picture ----------
@@ -731,6 +819,8 @@ function onPlaying(tile) {
 }
 
 function onPaused(tile) {
+  // The app paused the video itself to play the audio-only copy.
+  if (tile.player && tile.player.inBackground && tile.player.inBackground()) return;
   if (!document.hidden) {
     tile.wantPlaying = false;
     return;
@@ -824,7 +914,7 @@ $('#sound-btn').addEventListener('click', () => {
   else mountTile(tile);
 });
 
-$('#multi-btn').addEventListener('click', () => setMulti(!multi));
+$('#multi-btn').addEventListener('click', () => setAddMode(!addMode));
 
 $('#chat-btn').addEventListener('click', () => {
   saveSetting('showChat', !settings.showChat);
@@ -850,9 +940,8 @@ function parseHashList(hash) {
 window.addEventListener('hashchange', () => {
   const list = parseHashList(location.hash);
   if (!list.length || list.map(key).join(',') === tiles.map((t) => key(t.src)).join(',')) return;
-  if (list.length > 1 && !multi) { multi = true; store.set('multi', true); }
   current = list[0];
-  setTiles(multi ? list : [list[0]]);
+  setTiles(list);
 });
 
 // ---------- Live embed tabs ----------
@@ -896,7 +985,22 @@ function renderTabs() {
     name.className = 'name';
     name.textContent = item.name;
     b.append(platformIcon(item.src.type), name);
-    b.addEventListener('click', () => watch(item.src));
+    let held = false;
+    let holdTimer = null;
+    b.addEventListener('pointerdown', () => {
+      held = false;
+      holdTimer = setTimeout(() => { held = true; watch(item.src, { add: true }); }, 550);
+    });
+    for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => clearTimeout(holdTimer));
+    b.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      if (!held) watch(item.src, { add: true });
+      held = true;
+    });
+    b.addEventListener('click', () => {
+      if (held) { held = false; return; }
+      watch(item.src);
+    });
     return b;
   });
   nav.replaceChildren(...buttons);
@@ -1079,7 +1183,6 @@ renderAwake();
 startTabs();
 const fromHash = parseHashList(location.hash);
 const last = store.get('last', null);
-if (fromHash.length > 1) { multi = true; store.set('multi', true); }
 const first = fromHash.length ? fromHash : [(last && last.type && validate(last)) || DEFAULT_SOURCE];
 current = first[0];
-setTiles(multi ? first : [first[0]]);
+setTiles(first);
