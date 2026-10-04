@@ -1,8 +1,8 @@
-// The ⚙ settings menu (settings, actions, version and change log), the cast sheet
+// The ⋮ action row, the settings sheet (settings, actions, version and change log), the cast sheet
 // and the install bar.
 
 import { state, isCurrent } from './state.js';
-import { $, settings, saveSetting, store, toast, reducedMotion, isIOS, isAndroid, standalone } from './util.js';
+import { $, settings, saveSetting, store, toast, isIOS, isAndroid, standalone } from './util.js';
 import { OWN_PLAYER_TYPES } from './players.js';
 import { mountTile, setAddMode, updateWakeLock, layoutTiles, dropParked } from './stage.js';
 import { renderChat, loadChat, reloadChat } from './chat.js';
@@ -13,14 +13,9 @@ import { applyUpdateOrReload } from './bars.js';
 
 const sheetLayout = window.matchMedia('(max-width: 640px)');
 
+// Close right away: an animation here felt slow with a stream playing behind it.
 function closeSheet(dialog) {
-  if (!dialog.open) return;
-  if (!sheetLayout.matches || reducedMotion.matches) {
-    dialog.close();
-    return;
-  }
-  dialog.classList.add('closing');
-  setTimeout(() => dialog.close(), 180);
+  if (dialog.open) dialog.close();
 }
 
 function swipeToClose(dialog) {
@@ -80,8 +75,35 @@ export function openSheet(scrollTo) {
   if (scrollTo) $('#sheet').scrollTop = $(scrollTo).offsetTop - 8;
 }
 
-$('#menu-btn').addEventListener('click', () => openSheet());
 $('#sheet-close').addEventListener('click', () => closeSheet($('#sheet')));
+
+// ---------- Actions ----------
+// ⋮ slides a row of icon buttons out over the tab row; ✕ (the same button)
+// or using one of them slides it back.
+
+function setActions(open) {
+  $('#actions').hidden = !open;
+  $('#menu-btn').setAttribute('aria-expanded', String(open));
+  $('#menu-btn').setAttribute('aria-label', open ? 'Close' : 'More');
+  $('#menu-btn').title = open ? 'Close' : 'More';
+}
+
+$('#menu-btn').addEventListener('click', () => setActions($('#actions').hidden));
+$('#actions').addEventListener('click', (e) => {
+  if (e.target.closest('button')) setActions(false);
+});
+$('#settings-btn').addEventListener('click', () => openSheet());
+// A tap anywhere else, or Escape, puts the row away.
+document.addEventListener(
+  'pointerdown',
+  (e) => {
+    if (!$('#actions').hidden && !e.target.closest('#tabbar')) setActions(false);
+  },
+  { passive: true },
+);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !$('#actions').hidden) setActions(false);
+});
 
 $('#opt-awake').addEventListener('change', (e) => {
   saveSetting('keepAwake', e.target.checked);
@@ -98,18 +120,12 @@ $('#opt-own').addEventListener('change', (e) => {
   for (const t of state.tiles) if (OWN_PLAYER_TYPES.has(t.src.type)) mountTile(t);
 });
 
-$('#multi-btn').addEventListener('click', () => {
-  $('#sheet').close();
-  setAddMode(true);
-});
+$('#multi-btn').addEventListener('click', () => setAddMode(true));
 
 // Reloads everything, applying a downloaded update first if there is one.
 $('#refresh-btn').addEventListener('click', applyUpdateOrReload);
 
-$('#reload-chat').addEventListener('click', () => {
-  reloadChat();
-  $('#sheet').close();
-});
+$('#reload-chat').addEventListener('click', reloadChat);
 
 // Version line at the bottom of the menu, from the server.
 fetch('api/version', { cache: 'no-store' })

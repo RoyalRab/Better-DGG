@@ -69,7 +69,13 @@ check('long-press adds to multi-view', (await page.locator('#player .tile').coun
 
 await page.click('#menu-btn');
 await page.waitForTimeout(200);
-check('menu opens', await page.evaluate(() => document.querySelector('#sheet').open));
+check('⋮ slides out the action icons', await page.isVisible('#actions #settings-btn'));
+await page.click('#settings-btn');
+await page.waitForTimeout(200);
+check(
+  'settings open, icons put away',
+  await page.evaluate(() => document.querySelector('#sheet').open && document.querySelector('#actions').hidden),
+);
 await page.click('#opt-chat');
 check('Show chat toggles chat', await page.evaluate(() => document.body.classList.contains('no-chat')));
 await page.click('#opt-chat');

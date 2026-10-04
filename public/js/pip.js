@@ -31,8 +31,9 @@ function pipAvailable() {
 
 export function renderPip() {
   $('#pip-btn').hidden = !pipAvailable();
-  $('#pip-btn span').textContent =
-    document.pictureInPictureElement || docPip ? 'Exit picture-in-picture' : 'Picture-in-picture';
+  const label = document.pictureInPictureElement || docPip ? 'Exit picture-in-picture' : 'Picture-in-picture';
+  $('#pip-btn').setAttribute('aria-label', label);
+  $('#pip-btn').title = label;
 }
 
 async function togglePip() {
@@ -102,9 +103,6 @@ async function openDocPip(t) {
   });
 }
 
-$('#pip-btn').addEventListener('click', () => {
-  $('#sheet').close();
-  togglePip();
-});
+$('#pip-btn').addEventListener('click', togglePip);
 document.addEventListener('enterpictureinpicture', renderPip, true);
 document.addEventListener('leavepictureinpicture', renderPip, true);
