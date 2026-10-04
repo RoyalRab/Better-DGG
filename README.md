@@ -14,11 +14,11 @@ Under the player is a row of tabs with every live stream DGG viewers are embeddi
 
 **Screen stays on.** While the app is open it holds a [Screen Wake Lock](https://developer.mozilla.org/docs/Web/API/Screen_Wake_Lock_API). The sun icon turns yellow while the lock is held; tap it to turn it off.
 
-**Keeps playing when the phone locks.** YouTube and Twitch players pause themselves when the page is hidden. If that happens within a few seconds of the screen locking, the app starts them again. A pause made later, for example from the lock screen controls, is left alone. Kick, AngelThump and Rumble players can't be controlled from outside, so for them it depends on their player.
+**Keeps playing when the phone locks.** Kick streams play in the app's own video player by default. The server gets each channel's stream from Kick's public channel API, and the app plays it directly, so sound keeps going when the screen locks and the lock screen shows play and pause controls. If that fails, the app falls back to Kick's player. YouTube and Twitch players pause themselves when the page is hidden; if that happens within a few seconds of the screen locking, the app starts them again. AngelThump and Rumble players can't be controlled from outside, and AngelThump streams need a token only its own player can get, so for those it depends on their player.
 
 **Sound.** Browsers only let a player start with sound after a tap, so when the app opens it shows a play button instead of starting muted. If a stream still comes up muted, the speaker button in the top bar turns its sound on.
 
-**Cast to TV.** Streams come from other sites' players, and only those players can send video to a Chromecast, so the app can't cast by itself. The ⋮ menu has a Cast to TV page with the options for the device you're on: screen casting (Smart View, Screen cast or AirPlay mirroring) on phones and tablets, Chrome's Cast tab on desktop, or the cast icon inside YouTube and Twitch players.
+**Cast to TV.** Kick streams in the app's own player can be cast straight to a Chromecast from **⋮ → Cast to TV → Cast this stream**, or from the cast icon in the player's controls, where the browser supports it (Chrome on Android does). Other streams play in their sites' players, so the Cast to TV page lists the options for the device you're on: screen casting (Smart View, Screen cast or AirPlay mirroring) on phones and tablets, Chrome's Cast tab on desktop, or the cast icon inside YouTube and Twitch players.
 
 ## Installing
 
@@ -36,6 +36,6 @@ The app has no accounts, analytics or tracking. Settings stay in your own browse
 
 ## Running it
 
-`server.js` is a small Node server that serves the app from `public/` and relays the live embed list at `/api/embeds` (a snapshot) and `/api/live` (server-sent events). The `Dockerfile` builds it, and Railway redeploys on every push to the connected branch.
+`server.js` is a small Node server that serves the app from `public/` and relays the live embed list at `/api/embeds` (a snapshot) and `/api/live` (server-sent events), and relays Kick stream playlists at `/api/stream/kick/<channel>.m3u8`. The `Dockerfile` builds it, and Railway redeploys on every push to the connected branch.
 
 To run it locally: `npm install`, then `npm start`, then open http://localhost:8080.

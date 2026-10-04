@@ -193,6 +193,54 @@ function destinyStreams() {
   return out;
 }
 
+// ---------- Kick streams for the app's own player ----------
+// Kick's public channel API gives each live channel an HLS playlist URL.
+// Playing that in the app's own <video> keeps sound going when the phone
+// locks and lets Chrome cast it. The top-level playlist doesn't always allow
+// cross-site requests, so it's relayed from here; the media playlists and
+// video segments it points to are fetched by the browser directly.
+
+const KICK_SLUG = /^[A-Za-z0-9_-]{1,64}$/;
+const kickCache = new Map(); // slug -> { at, url }
+
+async function kickPlaybackUrl(slug) {
+  const hit = kickCache.get(slug);
+  if (hit && Date.now() - hit.at < 30 * 1000) return hit.url;
+  const r = await fetch(`https://kick.com/api/v2/channels/${slug}`, {
+    headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0 (compatible; better-dgg)' },
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!r.ok) throw new Error('kick api ' + r.status);
+  const j = await r.json();
+  const url = j && j.livestream && typeof j.playback_url === 'string' ? j.playback_url : null;
+  kickCache.set(slug, { at: Date.now(), url });
+  if (kickCache.size > 500) kickCache.delete(kickCache.keys().next().value);
+  return url;
+}
+
+async function serveKickPlaylist(res, slug) {
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  if (!KICK_SLUG.test(slug)) return send(res, 400, 'text/plain; charset=utf-8', 'Bad channel');
+  try {
+    const url = await kickPlaybackUrl(slug.toLowerCase());
+    if (!url) return send(res, 404, 'text/plain; charset=utf-8', 'Not live');
+    const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) return send(res, 502, 'text/plain; charset=utf-8', 'Upstream ' + r.status);
+    const text = await r.text();
+    if (!text.startsWith('#EXTM3U')) return send(res, 502, 'text/plain; charset=utf-8', 'Bad playlist');
+    // Make every URI absolute so it still resolves when served from here.
+    const out = text.split('\n').map((line) => {
+      const t = line.trim();
+      if (t && !t.startsWith('#')) return new URL(t, url).toString();
+      return line.replace(/URI="([^"]+)"/g, (_m, u) => `URI="${new URL(u, url).toString()}"`);
+    }).join('\n');
+    send(res, 200, 'application/vnd.apple.mpegurl', out);
+  } catch (err) {
+    send(res, 502, 'text/plain; charset=utf-8', 'Kick unavailable');
+  }
+}
+
 // ---------- HTTP ----------
 
 const server = http.createServer((req, res) => {
@@ -207,6 +255,8 @@ const server = http.createServer((req, res) => {
     return send(res, 200, 'application/json', JSON.stringify(snapshot()));
   }
   if (url.pathname === '/api/live') return openStream(req, res);
+  const kick = url.pathname.match(/^\/api\/stream\/kick\/([^/]+)\.m3u8$/);
+  if (kick) return serveKickPlaylist(res, decodeURIComponent(kick[1]));
   if (url.pathname === '/healthz') return send(res, 200, 'text/plain', 'ok');
   serveFile(req, res, url.pathname);
 });

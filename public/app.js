@@ -19,6 +19,7 @@ const store = {
 const settings = {
   keepAwake: store.get('keepAwake', true),
   resumeOnLock: store.get('resumeOnLock', true),
+  ownPlayer: store.get('ownPlayer', true),
   showChat: store.get('showChat', true),
 };
 
@@ -294,6 +295,80 @@ async function mountTwitch(tile, muted) {
   };
 }
 
+// Kick streams can play in the app's own <video>, which keeps sound going
+// when the phone locks, shows lock screen controls, and can be cast.
+const HLS_JS = 'https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js';
+const OWN_PLAYER_TYPES = new Set(['kick']);
+
+async function mountOwn(tile, muted) {
+  const url = new URL(`api/stream/${tile.src.type}/${encodeURIComponent(tile.src.id)}.m3u8`, location.href).toString();
+  const check = await fetch(url, { cache: 'no-store' });
+  if (!check.ok) throw new Error('not playable: ' + check.status);
+
+  const v = document.createElement('video');
+  v.className = 'own-player';
+  v.controls = true;
+  v.autoplay = true;
+  v.playsInline = true;
+  v.muted = muted;
+  v.setAttribute('playsinline', '');
+  tile.body.appendChild(v);
+
+  let hls = null;
+  if (v.canPlayType('application/vnd.apple.mpegurl')) {
+    // Native HLS (Safari, Chrome on Android): the plain URL can also be cast.
+    v.src = url;
+  } else {
+    await loadScript(HLS_JS);
+    if (!window.Hls || !Hls.isSupported()) { v.remove(); throw new Error('no HLS support'); }
+    hls = new Hls({ lowLatencyMode: true, liveSyncDurationCount: 3 });
+    let recoveries = 0;
+    hls.on(Hls.Events.ERROR, (_e, data) => {
+      if (!data.fatal) return;
+      if (recoveries++ > 3) return;
+      if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+      else setTimeout(() => hls && hls.loadSource(url), 2000);
+    });
+    hls.loadSource(url);
+    hls.attachMedia(v);
+  }
+  v.addEventListener('playing', () => { onPlaying(tile); updateMediaSession(); });
+  v.addEventListener('pause', () => onPaused(tile));
+  v.play().catch(() => {});
+  return {
+    video: v,
+    play() { v.play().catch(() => {}); },
+    setMuted(m) {
+      v.muted = m;
+      if (!m) v.play().catch(() => {});
+    },
+    unmute() { this.setMuted(false); },
+    destroy() {
+      if (hls) { hls.destroy(); hls = null; }
+      v.pause();
+      v.removeAttribute('src');
+      v.load();
+      v.remove();
+    },
+  };
+}
+
+// Lock screen and notification controls for the stream with sound.
+function updateMediaSession() {
+  if (!('mediaSession' in navigator) || !current) return;
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: streamName(current),
+    artist: PLATFORM_NAMES[current.type] || current.type,
+    album: 'Better DGG Pro',
+    artwork: [{ src: new URL('icons/icon-512.png', location.href).toString(), sizes: '512x512', type: 'image/png' }],
+  });
+  const tile = () => tiles.find((t) => key(t.src) === key(current));
+  try {
+    navigator.mediaSession.setActionHandler('play', () => tile()?.player?.play());
+    navigator.mediaSession.setActionHandler('pause', () => tile()?.player?.video?.pause());
+  } catch {}
+}
+
 async function mountTile(tile) {
   const token = (tile.token = (tile.token || 0) + 1);
   if (tile.player) tile.player.destroy();
@@ -303,7 +378,12 @@ async function mountTile(tile) {
   const muted = !current || key(current) !== key(tile.src);
   let mounted;
   try {
-    if (tile.src.type === 'youtube') mounted = await mountYouTube(tile, muted);
+    if (settings.ownPlayer && OWN_PLAYER_TYPES.has(tile.src.type)) {
+      try { mounted = await mountOwn(tile, muted); } catch { mounted = null; }
+      if (token !== tile.token) { mounted?.destroy(); return; }
+    }
+    if (mounted) { /* own player */ }
+    else if (tile.src.type === 'youtube') mounted = await mountYouTube(tile, muted);
     else if (tile.src.type === 'twitch' || tile.src.type === 'twitch-vod') mounted = await mountTwitch(tile, muted);
     else if (frameUrl(tile.src, muted)) mounted = mountFrame(tile, muted);
     else throw new Error('Unsupported platform ' + tile.src.type);
@@ -399,6 +479,7 @@ function renderStage() {
   history.replaceState(null, '', hash ? '#' + hash : location.pathname);
   renderTabs();
   updateWakeLock();
+  updateMediaSession();
 }
 
 function hasTapped() {
@@ -569,6 +650,7 @@ function renderChat() {
 function openSheet() {
   $('#opt-awake').checked = settings.keepAwake;
   $('#opt-resume').checked = settings.resumeOnLock;
+  $('#opt-own').checked = settings.ownPlayer;
   $('#sheet').showModal();
 }
 
@@ -579,6 +661,10 @@ $('#opt-awake').addEventListener('change', (e) => {
   updateWakeLock();
 });
 $('#opt-resume').addEventListener('change', (e) => saveSetting('resumeOnLock', e.target.checked));
+$('#opt-own').addEventListener('change', (e) => {
+  saveSetting('ownPlayer', e.target.checked);
+  for (const t of tiles) if (OWN_PLAYER_TYPES.has(t.src.type)) mountTile(t);
+});
 
 $('#awake-btn').addEventListener('click', () => {
   saveSetting('keepAwake', !settings.keepAwake);
@@ -748,7 +834,20 @@ function castSteps() {
   return steps;
 }
 
+function castableVideo() {
+  const t = tiles.find((x) => current && key(x.src) === key(current));
+  const v = t?.player?.video;
+  return v && v.remote && v.src && !v.src.startsWith('blob:') ? v : null;
+}
+
+$('#cast-now').addEventListener('click', () => {
+  const v = castableVideo();
+  if (!v) return;
+  v.remote.prompt().catch((err) => toast(err && err.name === 'NotFoundError' ? 'No Chromecast found on this network' : "Couldn't start casting"));
+});
+
 $('#cast-btn').addEventListener('click', () => {
+  $('#cast-now').hidden = !castableVideo();
   const box = $('#cast-steps');
   box.replaceChildren(...castSteps().map(([title, text]) => {
     const p = document.createElement('p');

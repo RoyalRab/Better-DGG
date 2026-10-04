@@ -10,6 +10,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
 html, body {
   margin: 0;
@@ -105,6 +106,8 @@ button, input { font: inherit; color: inherit; }
   height: 100% !important;
   border: 0;
 }
+.own-player { background: #000; object-fit: contain; }
+#cast-now { margin-top: 12px; }
 .tile-body > .empty {
   display: grid;
   place-items: center;
