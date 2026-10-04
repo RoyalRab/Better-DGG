@@ -179,6 +179,50 @@ function dropTile(t) {
   t.el.remove();
 }
 
+// ---------- Keep the last Kick stream warm ----------
+// A Kick stream in the app's own player that you switch away from (or remove
+// from multi-view) keeps playing hidden and muted for a minute, so switching
+// back to it is instant. Only the last one is kept. Other sites' players
+// can't be muted from outside, so they're closed as before.
+
+const PARK_MS = 60000;
+let parked = null; // { tile, timer }
+
+const canPark = (t) => !!(t.player && t.player.video && t.wantPlaying && !inDocPip(t));
+
+function retire(t) {
+  if (canPark(t)) park(t);
+  else dropTile(t);
+}
+
+function park(t) {
+  dropParked();
+  t.player.setMuted(true);
+  t.el.classList.remove('leaving');
+  t.el.classList.add('parked');
+  t.el.setAttribute('aria-hidden', 'true');
+  parked = { tile: t, timer: setTimeout(dropParked, PARK_MS) };
+}
+
+export function dropParked() {
+  if (!parked) return;
+  clearTimeout(parked.timer);
+  const { tile } = parked;
+  parked = null;
+  dropTile(tile);
+}
+
+function takeParked(src) {
+  if (!parked || key(parked.tile.src) !== key(src)) return null;
+  clearTimeout(parked.timer);
+  const { tile } = parked;
+  parked = null;
+  tile.el.classList.remove('parked');
+  tile.el.removeAttribute('aria-hidden');
+  tile.unparked = true;
+  return tile;
+}
+
 // ---------- Start loading on press ----------
 // A tab starts loading its stream the moment it's pressed, hidden behind the
 // current one; the tap that follows takes it over. A scroll, a long-press, or
@@ -189,6 +233,7 @@ let prepared = null; // { tile, timer }
 export function prepare(src) {
   cancelPrepare();
   if (state.addMode || OPEN_ON_DGG.has(src.type) || state.tiles.some((t) => key(t.src) === key(src))) return;
+  if (parked && key(parked.tile.src) === key(src)) return; // already running
   const tile = makeTile(src);
   tile.prepared = true;
   tile.el.classList.add('preparing');
@@ -234,7 +279,7 @@ function finishHandoff() {
   clearTimeout(handoff.timer);
   const { old } = handoff;
   handoff = null;
-  dropTile(old);
+  retire(old);
 }
 
 function onLoaded(tile) {
@@ -252,7 +297,7 @@ export function setTiles(want) {
   finishHandoff();
   const before = state.tiles;
   const keep = new Map(before.map((t) => [key(t.src), t]));
-  const next = want.map((src) => keep.get(key(src)) || takePrepared(src) || makeTile(src));
+  const next = want.map((src) => keep.get(key(src)) || takeParked(src) || takePrepared(src) || makeTile(src));
   const removed = before.filter((t) => !next.includes(t));
   const swap =
     before.length === 1 &&
@@ -260,13 +305,21 @@ export function setTiles(want) {
     removed.length === 1 &&
     removed[0].player &&
     !inDocPip(removed[0]) &&
-    !removed[0].el.classList.contains('loading');
+    !removed[0].el.classList.contains('loading') &&
+    !(next[0].player && next[0].wantPlaying); // the new one is already playing (kept warm)
   for (const t of removed) {
     if (swap) startHandoff(t, next[0]);
-    else dropTile(t);
+    else retire(t);
   }
   state.tiles = next;
   if (!state.current || !next.some((t) => isCurrent(t.src))) state.current = next[0] ? next[0].src : null;
+  // A stream coming back from being kept warm: sound back on if it's the one with sound.
+  for (const t of next) {
+    if (!t.unparked) continue;
+    t.unparked = false;
+    t.player.setMuted(!isCurrent(t.src));
+    t.player.play();
+  }
 
   const stage = $('#player');
   stage.dataset.count = String(next.length);

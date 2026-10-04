@@ -7,7 +7,7 @@
 //   tabs.js     the live embed tabs
 //   chat.js     chat and its resizer
 //   pip.js      picture-in-picture
-//   menu.js     the ⋮ menu, change log, cast and install
+//   menu.js     the ⚙ settings menu, change log, cast and install
 //   bars.js     update, what's new, offline and restore bars
 
 import { DEFAULT_SOURCE, key, parseHashList, validate } from './sources.js';

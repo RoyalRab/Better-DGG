@@ -1,6 +1,12 @@
 # Changelog
 
-What changed in each version of DGG Remix. The newest version is listed in the app's ⋮ menu, with older ones folded underneath. Add an entry here with every version bump.
+What changed in each version of DGG Remix. The newest version is listed in the app's ⚙ menu, with older ones folded underneath. Add an entry here with every version bump.
+
+## 1.4.0 (2026-10-04)
+
+- A Kick stream you switch away from keeps running hidden and muted for a minute, so switching back to it is instant.
+- The menu button is now a gear, and the menu's buttons have icons.
+- Android: the page now stays above the navigation buttons in the installed app, so the chat box isn't hidden under them.
 
 ## 1.3.1 (2026-10-04)
 

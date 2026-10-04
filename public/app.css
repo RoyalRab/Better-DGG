@@ -177,8 +177,10 @@ input {
   }
 }
 
-/* A stream loading ahead of a tap, hidden until the tap takes it over */
-.tile.preparing {
+/* A stream loading ahead of a tap, or a Kick stream kept warm after
+   switching away: hidden behind the stage */
+.tile.preparing,
+.tile.parked {
   position: absolute;
   inset: 0;
   z-index: -1;
@@ -440,8 +442,8 @@ body.no-chat #player[data-count='2'] {
   color: var(--text);
 }
 #menu-btn svg {
-  width: 17px;
-  height: 17px;
+  width: 19px;
+  height: 19px;
   fill: currentColor;
 }
 #tabs::-webkit-scrollbar {
@@ -638,6 +640,16 @@ dialog button.primary {
   margin: 0;
   flex: none;
   accent-color: var(--accent);
+}
+.links button {
+  gap: 8px;
+}
+.links button svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+  opacity: 0.85;
 }
 .links {
   display: flex;

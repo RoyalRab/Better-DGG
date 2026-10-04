@@ -31,7 +31,7 @@ function pipAvailable() {
 
 export function renderPip() {
   $('#pip-btn').hidden = !pipAvailable();
-  $('#pip-btn').textContent =
+  $('#pip-btn span').textContent =
     document.pictureInPictureElement || docPip ? 'Exit picture-in-picture' : 'Picture-in-picture';
 }
 

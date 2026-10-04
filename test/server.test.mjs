@@ -136,6 +136,18 @@ test('page uses content-hashed files, and the service worker can cache all of th
   assert.ok(sw.includes(JSON.stringify(srv.ASSETS)));
 });
 
+test('Android gets the page without viewport-fit=cover; others keep it', async () => {
+  const android = await (
+    await get('/', '10.5.0.1', { headers: { 'User-Agent': 'Mozilla/5.0 (Linux; Android 15) Chrome/140' } })
+  ).text();
+  const iphone = await (
+    await get('/', '10.5.0.1', { headers: { 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0)' } })
+  ).text();
+  assert.doesNotMatch(android, /viewport-fit=cover/);
+  assert.match(android, /name="viewport" content="width=device-width, initial-scale=1"/);
+  assert.match(iphone, /viewport-fit=cover/);
+});
+
 test('responses are compressed and carry security headers', async () => {
   const r = await get('/', '10.4.0.1', { headers: { 'Accept-Encoding': 'br' } });
   assert.equal(r.headers.get('content-encoding'), 'br');

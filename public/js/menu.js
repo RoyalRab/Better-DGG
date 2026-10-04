@@ -1,10 +1,10 @@
-// The ⋮ menu (settings, actions, version and change log), the cast sheet
+// The ⚙ settings menu (settings, actions, version and change log), the cast sheet
 // and the install bar.
 
 import { state, isCurrent } from './state.js';
 import { $, settings, saveSetting, store, toast, reducedMotion, isIOS, isAndroid, standalone } from './util.js';
 import { OWN_PLAYER_TYPES } from './players.js';
-import { mountTile, setAddMode, updateWakeLock, layoutTiles } from './stage.js';
+import { mountTile, setAddMode, updateWakeLock, layoutTiles, dropParked } from './stage.js';
 import { renderChat, loadChat, reloadChat } from './chat.js';
 import { applyUpdateOrReload } from './bars.js';
 
@@ -94,6 +94,7 @@ $('#opt-chat').addEventListener('change', (e) => {
 });
 $('#opt-own').addEventListener('change', (e) => {
   saveSetting('ownPlayer', e.target.checked);
+  dropParked();
   for (const t of state.tiles) if (OWN_PLAYER_TYPES.has(t.src.type)) mountTile(t);
 });
 

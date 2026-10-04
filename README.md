@@ -18,13 +18,13 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 | Installable app | Installs to the home screen with its own icon, opens full screen without the browser bar, and shows an install bar until it's installed. |
 | Picture-in-picture | Pops the stream into a floating window from the menu, and Kick streams pop out on their own when you leave the app where the browser supports it. |
 | Autoplay with sound | Streams start by themselves. In the installed app they usually start with sound; otherwise there's one **Tap for sound** button. |
-| More room for the stream | No top bar. The player starts at the top of the screen, with a short tab row under it and the ⋮ menu at the end of the row. |
+| More room for the stream | No top bar. The player starts at the top of the screen, with a short tab row under it and the ⚙ settings menu at the end of the row. |
 | One-tap switching | Every live embed is a tab under the player. Tap to switch, press and hold to add it to multi-view (a one-time tip says so). A stream starts loading the moment your finger touches its tab. |
 | Phone layouts | Portrait stacks player, tabs and chat. Landscape puts chat on the right. Chat can be hidden to give the stream the whole screen. |
 | Cast to TV help | Device-specific steps for screen casting (Smart View, Screen cast, AirPlay), plus direct Chromecast casting for Kick streams. |
 | Refresh button | Reloads the installed app, which has no pull-to-refresh. |
-| Bottom-sheet menu | On phones the ⋮ menu slides up from the bottom and closes with a swipe down. |
-| Bigger tap targets | The tab row stays short, but each tab and the ⋮ button take taps across a 44 px area. |
+| Bottom-sheet menu | On phones the ⚙ menu slides up from the bottom and closes with a swipe down. |
+| Bigger tap targets | The tab row stays short, but each tab and the ⚙ button take taps across a 44 px area. |
 | Opens instantly | The app opens from the phone's cache, even on bad signal, and downloads new versions in the background. An **Update ready** bar appears when one is ready. |
 | Offline banner | Shows when the connection drops; the tabs and stream come back on their own when it returns. |
 | Faster start on cellular | Kick starts at a lower quality and sharpens as the connection allows, and chat loads after the stream has started. |
@@ -38,7 +38,7 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 | Multi-view | Up to four streams at once, with a speaker button on each to move the sound and an ✕ to remove it. The grid is sized to give each stream the most room, including on ultrawides. The address bar link reopens the same set. |
 | Kick in the app's own player | Kick streams play in the app's own player ([hls.js](https://github.com/video-dev/hls.js)), which is what makes lock-screen audio, picture-in-picture and Chromecast possible. It falls back to Kick's player if it can't start. |
 | Desktop extras | Mouse wheel scrolls the tab row, right-click a tab to add it to multi-view, and picture-in-picture works for any stream in Chrome and Edge. |
-| Smooth switching | The stream you're leaving stays on screen until the new one starts, with a loading spinner instead of a black box. |
+| Smooth switching | The stream you're leaving stays on screen until the new one starts, with a loading spinner instead of a black box. A Kick stream you switch away from keeps running hidden and muted for a minute, so switching back is instant (this uses some data). |
 | Stays live | Kick streams in the app's own player catch back up after buffering (slightly faster playback, or a jump if far behind), and show LIVE, or how many seconds behind they are with a **Jump to live** button. |
 | Resizable chat | In landscape and on desktop, drag the line between the stream and chat (or use the arrow keys on it) to change chat's width. Double-click resets it. |
 | What's new | The menu lists what changed in each version, and a bar mentions it once after an update. |
@@ -49,9 +49,9 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 
 ## Using it
 
-Tap a tab to watch it. To watch more than one stream, press and hold a tab, or choose **Add a stream to multi-view** in the ⋮ menu and then tap a tab. In multi-view, tapping a tab replaces the stream that has the sound.
+Tap a tab to watch it. To watch more than one stream, press and hold a tab, or choose **Add a stream to multi-view** in the ⚙ menu and then tap a tab. In multi-view, tapping a tab replaces the stream that has the sound.
 
-When an update is ready, a bar at the top offers to refresh into it; Refresh app in the menu does the same. The ⋮ menu has the settings (keep the screen on, show chat, play Kick in the app's own player) and Refresh app, Picture-in-picture, Add a stream to multi-view, Cast to TV and Reload chat. The app's version and what changed in it are at the bottom of the menu; older versions are folded under **Earlier versions**. The full history is in `CHANGELOG.md`.
+When an update is ready, a bar at the top offers to refresh into it; Refresh app in the menu does the same. The ⚙ menu has the settings (keep the screen on, show chat, play Kick in the app's own player) and Refresh app, Picture-in-picture, Add a stream to multi-view, Cast to TV and Reload chat. The app's version and what changed in it are at the bottom of the menu; older versions are folded under **Earlier versions**. The full history is in `CHANGELOG.md`.
 
 ## Installing
 
