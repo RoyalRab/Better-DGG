@@ -1,4 +1,4 @@
-# Better DGG Pro
+# Better DGG Remix
 
 An unofficial, fan-made web app for watching destiny.gg's live embeds with chat. It works on Android, iPhone, iPad and other tablets, desktop browsers and ultrawide screens, and it can be installed to the home screen. It isn't affiliated with destiny.gg.
 
@@ -39,5 +39,7 @@ The app has no accounts, analytics or tracking, and nothing in it identifies who
 ## Running it
 
 `server.js` is a small Node server that serves the app from `public/` and relays the live embed list at `/api/embeds` (a snapshot) and `/api/live` (server-sent events), and relays Kick stream playlists at `/api/stream/kick/<channel>.m3u8`. The `Dockerfile` builds it, and Railway redeploys on every push to the connected branch.
+
+The app icon is destiny.gg's current icon with a REMIX tag. `scripts/make-icons.mjs` downloads it and adds the tag (`icon-src/remix-tag.png`) during the Docker build; if the download fails, the icons already in `public/icons` are used.
 
 To run it locally: `npm install`, then `npm start`, then open http://localhost:8080.

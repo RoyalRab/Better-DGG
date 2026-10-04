@@ -496,7 +496,7 @@ function updateMediaSession() {
   navigator.mediaSession.metadata = new MediaMetadata({
     title: streamName(current),
     artist: PLATFORM_NAMES[current.type] || current.type,
-    album: 'Better DGG Pro',
+    album: 'Better DGG Remix',
     artwork: [{ src: new URL('icons/icon-512.png', location.href).toString(), sizes: '512x512', type: 'image/png' }],
   });
   const tile = () => tiles.find((t) => key(t.src) === key(current));
@@ -622,8 +622,8 @@ function renderStage() {
   }
   document.body.classList.toggle('multi', tiles.length > 1);
   $('#multi-btn').setAttribute('aria-pressed', String(addMode));
-  const label = tiles.length > 1 ? `${tiles.length} streams` : current ? streamName(current) : 'Better DGG Pro';
-  document.title = current ? `${tiles.length > 1 ? label : streamName(current)} · Better DGG Pro` : 'Better DGG Pro';
+  const label = tiles.length > 1 ? `${tiles.length} streams` : current ? streamName(current) : 'Better DGG Remix';
+  document.title = current ? `${tiles.length > 1 ? label : streamName(current)} · Better DGG Remix` : 'Better DGG Remix';
   const hash = tiles.map((t) => key(t.src)).join(',');
   history.replaceState(null, '', hash ? '#' + hash : location.pathname);
   renderTabs();
@@ -1152,7 +1152,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   installPrompt = e;
   $('#install-btn').hidden = false;
-  showInstallBar('Install Better DGG Pro for full screen and quick access', true);
+  showInstallBar('Install Better DGG Remix for full screen and quick access', true);
 });
 
 async function runInstall() {

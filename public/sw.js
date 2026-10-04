@@ -1,12 +1,12 @@
 // Network first so updates show up right away; the cache only covers going offline.
-const CACHE = 'bdgg-v14';
+const CACHE = 'bdgg-v15';
 const SHELL = [
   './',
   './index.html',
   './app.css',
   './app.js',
   './manifest.webmanifest',
-  './icons/icon.svg',
+  './icons/favicon-64.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/apple-touch-icon.png',
