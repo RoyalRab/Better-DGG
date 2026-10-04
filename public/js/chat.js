@@ -11,17 +11,23 @@ export function renderChat() {
 // Chat loads once the first stream is playing (or after a few seconds), so
 // it doesn't compete with the stream for bandwidth at startup.
 let chatLoaded = false;
+// Until chat has loaded, the panel shows "Loading chat…" (the iframe stays
+// hidden so a blank page doesn't flash over it).
+const frame = $('#chat-frame');
+frame.addEventListener('load', () => {
+  if (frame.getAttribute('src')) frame.classList.add('loaded');
+});
+
 export function loadChat(force = false) {
   if (chatLoaded || (!settings.showChat && !force)) return;
-  const f = $('#chat-frame');
-  f.src = f.dataset.src;
+  frame.src = frame.dataset.src;
   chatLoaded = true;
 }
 
 export function reloadChat() {
-  const f = $('#chat-frame');
-  if (chatLoaded) f.src = f.dataset.src;
-  else loadChat(true);
+  if (!chatLoaded) return loadChat(true);
+  frame.classList.remove('loaded');
+  frame.src = frame.dataset.src;
 }
 
 // ---------- Resizing ----------

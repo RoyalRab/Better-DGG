@@ -3,7 +3,7 @@
 DGG Remix: an unofficial mobile-first web app (installable PWA) for destiny.gg's live embeds plus destiny.gg chat. User-facing docs are in README.md, and ideas for next steps are in IDEAS.md.
 
 ## Working with this user
-- **Share the link in every reply**, as the last line: https://better-dgg.up.railway.app
+- **Share the link in every reply**, as the last line: https://dggremix.up.railway.app
 - **Update README.md in the same commit as any user-visible change.** Keep the "What's different from destiny.gg" tables current, and put each feature in the right table: "Mobile experience" for phone- and tablet-specific things, "Everywhere" for the rest. Also update "Using it", "Limits" or "Development" when they're affected, and IDEAS.md when an idea ships (remove it).
 - Plain prose in chat. Ask instead of guessing when a request is ambiguous.
 - The owner tests on an Android phone in Chrome, as the installed app. After a deploy, they pick up changes with the update bar or ⋮ → Refresh.
@@ -11,7 +11,7 @@ DGG Remix: an unofficial mobile-first web app (installable PWA) for destiny.gg's
 
 ## Deploy
 - Railway deploys from `main` on every push (about 40 s). Work on a branch if the session gives you one, and push to `main` (`git push origin HEAD:main`) to ship.
-- Railway project `39eb599e-868e-49f2-9d41-3b53a9718181`, service `web` `e3a97c74-8d6c-4415-adca-eb1ba18fafd0`, environment `5dc0d05e-255c-4262-9e85-6e2ff4eb8bb6`, domain better-dgg.up.railway.app (port 8080).
+- Railway project `39eb599e-868e-49f2-9d41-3b53a9718181`, service `web` `e3a97c74-8d6c-4415-adca-eb1ba18fafd0`, environment `5dc0d05e-255c-4262-9e85-6e2ff4eb8bb6`, domain dggremix.up.railway.app (port 8080).
 - To confirm a deploy, use Railway MCP `get-logs` on the service (types `deploy`) and look for `listening on 8080` and `live: connected`. Build logs show `icons: built from destiny.gg icon with REMIX tag`.
 - Don't bump anything for caching: the server rewrites `CACHE` and `ASSETS` in `sw.js` and the `?v=` on app.css and the JS modules with content hashes at startup.
 - Railway's health check is `/healthz` (60 s timeout); a new deploy only takes traffic once it answers. On SIGTERM the server tells SSE clients to retry in 1 s.

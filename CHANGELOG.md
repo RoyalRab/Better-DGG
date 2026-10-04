@@ -2,6 +2,11 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.6.0 (2026-10-04)
+
+- New address: https://dggremix.up.railway.app (the old better-dgg address no longer works; reinstall the app from the new one).
+- Loading placeholders: a spinner in the player while the app picks a stream, faint tabs until the live list arrives, and "Loading chat…" until chat appears.
+
 ## 1.5.0 (2026-10-04)
 
 - ⋮ now slides a row of icons over the tab row (refresh, picture-in-picture, multi-view, cast, reload chat, settings) instead of opening a long menu; ✕ puts them away.

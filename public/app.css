@@ -358,6 +358,7 @@ body.multi .tile.has-sound {
 #chat {
   flex: 1;
   min-height: 0;
+  position: relative;
   background: var(--panel);
 }
 #chat iframe {
@@ -365,6 +366,46 @@ body.multi .tile.has-sound {
   width: 100%;
   height: 100%;
   border: 0;
+}
+#chat iframe:not(.loaded) {
+  visibility: hidden;
+}
+#chat:has(iframe:not(.loaded))::before {
+  content: 'Loading chat…';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Loading placeholders before anything has arrived: a spinner in the empty
+   player, and faint tabs until the live list comes in. */
+#player:empty::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 36px;
+  height: 36px;
+  margin: -18px 0 0 -18px;
+  border: 3px solid rgb(255 255 255 / 0.2);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+#tabs:empty:not(.loaded) {
+  background:
+    linear-gradient(var(--line), var(--line)) 12px 50% / 72px 10px no-repeat,
+    linear-gradient(var(--line), var(--line)) 104px 50% / 56px 10px no-repeat,
+    linear-gradient(var(--line), var(--line)) 180px 50% / 84px 10px no-repeat;
+  animation: placeholder-pulse 1.2s ease-in-out infinite alternate;
+}
+@keyframes placeholder-pulse {
+  to {
+    opacity: 0.4;
+  }
 }
 body.no-chat #chat,
 body.no-chat #chat-resizer {

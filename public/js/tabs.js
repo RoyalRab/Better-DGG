@@ -150,6 +150,7 @@ export function applyLive(data) {
   const items = liveItems(data);
   for (const i of items) knownNames.set(key(i.src), i.name);
   state.tabItems = items;
+  $('#tabs').classList.add('loaded'); // no more placeholder tabs, even if the list is empty
   renderTabs();
   renderTileNames();
   document.dispatchEvent(new CustomEvent('livelist'));
