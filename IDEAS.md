@@ -100,7 +100,6 @@ Ways to make DGG Remix better, roughly from most to least useful. Effort: S is a
 | Idea | Why | Effort |
 | --- | --- | --- |
 | Run `dev/smoke.mjs` in GitHub Actions on every push | Catch breakage before the user does | S |
-| Move from the `ccr-…` branch to `main` and point Railway at it | Simpler setup | S |
 | Custom domain | Easier to share and remember | S |
 | Delete the `dgg-probe` Railway Function when it's no longer needed | Tidier project | S |
 | Opt-in error reports (player failures, background audio failures) to the server log | Diagnose phone-only problems without screenshots | M |
