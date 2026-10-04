@@ -1,11 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <rect width="512" height="512" fill="#ffffff"/>
-  <rect x="80" y="118" width="352" height="210" rx="40" fill="#1e7ac4"/>
-  <path d="M224 174 L316 223 L224 272 Z" fill="#ffffff"/>
-  <path d="M126 356 h214 a30 30 0 0 1 30 30 v22 a30 30 0 0 1 -30 30 h-146 l-46 34 v-34 h-22 a30 30 0 0 1 -30 -30 v-22 a30 30 0 0 1 30 -30 z" fill="#1e7ac4"/>
-  <circle cx="182" cy="397" r="11" fill="#ffffff"/>
-  <circle cx="234" cy="397" r="11" fill="#ffffff"/>
-  <circle cx="286" cy="397" r="11" fill="#ffffff"/>
-  <rect x="300" y="64" width="164" height="76" rx="18" fill="#ffd166" stroke="#ffffff" stroke-width="8"/>
-  <text x="382" y="122" text-anchor="middle" font-family="Arial Black, Arial, Helvetica, sans-serif" font-weight="900" font-size="54" letter-spacing="2" fill="#11151d">PRO</text>
+  <path fill="#1e7ac4" fill-rule="evenodd" d="M120 110h120a146 146 0 0 1 0 292H120z M186 172h54a84 84 0 0 1 0 168h-54z"/>
+  <path fill="#1e7ac4" d="M214 212 L292 256 L214 300 Z"/>
+  <rect x="300" y="52" width="164" height="76" rx="18" fill="#ffd166" stroke="#ffffff" stroke-width="8"/>
+  <text x="382" y="110" text-anchor="middle" font-family="Arial Black, Arial, Helvetica, sans-serif" font-weight="900" font-size="54" letter-spacing="2" fill="#11151d">PRO</text>
 </svg>
