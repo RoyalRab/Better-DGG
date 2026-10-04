@@ -1,6 +1,7 @@
 .git
 node_modules
 README.md
+AGENTS.md
 CLAUDE.md
 IDEAS.md
 dev

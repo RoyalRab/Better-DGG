@@ -81,6 +81,10 @@ The app is plain JavaScript modules in `public/js/` with no build step; `public/
 
 To run it locally: `npm install`, then `npm start`, then open http://localhost:8080. `npm run check` runs ESLint, Prettier and the unit tests in `test/` (the same checks GitHub Actions runs on every push), and Dependabot opens pull requests for dependency updates. `dev/` has a fake destiny.gg feed, a browser smoke test (`dev/smoke.mjs`) and a screen-size check (both need Playwright: `npm i -g playwright && npx playwright install chromium`, or set `PLAYWRIGHT` and `CHROMIUM` to your own copies) that screenshots phone, tablet, desktop and ultrawide sizes (`dev/screens.mjs`). `CLAUDE.md` explains how the code is laid out and has the full testing checklist for Chrome, Safari, Firefox and Edge on Android, iPhone, iPad, macOS and Windows, including the installed app. Ideas for what to build next are in `IDEAS.md`.
 
+## Contributing
+
+Issues and pull requests are welcome. `AGENTS.md` and `CLAUDE.md` explain the code, the decisions already made and how to test; `npm run check` runs the same checks as CI. Nothing needs a key or a login.
+
 ## License
 
 MIT, see `LICENSE`. The license covers the code. DGG Remix is a fan project and isn't affiliated with destiny.gg; destiny.gg's name and logo belong to their owners, and the app icons in `public/icons` (derived from that logo) aren't covered by the MIT license.

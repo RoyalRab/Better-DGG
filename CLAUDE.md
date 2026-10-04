@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-DGG Remix: an unofficial mobile-first web app (installable PWA) for destiny.gg's live embeds plus destiny.gg chat. User-facing docs are in README.md, and ideas for next steps are in IDEAS.md.
+DGG Remix: an unofficial mobile-first web app (installable PWA) for destiny.gg's live embeds plus destiny.gg chat. User-facing docs are in README.md, and ideas for next steps are in IDEAS.md. This file is the guide for any agent or contributor (AGENTS.md points here); the Railway details below assume the Railway MCP tools, but the Railway CLI (`railway logs`, `railway up`) or the dashboard do the same, and a code contributor needs none of them: pushing to `main` is the deploy.
 
 ## Working with this user
 - **Share the link in every reply**, as the last line: https://dggremix.up.railway.app
