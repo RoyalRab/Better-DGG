@@ -18,7 +18,7 @@ const store = {
 
 const settings = {
   keepAwake: store.get('keepAwake', true),
-  resumeOnLock: store.get('resumeOnLock', true),
+  resumeOnLock: true,
   ownPlayer: store.get('ownPlayer', true),
   showChat: store.get('showChat', true),
 };
@@ -398,10 +398,12 @@ async function mountOwn(tile, muted) {
   // While the page is hidden (screen locked, another app open), play the
   // sound from an audio-only copy of the stream, then go back to the video.
   let bg = null; // { audio, hls }
+  let playingAtHide = false; // the stream was playing with sound when the page was hidden
+  let userPausedAt = 0; // last pause from the user (lock screen or picture-in-picture controls)
+
   function enterBackground() {
-    // Only for the stream with sound, and only if it was playing when hidden.
-    if (bg || !hls || !started || v.muted || !tile.wantPlaying) return;
-    if (!settings.resumeOnLock || document.pictureInPictureElement === v) return;
+    if (bg || !hls || !started || v.muted || !playingAtHide || !document.hidden) return;
+    if (!settings.resumeOnLock || Date.now() - userPausedAt < 1500) return;
     if (!current || key(current) !== key(tile.src)) return;
     const audio = document.createElement('audio');
     audio.preload = 'auto';
@@ -428,16 +430,27 @@ async function mountOwn(tile, muted) {
     }
     v.play().catch(() => {});
   }
-  // Give Chrome a moment to pop the video out into picture-in-picture on
-  // its own; a video in picture-in-picture keeps playing, so only switch to
-  // audio if that didn't happen.
+
+  // Chrome on Android pauses the video when the page is hidden (screen
+  // locked, another app open), and again when the screen locks while the
+  // video is in picture-in-picture. Whenever that happens, carry on with the
+  // audio-only copy. A video that keeps playing (in picture-in-picture, or on
+  // desktop) is left alone.
   let hideTimer = null;
   function onVisibility() {
     clearTimeout(hideTimer);
-    if (document.hidden) hideTimer = setTimeout(() => { if (document.hidden) enterBackground(); }, 700);
-    else leaveBackground();
+    if (document.hidden) {
+      playingAtHide = !v.paused && !v.muted;
+      // Fallback in case the browser pauses without telling us right away.
+      hideTimer = setTimeout(() => { if (v.paused) enterBackground(); }, 700);
+    } else {
+      leaveBackground();
+    }
   }
   document.addEventListener('visibilitychange', onVisibility);
+  v.addEventListener('pause', () => {
+    if (document.hidden && !bg) setTimeout(enterBackground, 0);
+  });
 
   return {
     video: v,
@@ -449,6 +462,7 @@ async function mountOwn(tile, muted) {
       else v.play().catch(() => {});
     },
     pause() {
+      userPausedAt = Date.now();
       if (bg) bg.audio.pause();
       else v.pause();
     },
@@ -742,7 +756,7 @@ function pipAvailable() {
 
 function renderPip() {
   $('#pip-btn').hidden = !pipAvailable();
-  $('#pip-btn').setAttribute('aria-pressed', String(!!(document.pictureInPictureElement || docPip)));
+  $('#pip-btn').textContent = document.pictureInPictureElement || docPip ? 'Exit picture-in-picture' : 'Picture-in-picture';
 }
 
 async function togglePip() {
@@ -806,7 +820,10 @@ async function openDocPip(t) {
   });
 }
 
-$('#pip-btn').addEventListener('click', togglePip);
+$('#pip-btn').addEventListener('click', () => {
+  $('#sheet').close();
+  togglePip();
+});
 document.addEventListener('enterpictureinpicture', renderPip, true);
 document.addEventListener('leavepictureinpicture', renderPip, true);
 
@@ -862,10 +879,7 @@ async function updateWakeLock() {
   renderAwake();
 }
 
-function renderAwake() {
-  $('#awake-btn').setAttribute('aria-pressed', String(!!wakeLock));
-  $('#awake-btn').title = wakeLock ? 'Screen will stay on' : 'Screen can sleep';
-}
+function renderAwake() {}
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
@@ -883,12 +897,12 @@ document.addEventListener('pointerdown', () => { if (!wakeLock) updateWakeLock()
 
 function renderChat() {
   document.body.classList.toggle('no-chat', !settings.showChat);
-  $('#chat-btn').setAttribute('aria-pressed', String(settings.showChat));
+  layoutTiles();
 }
 
 function openSheet() {
   $('#opt-awake').checked = settings.keepAwake;
-  $('#opt-resume').checked = settings.resumeOnLock;
+  $('#opt-chat').checked = settings.showChat;
   $('#opt-own').checked = settings.ownPlayer;
   $('#sheet').showModal();
 }
@@ -899,26 +913,22 @@ $('#opt-awake').addEventListener('change', (e) => {
   saveSetting('keepAwake', e.target.checked);
   updateWakeLock();
 });
-$('#opt-resume').addEventListener('change', (e) => saveSetting('resumeOnLock', e.target.checked));
+$('#opt-chat').addEventListener('change', (e) => {
+  saveSetting('showChat', e.target.checked);
+  renderChat();
+});
 $('#opt-own').addEventListener('change', (e) => {
   saveSetting('ownPlayer', e.target.checked);
   for (const t of tiles) if (OWN_PLAYER_TYPES.has(t.src.type)) mountTile(t);
 });
 
-$('#awake-btn').addEventListener('click', () => {
-  saveSetting('keepAwake', !settings.keepAwake);
-  updateWakeLock().then(() => {
-    if (!('wakeLock' in navigator)) toast("This browser can't keep the screen on");
-    else toast(settings.keepAwake ? 'Screen will stay on' : 'Screen can sleep normally');
-  });
+$('#multi-btn').addEventListener('click', () => {
+  $('#sheet').close();
+  setAddMode(true);
 });
 
-$('#multi-btn').addEventListener('click', () => setAddMode(!addMode));
-
-$('#chat-btn').addEventListener('click', () => {
-  saveSetting('showChat', !settings.showChat);
-  renderChat();
-});
+// Reloads everything, picking up a new version of the app if there is one.
+$('#refresh-btn').addEventListener('click', () => location.reload());
 
 $('#reload-chat').addEventListener('click', () => {
   const f = $('#chat-frame');
