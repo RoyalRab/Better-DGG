@@ -399,7 +399,8 @@ async function mountOwn(tile, muted) {
   // sound from an audio-only copy of the stream, then go back to the video.
   let bg = null; // { audio, hls }
   function enterBackground() {
-    if (bg || !hls || !started || v.muted || v.paused) return;
+    // Only for the stream with sound, and only if it was playing when hidden.
+    if (bg || !hls || !started || v.muted || !tile.wantPlaying) return;
     if (!settings.resumeOnLock || document.pictureInPictureElement === v) return;
     if (!current || key(current) !== key(tile.src)) return;
     const audio = document.createElement('audio');
@@ -427,8 +428,13 @@ async function mountOwn(tile, muted) {
     }
     v.play().catch(() => {});
   }
+  // Give Chrome a moment to pop the video out into picture-in-picture on
+  // its own; a video in picture-in-picture keeps playing, so only switch to
+  // audio if that didn't happen.
+  let hideTimer = null;
   function onVisibility() {
-    if (document.hidden) enterBackground();
+    clearTimeout(hideTimer);
+    if (document.hidden) hideTimer = setTimeout(() => { if (document.hidden) enterBackground(); }, 700);
     else leaveBackground();
   }
   document.addEventListener('visibilitychange', onVisibility);
@@ -459,6 +465,7 @@ async function mountOwn(tile, muted) {
     destroy() {
       clearTimeout(timer);
       document.removeEventListener('visibilitychange', onVisibility);
+      clearTimeout(hideTimer);
       if (bg) { bg.hls.destroy(); bg.audio.pause(); bg = null; }
       if (hls) { hls.destroy(); hls = null; }
       v.pause();
@@ -825,6 +832,8 @@ function onPaused(tile) {
     tile.wantPlaying = false;
     return;
   }
+  // The app's own player handles the background itself (audio-only copy).
+  if (tile.player && tile.player.video) return;
   const since = hiddenAt ? Date.now() - hiddenAt : 0;
   if (settings.resumeOnLock && tile.wantPlaying && tile.player &&
       since < RESUME_WINDOW_MS && resumesThisLock < MAX_RESUMES_PER_LOCK * MAX_TILES) {
@@ -902,16 +911,6 @@ $('#awake-btn').addEventListener('click', () => {
     if (!('wakeLock' in navigator)) toast("This browser can't keep the screen on");
     else toast(settings.keepAwake ? 'Screen will stay on' : 'Screen can sleep normally');
   });
-});
-
-$('#sound-btn').addEventListener('click', () => {
-  if (!current) return;
-  const tap = $('#player .tap-to-play');
-  if (tap) return tap.click();
-  const tile = tiles.find((t) => key(t.src) === key(current));
-  if (!tile) return;
-  if (tile.player) tile.player.unmute();
-  else mountTile(tile);
 });
 
 $('#multi-btn').addEventListener('click', () => setAddMode(!addMode));
