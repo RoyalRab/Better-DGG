@@ -314,6 +314,9 @@ async function mountOwn(tile, muted) {
   v.playsInline = true;
   v.muted = muted;
   v.setAttribute('playsinline', '');
+  // Let the browser pop it out on its own when you leave the app, where supported.
+  v.autoPictureInPicture = true;
+  v.setAttribute('autopictureinpicture', '');
   tile.body.appendChild(v);
 
   // hls.js plays the stream through Media Source in the page. Chrome's
@@ -401,6 +404,13 @@ function updateMediaSession() {
     navigator.mediaSession.setActionHandler('play', () => tile()?.player?.play());
     navigator.mediaSession.setActionHandler('pause', () => tile()?.player?.video?.pause());
   } catch {}
+  // Chrome calls this to pop the playing video out automatically when you switch away.
+  try {
+    navigator.mediaSession.setActionHandler('enterpictureinpicture', () => {
+      const v = tile()?.player?.video;
+      if (v && document.pictureInPictureEnabled && !document.pictureInPictureElement) v.requestPictureInPicture().catch(() => {});
+    });
+  } catch {}
 }
 
 async function mountTile(tile) {
@@ -432,6 +442,7 @@ async function mountTile(tile) {
   // The tile was removed or reloaded while this player was loading.
   if (token !== tile.token || !tiles.includes(tile)) { mounted.destroy(); return; }
   tile.player = mounted;
+  renderPip();
 }
 
 function makeTile(src) {
@@ -471,6 +482,7 @@ function setTiles(want) {
   const next = want.map((src) => keep.get(key(src)) || makeTile(src));
   for (const t of tiles) {
     if (!next.includes(t)) {
+      if (docPip && docPip.tile === t) docPip.win.close();
       t.token++;
       if (t.player) t.player.destroy();
       t.el.remove();
@@ -514,6 +526,7 @@ function renderStage() {
   renderTabs();
   updateWakeLock();
   updateMediaSession();
+  renderPip();
 }
 
 function hasTapped() {
@@ -608,6 +621,99 @@ function setMulti(on) {
   else renderStage();
   toast(on ? 'Multi-view on: tap streams below to add up to 4' : 'Multi-view off');
 }
+
+// ---------- Picture-in-picture ----------
+// Videos the app plays itself (Kick) use the standard picture-in-picture
+// API. Other sites' players are iframes the app can't reach into; on
+// desktop Chrome and Edge the whole player can move into a Document
+// Picture-in-Picture window instead (it reloads when it moves).
+
+let docPip = null; // { win, tile, placeholder }
+
+function soundTile() {
+  return tiles.find((t) => current && key(t.src) === key(current)) || null;
+}
+
+function canVideoPip(v) {
+  return !!v && ((document.pictureInPictureEnabled && v.requestPictureInPicture) ||
+    (v.webkitSupportsPresentationMode && v.webkitSupportsPresentationMode('picture-in-picture')));
+}
+
+function pipAvailable() {
+  const t = soundTile();
+  if (!t) return false;
+  return canVideoPip(t.player && t.player.video) || 'documentPictureInPicture' in window;
+}
+
+function renderPip() {
+  $('#pip-btn').hidden = !pipAvailable();
+  $('#pip-btn').setAttribute('aria-pressed', String(!!(document.pictureInPictureElement || docPip)));
+}
+
+async function togglePip() {
+  if (document.pictureInPictureElement) {
+    await document.exitPictureInPicture().catch(() => {});
+    return;
+  }
+  if (docPip) { docPip.win.close(); return; }
+  const t = soundTile();
+  if (!t) return;
+  const v = t.player && t.player.video;
+  if (v && document.pictureInPictureEnabled && v.requestPictureInPicture) {
+    try {
+      if (v.paused) await v.play().catch(() => {});
+      await v.requestPictureInPicture();
+    } catch {
+      toast("Couldn't start picture-in-picture");
+    }
+    return;
+  }
+  if (v && v.webkitSupportsPresentationMode && v.webkitSupportsPresentationMode('picture-in-picture')) {
+    v.webkitSetPresentationMode('picture-in-picture');
+    return;
+  }
+  if ('documentPictureInPicture' in window) {
+    openDocPip(t);
+    return;
+  }
+  toast("Picture-in-picture works here for Kick streams. For other streams, use the player's own button if it has one.");
+}
+
+async function openDocPip(t) {
+  let win;
+  try {
+    win = await documentPictureInPicture.requestWindow({ width: 480, height: 270 });
+  } catch {
+    toast("Couldn't start picture-in-picture");
+    return;
+  }
+  const style = win.document.createElement('style');
+  style.textContent = 'html,body{margin:0;height:100%;background:#000;overflow:hidden}' +
+    '.tile-body,.tile-body>*,.tile-body iframe,.tile-body video{position:absolute;inset:0;width:100%!important;height:100%!important;border:0}' +
+    'video{object-fit:contain;background:#000}';
+  win.document.head.appendChild(style);
+  win.document.title = streamName(t.src);
+  const placeholder = document.createElement('div');
+  placeholder.className = 'tile-body pip-placeholder';
+  placeholder.textContent = 'Playing in picture-in-picture';
+  t.el.insertBefore(placeholder, t.body);
+  win.document.body.appendChild(t.body);
+  docPip = { win, tile: t, placeholder };
+  renderPip();
+  win.addEventListener('pagehide', () => {
+    if (!docPip || docPip.win !== win) return;
+    placeholder.replaceWith(t.body);
+    docPip = null;
+    renderPip();
+    // Players built with the YouTube and Twitch scripts lose their connection
+    // when they move, so start them fresh back in the page.
+    if (tiles.includes(t) && !(t.player && t.player.video)) mountTile(t);
+  });
+}
+
+$('#pip-btn').addEventListener('click', togglePip);
+document.addEventListener('enterpictureinpicture', renderPip, true);
+document.addEventListener('leavepictureinpicture', renderPip, true);
 
 // ---------- Keep playing when the screen locks ----------
 // Some players pause themselves the moment the page is hidden. If a pause
