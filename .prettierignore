@@ -1,0 +1,5 @@
+node_modules
+dev-screens
+public/icons
+package-lock.json
+*.md

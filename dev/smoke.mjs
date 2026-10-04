@@ -41,7 +41,11 @@ page.on('pageerror', (e) => errors.push(e.message));
 await page.goto(base + '/');
 await page.waitForTimeout(2500);
 const tabs = await page.$$eval('#tabs .tab', (bs) => bs.map((b) => b.innerText.trim()));
-check('tabs show the live list (not-live video filtered out)', tabs.length >= 4 && !tabs.includes('a video'), tabs.join(', '));
+check(
+  'tabs show the live list (not-live video filtered out)',
+  tabs.length >= 4 && !tabs.includes('a video'),
+  tabs.join(', '),
+);
 check('opens on a live stream', /^#kick\/drt0123$/.test(await page.evaluate(() => location.hash)));
 check('Tap for sound shown when sound is blocked', await page.isVisible('.sound-chip'));
 

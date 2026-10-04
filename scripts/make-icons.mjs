@@ -39,7 +39,10 @@ async function withTag(logo, { logoSize, width, top }) {
 }
 
 try {
-  const base = await sharp(await fetchBaseIcon()).resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer();
+  const base = await sharp(await fetchBaseIcon())
+    .resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png()
+    .toBuffer();
   const tagged = await withTag(base, { logoSize: 512, width: 380, top: 382 });
   const white = { r: 255, g: 255, b: 255, alpha: 1 };
 

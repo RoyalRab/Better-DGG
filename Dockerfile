@@ -14,7 +14,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund
-COPY server.js ./
+COPY server.js CHANGELOG.md ./
 COPY --from=icons /app/public ./public
 USER node
 CMD ["node", "server.js"]

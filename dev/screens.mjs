@@ -12,13 +12,18 @@ import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 
 const base = process.argv[2] || 'http://localhost:8769';
-const { chromium } = await import(process.env.PLAYWRIGHT || `${execSync('npm root -g').toString().trim()}/playwright/index.mjs`);
+const { chromium } = await import(
+  process.env.PLAYWRIGHT || `${execSync('npm root -g').toString().trim()}/playwright/index.mjs`
+);
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || '/opt/pw-browsers/chromium' });
 fs.mkdirSync('dev-screens', { recursive: true });
 
-const ANDROID = 'Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36';
-const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
-const IPAD = 'Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
+const ANDROID =
+  'Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36';
+const IPHONE =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
+const IPAD =
+  'Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
 const sizes = [
   { name: 'small-android-portrait', w: 360, h: 800, ua: ANDROID, mobile: true, row: false },
   { name: 'android-portrait', w: 412, h: 915, ua: ANDROID, mobile: true, row: false },
@@ -34,7 +39,12 @@ const sizes = [
 
 let failed = 0;
 for (const s of sizes) {
-  const ctx = await browser.newContext({ viewport: { width: s.w, height: s.h }, userAgent: s.ua, isMobile: !!s.mobile, hasTouch: !!s.mobile });
+  const ctx = await browser.newContext({
+    viewport: { width: s.w, height: s.h },
+    userAgent: s.ua,
+    isMobile: !!s.mobile,
+    hasTouch: !!s.mobile,
+  });
   await ctx.addInitScript(() => {
     try {
       if (location.origin.startsWith('http://localhost')) {
@@ -61,13 +71,24 @@ for (const s of sizes) {
       tabsVisible: (r('#tabbar')?.height || 0) > 0,
       menuVisible: (r('#menu-btn')?.width || 0) > 0,
       tiles: tiles.length,
-      tilesOnScreen: tiles.every((t) => t.width > 50 && t.height > 30 && t.right <= innerWidth + 1 && t.bottom <= innerHeight + 1),
+      tilesOnScreen: tiles.every(
+        (t) => t.width > 50 && t.height > 30 && t.right <= innerWidth + 1 && t.bottom <= innerHeight + 1,
+      ),
     };
   });
-  const ok = !m.overflowX && m.playerTop === 0 && m.tabsVisible && m.menuVisible && m.tiles === 3 && m.tilesOnScreen &&
-    (s.row ? m.chatRight : m.chatBelow) && errors.length === 0;
+  const ok =
+    !m.overflowX &&
+    m.playerTop === 0 &&
+    m.tabsVisible &&
+    m.menuVisible &&
+    m.tiles === 3 &&
+    m.tilesOnScreen &&
+    (s.row ? m.chatRight : m.chatBelow) &&
+    errors.length === 0;
   if (!ok) failed++;
-  console.log(`${ok ? 'ok  ' : 'FAIL'} ${s.name.padEnd(24)} ${s.w}x${s.h}  ${JSON.stringify(m)}${errors.length ? ' errors: ' + errors.join(' | ') : ''}`);
+  console.log(
+    `${ok ? 'ok  ' : 'FAIL'} ${s.name.padEnd(24)} ${s.w}x${s.h}  ${JSON.stringify(m)}${errors.length ? ' errors: ' + errors.join(' | ') : ''}`,
+  );
   await p.screenshot({ path: `dev-screens/${s.name}.png` });
   await ctx.close();
 }

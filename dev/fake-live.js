@@ -35,7 +35,13 @@ const base = () => [
   embed('kick', 'bbb', 'bbb', 10),
   embed('kick', 'ccc', 'ccc', 10),
   // Not live: the server must filter these out.
-  { ...embed('youtube', 'dQw4w9WgXcQ', 'a video', null), mediaItem: { identifier: { platform: 'youtube', mediaId: 'dQw4w9WgXcQ' }, metadata: { displayName: 'a video', live: false } } },
+  {
+    ...embed('youtube', 'dQw4w9WgXcQ', 'a video', null),
+    mediaItem: {
+      identifier: { platform: 'youtube', mediaId: 'dQw4w9WgXcQ' },
+      metadata: { displayName: 'a video', live: false },
+    },
+  },
 ];
 
 wss.on('connection', (ws, req) => {
@@ -46,7 +52,14 @@ wss.on('connection', (ws, req) => {
   const timers = [
     setTimeout(() => send('dggApi:embeds', base()), 2000),
     setTimeout(() => send('dggApi:embeds', [...base(), embed('kick', 'newone', 'newone', 5)]), 6000),
-    setTimeout(() => send('dggApi:embeds', base().filter((e) => e.id !== 'dariusirl')), 9000),
+    setTimeout(
+      () =>
+        send(
+          'dggApi:embeds',
+          base().filter((e) => e.id !== 'dariusirl'),
+        ),
+      9000,
+    ),
   ];
   ws.on('close', () => timers.forEach(clearTimeout));
 });

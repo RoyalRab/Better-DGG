@@ -1,0 +1,274 @@
+// The ⋮ menu (settings, actions, version and change log), the cast sheet
+// and the install bar.
+
+import { state, isCurrent } from './state.js';
+import { $, settings, saveSetting, store, toast, reducedMotion, isIOS, isAndroid, standalone } from './util.js';
+import { OWN_PLAYER_TYPES } from './players.js';
+import { mountTile, setAddMode, updateWakeLock, layoutTiles } from './stage.js';
+import { renderChat, loadChat, reloadChat } from './chat.js';
+import { applyUpdateOrReload } from './bars.js';
+
+// ---------- Sheets ----------
+// On phones the menus are bottom sheets that can be swiped down to close.
+
+const sheetLayout = window.matchMedia('(max-width: 640px)');
+
+function closeSheet(dialog) {
+  if (!dialog.open) return;
+  if (!sheetLayout.matches || reducedMotion.matches) {
+    dialog.close();
+    return;
+  }
+  dialog.classList.add('closing');
+  setTimeout(() => dialog.close(), 180);
+}
+
+function swipeToClose(dialog) {
+  let startY = null;
+  let dy = 0;
+  let startT = 0;
+  dialog.addEventListener('close', () => {
+    dialog.classList.remove('closing');
+    dialog.style.removeProperty('transform');
+    dialog.style.removeProperty('transition');
+  });
+  dialog.addEventListener(
+    'touchstart',
+    (e) => {
+      startY = sheetLayout.matches && dialog.scrollTop <= 0 && e.touches.length === 1 ? e.touches[0].clientY : null;
+      dy = 0;
+      startT = Date.now();
+    },
+    { passive: true },
+  );
+  dialog.addEventListener(
+    'touchmove',
+    (e) => {
+      if (startY == null) return;
+      dy = e.touches[0].clientY - startY;
+      if (dy <= 0) {
+        dialog.style.removeProperty('transform');
+        if (dy < -10) startY = null; // scrolling the sheet's content up
+        return;
+      }
+      e.preventDefault();
+      dialog.style.transition = 'none';
+      dialog.style.transform = `translateY(${dy}px)`;
+    },
+    { passive: false },
+  );
+  dialog.addEventListener('touchend', () => {
+    if (startY == null) return;
+    startY = null;
+    dialog.style.removeProperty('transition');
+    const flick = dy > 40 && Date.now() - startT < 250;
+    if (dy > 100 || flick) closeSheet(dialog);
+    else dialog.style.removeProperty('transform');
+  });
+}
+
+for (const d of document.querySelectorAll('dialog')) swipeToClose(d);
+
+// ---------- Menu ----------
+
+export function openSheet(scrollTo) {
+  $('#opt-awake').checked = settings.keepAwake;
+  $('#opt-chat').checked = settings.showChat;
+  $('#opt-own').checked = settings.ownPlayer;
+  $('#sheet').showModal();
+  // Scroll inside the sheet only (scrollIntoView could also move the page behind it).
+  if (scrollTo) $('#sheet').scrollTop = $(scrollTo).offsetTop - 8;
+}
+
+$('#menu-btn').addEventListener('click', () => openSheet());
+$('#sheet-close').addEventListener('click', () => closeSheet($('#sheet')));
+
+$('#opt-awake').addEventListener('change', (e) => {
+  saveSetting('keepAwake', e.target.checked);
+  updateWakeLock();
+});
+$('#opt-chat').addEventListener('change', (e) => {
+  saveSetting('showChat', e.target.checked);
+  renderChat();
+  loadChat();
+});
+$('#opt-own').addEventListener('change', (e) => {
+  saveSetting('ownPlayer', e.target.checked);
+  for (const t of state.tiles) if (OWN_PLAYER_TYPES.has(t.src.type)) mountTile(t);
+});
+
+$('#multi-btn').addEventListener('click', () => {
+  $('#sheet').close();
+  setAddMode(true);
+});
+
+// Reloads everything, applying a downloaded update first if there is one.
+$('#refresh-btn').addEventListener('click', applyUpdateOrReload);
+
+$('#reload-chat').addEventListener('click', () => {
+  reloadChat();
+  $('#sheet').close();
+});
+
+// Version line at the bottom of the menu, from the server.
+fetch('api/version', { cache: 'no-store' })
+  .then((r) => (r.ok ? r.json() : null))
+  .then((v) => {
+    if (v && v.version) $('#version').textContent = `Version ${v.version}${v.commit ? ` (${v.commit})` : ''}`;
+  })
+  .catch(() => {});
+
+// ---------- Change log ----------
+// From CHANGELOG.md, which the server turns into changelog.json. The latest
+// version is listed in the menu, older ones are folded underneath.
+
+function versionList(entries) {
+  const frag = document.createDocumentFragment();
+  for (const e of entries) {
+    const h = document.createElement('h4');
+    h.textContent = e.date ? `${e.version} · ${e.date}` : e.version;
+    const ul = document.createElement('ul');
+    for (const item of e.items) {
+      const li = document.createElement('li');
+      li.textContent = item;
+      ul.appendChild(li);
+    }
+    frag.append(h, ul);
+  }
+  return frag;
+}
+
+export function renderChangelog(entries) {
+  const box = $('#changelog');
+  if (!entries.length) return;
+  const [latest, ...older] = entries;
+  const title = document.createElement('h3');
+  title.id = 'changelog-title';
+  title.textContent = `What's new in ${latest.version}`;
+  const ul = versionList([latest]).querySelector('ul');
+  box.replaceChildren(title, ul);
+  if (older.length) {
+    const details = document.createElement('details');
+    const summary = document.createElement('summary');
+    summary.textContent = 'Earlier versions';
+    details.append(summary, versionList(older));
+    box.appendChild(details);
+  }
+  box.hidden = false;
+}
+
+// ---------- Cast to TV ----------
+
+function castSteps() {
+  const steps = [];
+  if (isAndroid) {
+    steps.push([
+      'Whole screen, with chat',
+      'Swipe down for quick settings and tap Smart View (Samsung) or Screen cast, then pick your TV.',
+    ]);
+  } else if (isIOS) {
+    steps.push([
+      'Whole screen, with chat',
+      "Open Control Center, tap Screen Mirroring and pick an AirPlay TV. Chromecast doesn't support AirPlay.",
+    ]);
+  } else {
+    steps.push([
+      'This tab, with chat',
+      'In Chrome or Edge, open the ⋮ menu, choose Cast, save, and share, then Cast…, set Sources to Cast tab and pick your TV.',
+    ]);
+  }
+  steps.push([
+    'Just the video',
+    'If the player shows a cast icon (YouTube and Twitch often do), tap it to send only the stream to your Chromecast.',
+  ]);
+  return steps;
+}
+
+function castableTile() {
+  const t = state.tiles.find((x) => isCurrent(x.src));
+  return t && t.player && t.player.video && t.player.video.remote ? t : null;
+}
+
+$('#cast-now').addEventListener('click', () => {
+  const t = castableTile();
+  if (!t) return;
+  const p = t.player;
+  const hadHls = p.usesHls();
+  if (hadHls) p.castSource();
+  p.video.remote.prompt().catch((err) => {
+    toast(err && err.name === 'NotFoundError' ? 'No Chromecast found on this network' : "Couldn't start casting");
+    if (hadHls) mountTile(t);
+  });
+});
+
+$('#cast-btn').addEventListener('click', () => {
+  $('#cast-now').hidden = !castableTile();
+  $('#cast-steps').replaceChildren(
+    ...castSteps().map(([title, text]) => {
+      const p = document.createElement('p');
+      const b = document.createElement('b');
+      b.textContent = title + '. ';
+      p.append(b, text);
+      return p;
+    }),
+  );
+  $('#sheet').close();
+  $('#cast-sheet').showModal();
+});
+$('#cast-close').addEventListener('click', () => closeSheet($('#cast-sheet')));
+
+if (isIOS && !standalone) $('#ios-install').hidden = false;
+
+// ---------- Install ----------
+// A bar at the top offers to install the app. Chrome and Edge get a one-tap
+// install; iPhones and in-app browsers get instructions instead.
+
+let installPrompt = null;
+const INSTALL_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
+
+const installSnoozed = () => Date.now() - store.get('installDismissedAt', 0) < INSTALL_SNOOZE_MS;
+
+function showInstallBar(text, withButton) {
+  if (standalone || installSnoozed()) return;
+  $('#install-text').textContent = text;
+  $('#install-yes').hidden = !withButton;
+  $('#install-bar').hidden = false;
+  layoutTiles();
+}
+
+function hideInstallBar() {
+  $('#install-bar').hidden = true;
+  layoutTiles();
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  installPrompt = e;
+  $('#install-btn').hidden = false;
+  showInstallBar('Install DGG Remix for full screen and quick access', true);
+});
+
+async function runInstall() {
+  if (!installPrompt) return;
+  installPrompt.prompt();
+  const choice = await installPrompt.userChoice.catch(() => null);
+  installPrompt = null;
+  $('#install-btn').hidden = true;
+  hideInstallBar();
+  if (choice && choice.outcome === 'dismissed') store.set('installDismissedAt', Date.now());
+}
+
+$('#install-yes').addEventListener('click', runInstall);
+$('#install-btn').addEventListener('click', runInstall);
+$('#install-no').addEventListener('click', () => {
+  store.set('installDismissedAt', Date.now());
+  hideInstallBar();
+});
+window.addEventListener('appinstalled', hideInstallBar);
+
+// No install prompt from the browser: explain how instead.
+setTimeout(() => {
+  if (installPrompt || standalone) return;
+  if (isIOS) showInstallBar('Install: tap Share, then Add to Home Screen', false);
+  else if (isAndroid) showInstallBar('Install: in Chrome, tap ⋮ then Add to home screen', false);
+}, 3000);

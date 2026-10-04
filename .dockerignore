@@ -4,3 +4,8 @@ README.md
 CLAUDE.md
 IDEAS.md
 dev
+.github
+test
+eslint.config.js
+.prettierrc.json
+.prettierignore
