@@ -748,6 +748,23 @@ dialog button.primary {
   gap: 8px;
   margin-top: 12px;
 }
+.links button {
+  gap: 8px;
+}
+.links button svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+  opacity: 0.85;
+}
+#sheet-actions {
+  margin: 4px 0 12px;
+}
+.sheet-subhead {
+  margin: 20px 0 0;
+  font-size: 14px;
+}
 
 .hint {
   color: var(--muted);
@@ -777,6 +794,38 @@ dialog button.primary {
 }
 #toast.show {
   opacity: 1;
+}
+
+/* One-time tip pointing at ⋮ */
+#menu-tip {
+  position: fixed;
+  z-index: 20;
+  max-width: min(260px, calc(100vw - 16px));
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.35;
+  box-shadow: 0 4px 20px rgb(0 0 0 / 0.5);
+  cursor: pointer;
+  animation: tip-in 0.2s ease-out;
+}
+#menu-tip::after {
+  content: '';
+  position: absolute;
+  right: 14px;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  background: var(--accent);
+  transform: rotate(45deg);
+}
+@keyframes tip-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
 }
 
 /* What's new, at the bottom of the menu */

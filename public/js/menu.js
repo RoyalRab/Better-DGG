@@ -66,7 +66,28 @@ for (const d of document.querySelectorAll('dialog')) swipeToClose(d);
 
 // ---------- Menu ----------
 
+// The same actions as the ⋮ row, listed with their names so each icon is
+// explained. Each one runs the row's button.
+function renderSheetActions() {
+  const rows = [...$('#actions').querySelectorAll('button')]
+    .filter((b) => b.id !== 'settings-btn' && !b.hidden)
+    .map((b) => {
+      const row = document.createElement('button');
+      row.type = 'button';
+      const label = document.createElement('span');
+      label.textContent = b.getAttribute('aria-label');
+      row.append(b.querySelector('svg').cloneNode(true), label);
+      row.addEventListener('click', () => {
+        $('#sheet').close();
+        b.click();
+      });
+      return row;
+    });
+  $('#sheet-actions').replaceChildren(...rows);
+}
+
 export function openSheet(scrollTo) {
+  renderSheetActions();
   $('#opt-awake').checked = settings.keepAwake;
   $('#opt-chat').checked = settings.showChat;
   $('#opt-own').checked = settings.ownPlayer;
@@ -82,6 +103,7 @@ $('#sheet-close').addEventListener('click', () => closeSheet($('#sheet')));
 // or using one of them slides it back.
 
 function setActions(open) {
+  if (open) hideMenuTip();
   $('#actions').hidden = !open;
   $('#menu-btn').setAttribute('aria-expanded', String(open));
   $('#menu-btn').setAttribute('aria-label', open ? 'Close' : 'More');
@@ -89,6 +111,37 @@ function setActions(open) {
 }
 
 $('#menu-btn').addEventListener('click', () => setActions($('#actions').hidden));
+
+// ---------- First-time tip ----------
+// A bubble pointing at ⋮, once, for anyone who hasn't opened the action row
+// yet. Tapping it, opening the row, or 10 s puts it away.
+
+let tipTimer = null;
+
+function placeMenuTip() {
+  const tip = $('#menu-tip');
+  const b = $('#menu-btn').getBoundingClientRect();
+  tip.style.right = Math.max(8, window.innerWidth - b.right + 4) + 'px';
+  // The button's top is 8 px above the visible row (its tap area), so this sits just above the row.
+  tip.style.bottom = window.innerHeight - b.top + 2 + 'px';
+}
+
+export function maybeShowMenuTip() {
+  if (store.get('menuTipShown', false) || !$('#actions').hidden) return;
+  store.set('menuTipShown', true);
+  $('#menu-tip').hidden = false;
+  placeMenuTip();
+  window.addEventListener('resize', placeMenuTip);
+  tipTimer = setTimeout(hideMenuTip, 10000);
+}
+
+function hideMenuTip() {
+  clearTimeout(tipTimer);
+  $('#menu-tip').hidden = true;
+  window.removeEventListener('resize', placeMenuTip);
+}
+
+$('#menu-tip').addEventListener('click', hideMenuTip);
 $('#actions').addEventListener('click', (e) => {
   if (e.target.closest('button')) setActions(false);
 });
@@ -126,6 +179,29 @@ $('#multi-btn').addEventListener('click', () => setAddMode(true));
 $('#refresh-btn').addEventListener('click', applyUpdateOrReload);
 
 $('#reload-chat').addEventListener('click', reloadChat);
+
+const DGG_LOGIN = '/login';
+// destiny.gg signs out with a form that needs a token from its own page, so
+// this opens the site, where sign-out is in the account menu.
+const DGG_LOGOUT = '/';
+
+// ---------- Chat account ----------
+// The app can't see whether chat is signed in (it's destiny.gg's page in a
+// frame), so both are offered. Each opens destiny.gg, and chat reloads when
+// you come back to the app.
+
+function openDgg(path) {
+  window.open('https://www.destiny.gg' + path, '_blank', 'noopener');
+  const back = () => {
+    if (document.hidden) return;
+    document.removeEventListener('visibilitychange', back);
+    reloadChat();
+  };
+  document.addEventListener('visibilitychange', back);
+}
+
+$('#sign-in').addEventListener('click', () => openDgg(DGG_LOGIN));
+$('#sign-out').addEventListener('click', () => openDgg(DGG_LOGOUT));
 
 // Version line at the bottom of the menu, from the server.
 fetch('api/version', { cache: 'no-store' })

@@ -51,7 +51,7 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 
 Tap a tab to watch it. To watch more than one stream, press and hold a tab, or choose **Add a stream to multi-view** in the ⋮ menu and then tap a tab. In multi-view, tapping a tab replaces the stream that has the sound.
 
-When an update is ready, a bar at the top offers to refresh into it. The ⋮ button at the end of the tab row slides out a row of icons: Refresh app, Picture-in-picture, Add a stream to multi-view, Cast to TV, Reload chat, Install (when available) and the gear for settings. ✕ puts them away. Settings has the toggles (keep the screen on, show chat, play Kick in the app's own player), the app's version and what changed in it; older versions are folded under **Earlier versions**. The full history is in `CHANGELOG.md`.
+When an update is ready, a bar at the top offers to refresh into it. The ⋮ button at the end of the tab row slides out a row of icons: Refresh app, Picture-in-picture, Add a stream to multi-view, Cast to TV, Reload chat, Install (when available) and the gear for settings. ✕ puts them away; a one-time tip points it out, and settings list the same actions with their names. Settings has the toggles (keep the screen on, show chat, play Kick in the app's own player), the app's version and what changed in it; older versions are folded under **Earlier versions**. The full history is in `CHANGELOG.md`.
 
 ## Installing
 
@@ -63,7 +63,7 @@ For sound with the screen locked on Android, Chrome has to be allowed to run in 
 
 Lock-screen audio, picture-in-picture on phones and Chromecast casting work for Kick only. AngelThump streams are slow to start and often buffer on destiny.gg too: AngelThump's player is a large app that loads late, it asks for a token before playing, it offers only full quality (about 8 Mbps) with no lower versions for mobile data, and it keeps a very small buffer for low latency. For sound on AngelThump and Rumble, use the player's own speaker button. Twitch, YouTube, AngelThump and Rumble play in their sites' own players, which the app can't control. Twitch blocks other sites from loading its streams directly, YouTube ties its streams to its own player, and AngelThump only gives its streams to its own player. On Android, those players can still float if you make them fullscreen and press home.
 
-Chat uses destiny.gg's own login. The app can't tell whether you're logged in. If chat shows you logged out, log in on destiny.gg in Chrome, then use **Reload chat** in the menu.
+Chat uses destiny.gg's own login. The app can't tell whether you're signed in, so settings offer both **Sign in** and **Sign out**: each opens destiny.gg (sign-out is in the account menu there, since destiny.gg signs out with a form only its own page can send), and chat reloads when you come back.
 
 ## Privacy
 

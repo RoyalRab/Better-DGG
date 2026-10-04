@@ -136,7 +136,9 @@ export function renderTabs() {
 // Long-press is invisible until someone mentions it, so say it once.
 let hintTimer = null;
 function maybeShowHint() {
-  if (hintTimer || store.get('holdHintShown', false)) return;
+  // Wait until the ⋮ tip has had its turn, so the two don't overlap.
+  if (hintTimer || store.get('holdHintShown', false) || !store.get('menuTipShown', false)) return;
+  if (!$('#menu-tip').hidden) return;
   hintTimer = setTimeout(() => {
     store.set('holdHintShown', true);
     toast(

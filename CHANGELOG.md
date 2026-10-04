@@ -2,6 +2,12 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.7.0 (2026-10-04)
+
+- A one-time tip points at ⋮ for anyone who hasn't opened it yet.
+- Settings list every ⋮ action with its name, so each icon is explained, and they work from there too.
+- Chat account: Sign in and Sign out buttons in settings open destiny.gg, and chat reloads when you come back.
+
 ## 1.6.0 (2026-10-04)
 
 - New address: https://dggremix.up.railway.app (the old better-dgg address no longer works; reinstall the app from the new one).

@@ -17,7 +17,7 @@ import { setTiles } from './stage.js';
 import { HLS_JS, hasMse, loadScript } from './players.js';
 import { startTabs } from './tabs.js';
 import { renderChat, loadChat } from './chat.js';
-import './menu.js';
+import { maybeShowMenuTip } from './menu.js';
 import { registerServiceWorker, loadChangelog, offerRestore } from './bars.js';
 
 // Open what a shared link asks for. Otherwise wait briefly for the live list
@@ -62,6 +62,8 @@ if (fromHash.length) {
 }
 startTabs();
 registerServiceWorker();
+// Point out the ⋮ menu once the first stream has had a moment to start.
+setTimeout(maybeShowMenuTip, 3000);
 loadChangelog();
 
 // For tests and debugging in the browser console.

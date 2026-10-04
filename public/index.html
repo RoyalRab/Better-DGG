@@ -142,12 +142,34 @@
       <form method="dialog" id="source-form">
         <h2 id="sheet-title">Settings</h2>
         <p class="hint tagline">Improved mobile experience.</p>
+        <div id="sheet-actions" class="links" aria-label="Actions (also under ⋮)"></div>
         <label class="toggle"><input type="checkbox" id="opt-awake" /> Keep the screen on while the app is open</label>
         <label class="toggle"><input type="checkbox" id="opt-chat" /> Show chat</label>
         <label class="toggle"
           ><input type="checkbox" id="opt-own" /> Play Kick streams in the app's own player, so they keep playing when
           the screen locks and can pop out or be cast</label
         >
+        <h3 class="sheet-subhead">Chat account</h3>
+        <p class="hint">
+          Chat uses your destiny.gg account. Both open destiny.gg (to sign out, use the account menu there), and chat
+          reloads when you come back.
+        </p>
+        <div class="links">
+          <button type="button" id="sign-in">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M11 7 9.6 8.4l2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5-5-5zm9 12h-8v2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-8v2h8v14z"
+              /></svg
+            ><span>Sign in</span>
+          </button>
+          <button type="button" id="sign-out">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="m17 7-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"
+              /></svg
+            ><span>Sign out</span>
+          </button>
+        </div>
         <p class="hint" id="android-tip">
           <b>Android:</b> install from Chrome, and don't let Chrome sleep (Settings → Battery) so sound keeps playing
           when locked.
@@ -176,6 +198,9 @@
 
     <div id="toast" role="status" aria-live="polite"></div>
     <div id="sr-status" class="sr-only" aria-live="polite"></div>
+    <div id="menu-tip" role="status" hidden>
+      Tap <b>⋮</b> for refresh, picture-in-picture, multi-view, cast and settings.
+    </div>
 
     <script type="module" src="js/main.js"></script>
   </body>
