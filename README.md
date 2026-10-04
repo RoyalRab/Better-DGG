@@ -39,7 +39,7 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 
 Tap a tab to watch it. To watch more than one stream, press and hold a tab, or choose **Add a stream to multi-view** in the ⋮ menu and then tap a tab. In multi-view, tapping a tab replaces the stream that has the sound.
 
-The ⋮ menu has the settings (keep the screen on, show chat, play Kick in the app's own player) and Refresh app, Picture-in-picture, Add a stream to multi-view, Cast to TV and Reload chat.
+The ⋮ menu has the settings (keep the screen on, show chat, play Kick in the app's own player) and Refresh app, Picture-in-picture, Add a stream to multi-view, Cast to TV and Reload chat. The app's version is at the bottom of the menu.
 
 ## Installing
 

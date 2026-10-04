@@ -14,10 +14,11 @@ DGG Remix: an unofficial mobile-first web app (installable PWA) for destiny.gg's
 - Railway project `39eb599e-868e-49f2-9d41-3b53a9718181`, service `web` `e3a97c74-8d6c-4415-adca-eb1ba18fafd0`, environment `5dc0d05e-255c-4262-9e85-6e2ff4eb8bb6`, domain better-dgg.up.railway.app (port 8080).
 - To confirm a deploy, use Railway MCP `get-logs` on the service (types `deploy`) and look for `listening on 8080` and `live: connected`. Build logs show `icons: built from destiny.gg icon with REMIX tag`.
 - Bump `CACHE` in `public/sw.js` on every client change.
+- Bump `version` in `package.json` for every user-visible change (semver: patch for fixes, minor for features), and update `package-lock.json` with `npm install --package-lock-only`. The menu shows `Version x.y.z (commit)` from `/api/version`, using `RAILWAY_GIT_COMMIT_SHA` for the commit.
 
 ## Sandbox limits
 - This container can't reach destiny.gg, Kick, Twitch, YouTube or *.railway.app (curl and WebFetch are blocked).
-- To fetch from the internet, put a one-off script in the Railway Function `dgg-probe` (service `555c0ad0-c06a-4ae8-8935-326e8cd29979`, Bun) with `update-function-source-code`. It runs once on deploy; read its `console.log` output with `get-logs`.
+- To fetch from the internet, use a Railway Function named `dgg-probe` (Bun). It may have been deleted; if so, recreate it with `create-function` in the project. Put a one-off script in it with `update-function-source-code`; it runs once on deploy. Read its `console.log` output with `get-logs`.
 - Don't use `pkill -f` with a pattern that also appears in the command line: it kills the shell itself. Kill by PID instead: `for p in $(ps aux | grep -E "node (server\.js|dev/fake-live)" | grep -v grep | awk '{print $2}'); do kill $p; done`.
 
 ## Code map

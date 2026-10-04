@@ -10,6 +10,12 @@ const crypto = require('crypto');
 const WebSocket = require('ws');
 
 const PORT = Number(process.env.PORT) || 8080;
+// Shown in the app's menu: the package version plus the deployed commit
+// (Railway sets RAILWAY_GIT_COMMIT_SHA).
+const VERSION = {
+  version: require('./package.json').version,
+  commit: (process.env.RAILWAY_GIT_COMMIT_SHA || '').slice(0, 7) || null,
+};
 const LIVE_URL = process.env.LIVE_URL || 'wss://live.destiny.gg';
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
@@ -250,6 +256,10 @@ const server = http.createServer((req, res) => {
     return send(res, 200, 'application/json', JSON.stringify(snapshot()));
   }
   if (url.pathname === '/api/live') return openStream(req, res);
+  if (url.pathname === '/api/version') {
+    res.setHeader('Cache-Control', 'no-store');
+    return send(res, 200, 'application/json', JSON.stringify(VERSION));
+  }
   const kick = url.pathname.match(/^\/api\/stream\/kick\/([^/]+)\.m3u8$/);
   if (kick) return serveKickPlaylist(res, decodeURIComponent(kick[1]));
   if (url.pathname === '/healthz') return send(res, 200, 'text/plain', 'ok');

@@ -967,6 +967,14 @@ function openSheet() {
 
 $('#menu-btn').addEventListener('click', openSheet);
 
+// Version line at the bottom of the menu, from the server.
+fetch('api/version', { cache: 'no-store' })
+  .then((r) => (r.ok ? r.json() : null))
+  .then((v) => {
+    if (v && v.version) $('#version').textContent = `Version ${v.version}${v.commit ? ` (${v.commit})` : ''}`;
+  })
+  .catch(() => {});
+
 $('#opt-awake').addEventListener('change', (e) => {
   saveSetting('keepAwake', e.target.checked);
   updateWakeLock();
