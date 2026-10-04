@@ -133,7 +133,8 @@ function mountFrame(src) {
   f.allowFullscreen = true;
   f.referrerPolicy = 'strict-origin-when-cross-origin';
   $('#player').appendChild(f);
-  return { play() {}, destroy() { f.remove(); } };
+  // No API to unmute a plain iframe; reloading it after a tap starts it with sound.
+  return { play() {}, unmute() { remountCurrent(); }, destroy() { f.remove(); } };
 }
 
 async function mountYouTube(id) {
@@ -153,6 +154,7 @@ async function mountYouTube(id) {
   });
   return {
     play() { try { yt.playVideo(); } catch {} },
+    unmute() { try { yt.unMute(); yt.setVolume(100); yt.playVideo(); } catch {} },
     destroy() {
       try { yt.destroy(); } catch {}
       const el = document.getElementById(holder.id);
@@ -178,40 +180,17 @@ async function mountTwitch(channel) {
   tw.addEventListener(Twitch.Player.PAUSE, onPaused);
   return {
     play() { try { tw.play(); } catch {} },
+    unmute() { try { tw.setMuted(false); tw.setVolume(1); tw.play(); } catch {} },
     destroy() { holder.remove(); },
   };
 }
 
-async function watch(src, { remember = true } = {}) {
+function watch(src, { remember = true } = {}) {
   if (current && key(current) === key(src) && player) return;
-  if (player) player.destroy();
-  player = null;
-  $('#player').replaceChildren();
   current = src;
-  wantPlaying = false;
   $('#source-label').textContent = key(src);
   document.title = `${key(src)} · Better DGG`;
   history.replaceState(null, '', '#' + key(src));
-  const token = ++mountToken;
-
-  let mounted;
-  try {
-    if (src.type === 'youtube') mounted = await mountYouTube(src.id);
-    else if (src.type === 'twitch') mounted = await mountTwitch(src.id);
-    else if (src.type === 'kick') mounted = mountFrame(`https://player.kick.com/${encodeURIComponent(src.id)}?autoplay=true`);
-    else if (src.type === 'rumble') mounted = mountFrame(`https://rumble.com/embed/${encodeURIComponent(src.id)}/`);
-  } catch (err) {
-    if (token !== mountToken) return;
-    const msg = document.createElement('div');
-    msg.className = 'empty';
-    msg.textContent = 'Could not load the player. Check your connection and try again.';
-    $('#player').replaceChildren(msg);
-    current = null;
-    return;
-  }
-  // Another stream was picked while this one was loading.
-  if (token !== mountToken) { mounted.destroy(); return; }
-  player = mounted;
 
   if (remember) {
     store.set('last', src);
@@ -219,7 +198,66 @@ async function watch(src, { remember = true } = {}) {
     recent.unshift(src);
     store.set('recent', recent.slice(0, 6));
   }
+
+  // Chrome only lets a player start with sound after the user has tapped
+  // something on the page. Until then, wait for a tap instead of starting muted.
+  if (hasTapped()) mountCurrent();
+  else showTapToPlay();
   updateWakeLock();
+}
+
+function hasTapped() {
+  return !!(navigator.userActivation && navigator.userActivation.hasBeenActive);
+}
+
+function clearPlayer() {
+  if (player) player.destroy();
+  player = null;
+  wantPlaying = false;
+  $('#player').replaceChildren();
+}
+
+function showTapToPlay() {
+  clearPlayer();
+  mountToken++;
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'tap-to-play';
+  b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span></span>';
+  b.querySelector('span').textContent = 'Tap to play ' + key(current);
+  b.addEventListener('click', mountCurrent);
+  $('#player').replaceChildren(b);
+}
+
+function remountCurrent() {
+  if (!current) return;
+  clearPlayer();
+  mountCurrent();
+}
+
+async function mountCurrent() {
+  const src = current;
+  if (!src) return;
+  clearPlayer();
+  const token = ++mountToken;
+
+  let mounted;
+  try {
+    if (src.type === 'youtube') mounted = await mountYouTube(src.id);
+    else if (src.type === 'twitch') mounted = await mountTwitch(src.id);
+    else if (src.type === 'kick') mounted = mountFrame(`https://player.kick.com/${encodeURIComponent(src.id)}?autoplay=true&muted=false`);
+    else if (src.type === 'rumble') mounted = mountFrame(`https://rumble.com/embed/${encodeURIComponent(src.id)}/`);
+  } catch (err) {
+    if (token !== mountToken) return;
+    const msg = document.createElement('div');
+    msg.className = 'empty';
+    msg.textContent = 'Could not load the player. Check your connection and try again.';
+    $('#player').replaceChildren(msg);
+    return;
+  }
+  // Another stream was picked while this one was loading.
+  if (token !== mountToken) { mounted.destroy(); return; }
+  player = mounted;
 }
 
 // ---------- Keep playing when the screen locks ----------
@@ -350,6 +388,12 @@ $('#awake-btn').addEventListener('click', () => {
     if (!('wakeLock' in navigator)) toast("This browser can't keep the screen on");
     else toast(settings.keepAwake ? 'Screen will stay on' : 'Screen can sleep normally');
   });
+});
+
+$('#sound-btn').addEventListener('click', () => {
+  if (!current) return;
+  if (!player) mountCurrent();
+  else player.unmute();
 });
 
 $('#chat-btn').addEventListener('click', () => {

@@ -56,7 +56,7 @@ button, input { font: inherit; color: inherit; }
   place-items: center;
   color: var(--muted);
 }
-#bar .icon[aria-pressed="true"] { color: var(--text); }
+#bar .icon[aria-pressed="true"], #bar .icon.on { color: var(--text); }
 #awake-btn[aria-pressed="true"] { color: #ffd166; }
 #bar .source {
   display: flex;
@@ -98,6 +98,27 @@ button, input { font: inherit; color: inherit; }
   color: var(--muted);
   text-align: center;
 }
+#player .tap-to-play {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #000;
+  border: 0;
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+}
+#player .tap-to-play svg {
+  width: 64px;
+  height: 64px;
+  padding: 14px 12px 14px 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  fill: #fff;
+}
+
 #chat {
   flex: 1;
   min-height: 0;
