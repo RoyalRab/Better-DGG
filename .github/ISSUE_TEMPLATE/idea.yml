@@ -1,0 +1,17 @@
+name: Idea
+description: Suggest something for DGG Remix
+title: 'Idea: '
+labels: [idea]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What would you like the app to do, and when would you use it?
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Where you use the app
+      placeholder: e.g. Android phone, installed app

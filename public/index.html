@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#11151d" />
+    <meta
+      name="description"
+      content="Unofficial fan-made app for destiny.gg's live embeds and chat, made for phones: Kick keeps playing with the screen locked, multi-view, picture-in-picture."
+    />
+    <!-- Link previews when the address is shared (Discord, Reddit, messages). Update the address here if it changes. -->
+    <link rel="canonical" href="https://dggremix.up.railway.app/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="DGG Remix" />
+    <meta property="og:title" content="DGG Remix" />
+    <meta
+      property="og:description"
+      content="Unofficial fan-made app for destiny.gg's live embeds and chat, made for phones: Kick keeps playing with the screen locked, multi-view, picture-in-picture."
+    />
+    <meta property="og:url" content="https://dggremix.up.railway.app/" />
+    <meta property="og:image" content="https://dggremix.up.railway.app/icons/icon-512.png?v=5" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="The destiny.gg logo with a REMIX tag" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="DGG Remix" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <title>DGG Remix</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icons/favicon-64.png?v=5" type="image/png" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=5" />
+    <meta name="hls-js" content="vendor/hls.min.js" />
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body>
+    <div id="install-bar" hidden>
+      <img src="icons/icon-192.png" alt="" width="28" height="28" />
+      <span id="install-text">Install DGG Remix for full screen and quick access</span>
+      <button type="button" id="install-yes">Install</button>
+      <button type="button" id="install-no" aria-label="Not now">✕</button>
+    </div>
+
+    <div id="update-bar" class="bar" hidden>
+      <span class="bar-text">Update ready.</span>
+      <button type="button" id="update-yes">Refresh</button>
+    </div>
+    <div id="whatsnew-bar" class="bar" hidden>
+      <span class="bar-text" id="whatsnew-text">DGG Remix was updated.</span>
+      <button type="button" id="whatsnew-yes">What's new</button>
+      <button type="button" id="whatsnew-no" class="bar-close" aria-label="Dismiss">✕</button>
+    </div>
+    <div id="offline-bar" class="bar" role="status" hidden>
+      <span class="bar-text">You're offline. Streams pick back up when you reconnect.</span>
+    </div>
+    <div id="restore-bar" class="bar" hidden>
+      <span class="bar-text" id="restore-text">Restore your multi-view?</span>
+      <button type="button" id="restore-yes">Restore</button>
+      <button type="button" id="restore-no" class="bar-close" aria-label="No thanks">✕</button>
+    </div>
+
+    <main id="stage">
+      <div id="watch">
+        <section id="player" aria-label="Stream"></section>
+        <div id="tabbar">
+          <nav id="tabs" aria-label="Live embeds"></nav>
+          <div id="actions" role="toolbar" aria-label="App actions" hidden>
+            <button aria-label="Refresh app" title="Refresh app" type="button" id="refresh-btn">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"
+                />
+              </svg>
+            </button>
+            <button aria-label="Picture-in-picture" title="Picture-in-picture" type="button" id="pip-btn" hidden>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M19 7h-8v6h8V7zm2-4H3a2 2 0 0 0-2 2v14c0 1.1.9 1.98 2 1.98h18c1.1 0 2-.88 2-1.98V5a2 2 0 0 0-2-2zm0 16.01H3V4.98h18v14.03z"
+                />
+              </svg>
+            </button>
+            <button
+              aria-label="Add a stream to multi-view"
+              title="Add a stream to multi-view"
+              type="button"
+              id="multi-btn"
+              aria-pressed="false"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm13 0h2v3h3v2h-3v3h-2v-3h-3v-2h3v-3z" />
+              </svg>
+            </button>
+            <button aria-label="Cast to TV" title="Cast to TV" type="button" id="cast-btn">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm18-11H5a2 2 0 0 0-2 2v3h2V5h14v14h-5v2h5a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM1 10v2a9 9 0 0 1 9 9h2c0-6.08-4.93-11-11-11z"
+                />
+              </svg>
+            </button>
+            <button aria-label="Reload chat" title="Reload chat" type="button" id="reload-chat">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm0 14H5.17L4 17.17V4h16v12z" />
+              </svg>
+            </button>
+            <button aria-label="Install app" title="Install app" type="button" id="install-btn" hidden>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z" /></svg>
+            </button>
+            <button aria-label="Settings" title="Settings" type="button" id="settings-btn">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.47.47 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"
+                />
+              </svg>
+            </button>
+          </div>
+          <button
+            id="menu-btn"
+            type="button"
+            title="More"
+            aria-label="More"
+            aria-expanded="false"
+            aria-controls="actions"
+          >
+            <svg class="icon-more" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="5" r="2" />
+              <circle cx="12" cy="12" r="2" />
+              <circle cx="12" cy="19" r="2" />
+            </svg>
+            <svg class="icon-close" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div
+        id="chat-resizer"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize chat"
+        aria-controls="chat"
+        tabindex="0"
+        title="Drag to resize chat, double-click to reset"
+      ></div>
+      <section id="chat" aria-label="Chat">
+        <iframe
+          id="chat-frame"
+          title="destiny.gg chat"
+          data-src="https://www.destiny.gg/embed/chat"
+          allow="clipboard-write"
+        ></iframe>
+      </section>
+    </main>
+
+    <dialog id="sheet" aria-labelledby="sheet-title">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <form method="dialog">
+        <h2 id="sheet-title">Settings</h2>
+        <p class="hint tagline">Improved mobile experience.</p>
+        <div id="sheet-actions" class="links" aria-label="Actions (also under ⋮)"></div>
+        <label class="toggle"><input type="checkbox" id="opt-awake" /> Keep the screen on while the app is open</label>
+        <label class="toggle"><input type="checkbox" id="opt-chat" /> Show chat</label>
+        <label class="toggle"
+          ><input type="checkbox" id="opt-own" /> Play Kick streams in the app's own player, so they keep playing when
+          the screen locks and can pop out or be cast</label
+        >
+        <h3 class="sheet-subhead">Chat account</h3>
+        <p class="hint">
+          Chat uses your destiny.gg account. Both open destiny.gg (to sign out, use the account menu there), and chat
+          reloads when you come back.
+        </p>
+        <div class="links">
+          <button type="button" id="sign-in">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M11 7 9.6 8.4l2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5-5-5zm9 12h-8v2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-8v2h8v14z"
+              /></svg
+            ><span>Sign in</span>
+          </button>
+          <button type="button" id="sign-out">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="m17 7-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"
+              /></svg
+            ><span>Sign out</span>
+          </button>
+        </div>
+        <h3 class="sheet-subhead">Share</h3>
+        <p class="hint">Send DGG Remix to someone: <span id="app-address">dggremix.up.railway.app</span></p>
+        <div class="links">
+          <button type="button" id="share-btn">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11A2.99 2.99 0 0 0 21 5a3 3 0 1 0-5.91.7L8.04 9.81A2.99 2.99 0 0 0 3 12a3 3 0 0 0 5.04 2.19l7.12 4.16a2.82 2.82 0 0 0-.08.65 2.92 2.92 0 1 0 2.92-2.92z"
+              />
+            </svg>
+            <span>Share link</span>
+          </button>
+        </div>
+        <p class="hint" id="android-tip" hidden>
+          <b>Android:</b> install from Chrome, and don't let Chrome sleep (Android Settings → Battery) so sound keeps
+          playing when locked.
+        </p>
+        <p id="ios-install" class="hint" hidden>
+          To install on iPhone or iPad: tap Share, then <b>Add to Home Screen</b>.
+        </p>
+        <h3 class="sheet-subhead">Ideas and problems</h3>
+        <p class="hint">
+          Have an idea, or did something break? Both go to the project's page on GitHub (you need a GitHub account to
+          post).
+        </p>
+        <div class="links">
+          <button type="button" id="idea-btn">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1-.85.6V16h-4v-2.3l-.85-.6A4.997 4.997 0 0 1 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1z"
+              /></svg
+            ><span>Suggest an idea</span>
+          </button>
+          <button type="button" id="bug-btn">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M20 8h-2.81a5.985 5.985 0 0 0-1.82-1.96L17 4.41 15.59 3l-2.17 2.17a6.002 6.002 0 0 0-2.84 0L8.41 3 7 4.41l1.62 1.63C7.88 6.55 7.26 7.22 6.81 8H4v2h2.09c-.05.33-.09.66-.09 1v1H4v2h2v1c0 .34.04.67.09 1H4v2h2.81c1.04 1.79 2.97 3 5.19 3s4.15-1.21 5.19-3H20v-2h-2.09c.05-.33.09-.66.09-1v-1h2v-2h-2v-1c0-.34-.04-.67-.09-1H20V8zm-6 8h-4v-2h4v2zm0-4h-4v-2h4v2z"
+              /></svg
+            ><span>Report a problem</span>
+          </button>
+        </div>
+        <p class="hint">
+          DGG Remix is an unofficial fan-made app and isn't affiliated with destiny.gg. The code is open source on
+          <a id="repo-link" href="https://github.com/RoyalRab/Better-DGG" target="_blank" rel="noopener">GitHub</a>.
+        </p>
+        <p class="hint" id="version"></p>
+        <section id="changelog" aria-labelledby="changelog-title" hidden></section>
+        <div class="row end"><button type="button" id="sheet-close">Close</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="cast-sheet" aria-labelledby="cast-title">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <h2 id="cast-title">Cast to TV</h2>
+      <p class="hint">
+        Kick streams playing in the app's own player can be cast directly. Other streams use their sites' players, so
+        these are the ways that work for them:
+      </p>
+      <button type="button" id="cast-now" class="primary" hidden>Cast this stream</button>
+      <div id="cast-steps"></div>
+      <div class="row end"><button type="button" id="cast-close">Close</button></div>
+    </dialog>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+    <div id="sr-status" class="sr-only" aria-live="polite"></div>
+    <div id="menu-tip" role="status" hidden>
+      <span id="menu-tip-verb">Tap</span> <b>⋮</b> for refresh, picture-in-picture, multi-view, cast and settings.
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>
