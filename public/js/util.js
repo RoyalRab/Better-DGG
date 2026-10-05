@@ -25,6 +25,9 @@ export const settings = {
   showChat: store.get('showChat', true),
   chatLeft: store.get('chatLeft', false),
   errorReports: store.get('errorReports', false),
+  audioOnly: store.get('audioOnly', false), // Kick in the app's own player: sound only
+  kickQuality: store.get('kickQuality', 'auto'), // 'auto' or a height like 720
+  dataSaver: store.get('dataSaver', true), // cap Kick at 480p on mobile data
 };
 
 export function saveSetting(key, value) {

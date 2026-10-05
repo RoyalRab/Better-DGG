@@ -243,6 +243,28 @@ input {
   background: #000;
   object-fit: contain;
 }
+/* Audio only: a card with the stream's name over the tile, the sound
+   controls along the bottom (the tile rule above stretches children). */
+.tile-body > .audio-only {
+  display: grid;
+  place-content: center;
+  gap: 4px;
+  padding: 16px 16px 60px;
+  text-align: center;
+  background: #000;
+  color: var(--text);
+}
+.tile-body > .audio-only b {
+  font-size: 18px;
+}
+.tile-body > .audio-only span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.tile-body > audio.own-player {
+  top: auto;
+  height: 44px !important;
+}
 .pip-placeholder {
   display: grid;
   place-items: center;
@@ -763,6 +785,23 @@ dialog button.primary {
   margin: 0;
   flex: none;
   accent-color: var(--accent);
+}
+.select-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+.select-row select {
+  flex: none;
+  height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
 }
 .links {
   display: flex;

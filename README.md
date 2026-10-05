@@ -15,6 +15,8 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 | Keeps playing when the screen locks | Kick streams keep their sound when you lock the phone or switch apps. Chrome on Android pauses video in the background, so the app switches to an audio-only copy of the stream and back to the video when you return. |
 | Lock screen controls | Play, pause, next and previous from the lock screen and notification, with the stream's name. Next and previous step through the live embeds, and earbud buttons do the same. |
 | Sleep timer | Settings → Sleep timer pauses the stream after 15, 30 or 60 minutes, for falling asleep listening. |
+| Audio only | Settings can play Kick streams as sound only in the app's own player: no picture, less data and battery. |
+| Data saver | On mobile data, Kick streams in the app's own player stay at 480p or below (on by default, where the browser reports the connection type: Chrome on Android does). |
 | Home screen shortcuts | Long-press the app icon for **Destiny's stream** or **Multi-view** (your last multi-view set). |
 | Share into the app | Share a Kick, Twitch, YouTube, AngelThump or Rumble link from another app to DGG Remix to open it (Android, installed app). |
 | Haptic tap | A short buzz confirms that holding a tab added it to multi-view. |
@@ -45,6 +47,7 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 | Keyboard shortcuts | On desktop: 1–9 switch tabs, ← → previous and next, M add to multi-view, C chat, F fullscreen, P picture-in-picture. |
 | Chat on the left | Settings can put chat on the left in landscape and on desktop. |
 | Remembers volume | Kick streams in the app's own player keep their own volume. |
+| Kick quality | Settings cap the quality of Kick streams in the app's own player (Auto, or up to 1080p, 720p, 480p or 360p) for a steadier picture on a slow connection. |
 | Error reports | Optional, off by default: when a player fails, the app sends what failed, its version and the kind of browser to the server log. Nothing about you. |
 | Real-time embed tabs | The tab row updates the moment someone embeds something, with live streams only (no VODs, clips or ordinary videos), each with its platform icon. The list recovers on its own after the phone changes networks. |
 | Opens on something live | Opens the last stream you watched if it's still live, then Destiny if he's live, then the first tab. A stream on screen that ends keeps a dimmed tab. |

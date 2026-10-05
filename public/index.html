@@ -180,6 +180,24 @@
           the screen locks and can pop out or be cast</label
         >
         <label class="toggle"
+          ><input type="checkbox" id="opt-audio" /> Audio only for Kick: no picture, less data and battery (needs the
+          app's own player)</label
+        >
+        <label class="select-row"
+          ><span>Kick quality (the app's own player)</span>
+          <select id="opt-quality">
+            <option value="auto">Auto</option>
+            <option value="1080">Up to 1080p</option>
+            <option value="720">Up to 720p</option>
+            <option value="480">Up to 480p</option>
+            <option value="360">Up to 360p</option>
+          </select></label
+        >
+        <label class="toggle"
+          ><input type="checkbox" id="opt-datasaver" /> Data saver: Kick at 480p at most on mobile data (when the
+          browser can tell)</label
+        >
+        <label class="toggle"
           ><input type="checkbox" id="opt-chat-left" /> Chat on the left (landscape and desktop)</label
         >
         <h3 class="sheet-subhead">Sleep timer</h3>

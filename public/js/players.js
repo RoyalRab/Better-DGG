@@ -8,7 +8,7 @@
 
 import { PLATFORM_NAMES } from './sources.js';
 import { state, isCurrent, streamName } from './state.js';
-import { isTouch, store, report } from './util.js';
+import { isTouch, store, report, settings } from './util.js';
 
 const scripts = {};
 export function loadScript(src) {
@@ -288,6 +288,11 @@ const HLS_CONFIG = {
   backBufferLength: 30,
 };
 export const OWN_PLAYER_TYPES = new Set(['kick']);
+// Mobile data, as far as the browser says (Chrome on Android does; others don't).
+export const onMobileData = () => {
+  const c = navigator.connection;
+  return !!c && (c.type === 'cellular' || c.saveData === true);
+};
 export const hasMse = () => !!(window.MediaSource || window.ManagedMediaSource);
 
 const OWN_START_TIMEOUT_MS = 12000;
@@ -333,7 +338,12 @@ export async function mountOwn(tile, muted) {
   if (!check.ok) throw new Error('not playable: ' + check.status);
   if (cancelled()) throw new Error('cancelled');
 
-  const v = document.createElement('video');
+  // Audio only: an <audio> element fed the audio-only copy of the stream
+  // (no video track reaches the browser, so no video data is fetched),
+  // behind a card with the stream's name. It keeps playing when the phone
+  // locks without any switching.
+  const audioOnly = !!settings.audioOnly;
+  const v = document.createElement(audioOnly ? 'audio' : 'video');
   v.className = 'own-player';
   v.controls = true;
   v.autoplay = true;
@@ -341,9 +351,20 @@ export async function mountOwn(tile, muted) {
   v.muted = muted;
   v.setAttribute('playsinline', '');
   v.setAttribute('aria-label', playerTitle(tile.src));
-  // Let the browser pop it out on its own when you leave the app, where supported.
-  v.autoPictureInPicture = true;
-  v.setAttribute('autopictureinpicture', '');
+  if (audioOnly) {
+    const card = document.createElement('div');
+    card.className = 'audio-only';
+    const name = document.createElement('b');
+    name.textContent = playerTitle(tile.src);
+    const note = document.createElement('span');
+    note.textContent = 'Audio only (settings)';
+    card.append(name, note);
+    tile.body.appendChild(card);
+  } else {
+    // Let the browser pop it out on its own when you leave the app, where supported.
+    v.autoPictureInPicture = true;
+    v.setAttribute('autopictureinpicture', '');
+  }
   // Some streams are much louder than others: the volume is kept per stream.
   const volumeKey = `volume:${tile.src.type}/${tile.src.id}`;
   const savedVolume = store.get(volumeKey, null);
@@ -370,7 +391,8 @@ export async function mountOwn(tile, muted) {
       v.remove();
       throw new Error('no HLS support');
     }
-    hls = new Hls(HLS_CONFIG);
+    hls = audioOnly ? makeAudioOnlyHls(HLS_CONFIG) : new Hls(HLS_CONFIG);
+    hls.on(Hls.Events.MANIFEST_PARSED, () => applyQuality());
     let recoveries = 0;
     hls.on(Hls.Events.ERROR, (_e, data) => {
       if (!data.fatal) return;
@@ -386,6 +408,29 @@ export async function mountOwn(tile, muted) {
     v.remove();
     throw new Error('no HLS support');
   }
+
+  // Quality: the picked ceiling from settings, lowered to 480p on mobile data
+  // when the data saver is on. hls.js still picks the best level under it.
+  function applyQuality() {
+    if (!hls || !hls.levels || !hls.levels.length) return;
+    let max = settings.kickQuality === 'auto' ? Infinity : Number(settings.kickQuality) || Infinity;
+    if (settings.dataSaver && onMobileData()) max = Math.min(max, 480);
+    if (!Number.isFinite(max)) {
+      hls.autoLevelCapping = -1;
+      return;
+    }
+    let cap = -1;
+    hls.levels.forEach((l, i) => {
+      if (l.height && l.height <= max && (cap < 0 || l.height >= hls.levels[cap].height)) cap = i;
+    });
+    // Nothing small enough: the lowest there is.
+    if (cap < 0) cap = hls.levels.reduce((best, l, i) => (l.height < hls.levels[best].height ? i : best), 0);
+    hls.autoLevelCapping = cap;
+    if (hls.currentLevel > cap) hls.currentLevel = -1;
+  }
+  const conn = navigator.connection;
+  const onConnection = () => applyQuality();
+  conn?.addEventListener?.('change', onConnection);
 
   // If it hasn't started in a few seconds, go back to the site's own player.
   let started = false;
@@ -503,7 +548,7 @@ export async function mountOwn(tile, muted) {
     bg = { audio, hls: h2 };
   }
   function enterBackground() {
-    if (bg || !hls || v.muted || !playingAtHide || !document.hidden) return;
+    if (audioOnly || bg || !hls || v.muted || !playingAtHide || !document.hidden) return;
     if (Date.now() - userPausedAt < 1500) return;
     if (!isCurrent(tile.src) || !state.tiles.includes(tile)) return;
     startAudioCopy(1);
@@ -587,10 +632,17 @@ export async function mountOwn(tile, muted) {
       if (hls) hls.startLoad(-1);
       v.play().catch(() => {});
     },
+    audioOnly,
+    applyQuality,
+    // For dev/kick-player.mjs.
+    levelsForTests: () => (hls ? hls.levels.map((l) => l.height) : []),
+    cappingForTests: () => (hls ? hls.autoLevelCapping : null),
     destroy() {
       clearTimeout(timer);
       clearInterval(health);
       liveChip.remove();
+      conn?.removeEventListener?.('change', onConnection);
+      tile.body.querySelector('.audio-only')?.remove();
       document.removeEventListener('visibilitychange', onVisibility);
       clearTimeout(hideTimer);
       if (bg) {

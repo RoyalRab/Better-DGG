@@ -2,6 +2,12 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.3.0 (2026-10-05)
+
+- Audio only: a setting plays Kick streams as sound only in the app's own player, for less data and battery.
+- Kick quality: a setting caps Kick streams in the app's own player at 1080p, 720p, 480p or 360p, or leaves it on Auto.
+- Data saver: on mobile data, Kick streams in the app's own player stay at 480p or below. On by default; turn it off in settings.
+
 ## 1.2.1 (2026-10-05)
 
 - Kick streams in the app's own player stay closer to live: about 5 seconds behind instead of 10 to 15, and they catch up faster after buffering.

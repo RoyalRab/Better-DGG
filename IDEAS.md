@@ -6,8 +6,6 @@ The owner's backlog. Ideas from users arrive as GitHub issues labelled `idea` (S
 
 | Idea | Why | Effort |
 | --- | --- | --- |
-| Audio-only mode toggle | Listen with the video off to save data and battery; reuses `makeAudioOnlyHls` | S |
-| Data saver: cap Kick quality on cellular (`navigator.connection`, hls.js level cap) and a quality picker | Less data on mobile, sharper picture on Wi-Fi | M |
 | Rotate to landscape goes fullscreen, with an optional see-through chat overlay | Watching sideways without wasting space | M |
 | Kick low latency: read the `EXT-X-PREFETCH` segments Kick's playlists list (the one being written) through a custom hls.js loader, as Kick's own player does | Another 2 to 4 s closer to live | L |
 | Push notification when Destiny goes live (Web Push; the server already sees `dggApi:streamInfo`) | Know when to open the app | L |

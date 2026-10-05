@@ -94,6 +94,9 @@ export function openSheet(scrollTo) {
   $('#opt-own').checked = settings.ownPlayer;
   $('#opt-chat-left').checked = settings.chatLeft;
   $('#opt-reports').checked = settings.errorReports;
+  $('#opt-audio').checked = settings.audioOnly;
+  $('#opt-quality').value = String(settings.kickQuality);
+  $('#opt-datasaver').checked = settings.dataSaver;
   renderSleep();
   $('#sheet').showModal();
   // Scroll inside the sheet only (scrollIntoView could also move the page behind it).
@@ -240,6 +243,24 @@ $('#opt-own').addEventListener('change', (e) => {
   saveSetting('ownPlayer', e.target.checked);
   dropParked();
   for (const t of state.tiles) if (OWN_PLAYER_TYPES.has(t.src.type)) mountTile(t);
+});
+// Audio only swaps the element, so the Kick tiles start over; the quality
+// cap and the data saver apply to the running players.
+$('#opt-audio').addEventListener('change', (e) => {
+  saveSetting('audioOnly', e.target.checked);
+  dropParked();
+  for (const t of state.tiles) if (OWN_PLAYER_TYPES.has(t.src.type)) mountTile(t);
+});
+const applyQualityAll = () => {
+  for (const t of state.tiles) t.player?.applyQuality?.();
+};
+$('#opt-quality').addEventListener('change', (e) => {
+  saveSetting('kickQuality', e.target.value);
+  applyQualityAll();
+});
+$('#opt-datasaver').addEventListener('change', (e) => {
+  saveSetting('dataSaver', e.target.checked);
+  applyQualityAll();
 });
 
 $('#multi-btn').addEventListener('click', () => setAddMode(true));
