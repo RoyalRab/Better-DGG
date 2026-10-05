@@ -144,6 +144,7 @@ export function openSheet(scrollTo) {
   const insets = document.documentElement.dataset.insets;
   $('#display-info').textContent = insets ? `Display: ${insets}` : '';
   $('#display-info').hidden = !insets;
+  renderPush();
   $('#opt-awake').checked = settings.keepAwake;
   $('#opt-chat').checked = settings.showChat;
   $('#opt-own').checked = settings.ownPlayer;
@@ -269,6 +270,74 @@ $('#overlay-btn').addEventListener('click', () => {
   renderLandscape();
 });
 $('#focus-btn').addEventListener('click', () => setFocusLayout(!state.focus));
+
+// "Destiny is live" notifications: web push through the service worker,
+// with the server's public key. Needs a browser with push (Safari only as
+// an installed app) and the server to have keys; otherwise the row explains.
+const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+function keyBytes(b64) {
+  const pad = '='.repeat((4 - (b64.length % 4)) % 4);
+  const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+}
+async function pushSubscription() {
+  const reg = await navigator.serviceWorker.ready;
+  return reg.pushManager.getSubscription();
+}
+function renderPush(hint = '') {
+  const row = $('#push-row');
+  const ok = pushSupported();
+  row.hidden = !ok;
+  $('#push-hint').hidden = !hint && ok;
+  $('#push-hint').textContent =
+    hint ||
+    (ok
+      ? ''
+      : isIOS && !standalone
+        ? 'On iPhone and iPad, notifications work once the app is installed (Share → Add to Home Screen).'
+        : 'This browser has no notifications.');
+  $('#opt-push').checked = !!settings.push;
+}
+async function subscribePush() {
+  const r = await fetch('api/push/key', { cache: 'no-store' });
+  if (!r.ok) throw new Error('Notifications are off on the server right now.');
+  const { key } = await r.json();
+  if ((await Notification.requestPermission()) !== 'granted') throw new Error('Notifications were not allowed.');
+  const reg = await navigator.serviceWorker.ready;
+  const sub =
+    (await reg.pushManager.getSubscription()) ||
+    (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(key) }));
+  const res = await fetch('api/push/subscribe', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ subscription: sub.toJSON() }),
+  });
+  if (!res.ok) throw new Error("Couldn't register for notifications.");
+}
+async function unsubscribePush() {
+  const sub = await pushSubscription().catch(() => null);
+  if (!sub) return;
+  fetch('api/push/unsubscribe', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ endpoint: sub.endpoint }),
+  }).catch(() => {});
+  await sub.unsubscribe().catch(() => {});
+}
+$('#opt-push').addEventListener('change', async (e) => {
+  const on = e.target.checked;
+  e.target.disabled = true;
+  try {
+    if (on) await subscribePush();
+    else await unsubscribePush();
+    saveSetting('push', on);
+    renderPush(on ? "You'll get a notification when Destiny goes live." : '');
+  } catch (err) {
+    saveSetting('push', false);
+    renderPush(err.message || 'Notifications could not be turned on.');
+  }
+  e.target.disabled = false;
+});
 $('#opt-reports').addEventListener('change', (e) => saveSetting('errorReports', e.target.checked));
 
 // ---------- Favorites ----------

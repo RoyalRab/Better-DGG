@@ -382,6 +382,7 @@ function connectLive() {
     } else if (msg.type === 'dggApi:streamInfo') {
       live.streamInfo = msg.data;
       broadcast();
+      pushOnStreamInfo();
     } else if (msg.type === 'dggApi:bannedEmbeds' && Array.isArray(msg.data)) {
       live.banned = bannedSet(msg.data);
       broadcast();
@@ -739,6 +740,157 @@ async function serveKickVideo(req, res, kind, channel, id) {
   }
 }
 
+// ---------- Web push: "Destiny is live" ----------
+// The VAPID keys live in the environment (VAPID_PUBLIC, VAPID_PRIVATE and
+// VAPID_SUBJECT, a contact URL), never in the repo; without them the feature
+// is off and /api/push/key answers 404. Subscriptions are kept in PUSH_FILE
+// (a Railway volume at /data) so they survive a deploy, and in memory when
+// that file can't be written. A platform of Destiny's going from not live
+// to live in dggApi:streamInfo sends one notification per platform per 10
+// minutes; the first streamInfo after a start is a baseline, not news, so a
+// deploy while he's live doesn't notify everyone.
+const pushFile = () => process.env.PUSH_FILE || '/data/push.json';
+const PUSH_MAX = 5000;
+const push = {
+  subs: new Map(), // endpoint -> subscription
+  live: null, // platforms live at the last streamInfo; null until the first one
+  sentAt: new Map(), // platform -> when it was last announced
+  sender: null, // (subscription, payload) => Promise; web-push, or a test's stand-in
+  config() {
+    const pub = process.env.VAPID_PUBLIC;
+    const priv = process.env.VAPID_PRIVATE;
+    return pub && priv ? { pub, priv, subject: process.env.VAPID_SUBJECT || 'https://dggremix.up.railway.app' } : null;
+  },
+};
+const validSub = (x) =>
+  !!x &&
+  typeof x.endpoint === 'string' &&
+  /^https:\/\/\S{1,1000}$/.test(x.endpoint) &&
+  !!x.keys &&
+  typeof x.keys.p256dh === 'string' &&
+  typeof x.keys.auth === 'string' &&
+  x.keys.p256dh.length <= 200 &&
+  x.keys.auth.length <= 100;
+
+function loadPush() {
+  try {
+    const list = JSON.parse(fs.readFileSync(pushFile(), 'utf8'));
+    for (const x of Array.isArray(list) ? list : []) if (validSub(x)) push.subs.set(x.endpoint, x);
+    if (push.subs.size) console.log(`push: ${push.subs.size} subscriptions loaded`);
+  } catch {}
+}
+let pushSaveTimer = null;
+function savePush() {
+  clearTimeout(pushSaveTimer);
+  pushSaveTimer = setTimeout(() => {
+    try {
+      fs.mkdirSync(path.dirname(pushFile()), { recursive: true });
+      fs.writeFileSync(pushFile() + '.tmp', JSON.stringify([...push.subs.values()]));
+      fs.renameSync(pushFile() + '.tmp', pushFile());
+    } catch (e) {
+      console.log('push: save failed', e.message);
+    }
+  }, 500);
+  pushSaveTimer.unref();
+}
+function sendPush(sub, payload) {
+  if (!push.sender) {
+    const webpush = require('web-push');
+    const c = push.config();
+    webpush.setVapidDetails(c.subject, c.pub, c.priv);
+    push.sender = (s, p) => webpush.sendNotification(s, p, { TTL: 600 });
+  }
+  return push.sender(sub, payload);
+}
+const PLATFORM_LABEL = { kick: 'Kick', youtube: 'YouTube', rumble: 'Rumble', twitch: 'Twitch' };
+async function notifyLive(stream) {
+  if (!push.config() || !push.subs.size) return;
+  const { platform, id, title } = stream;
+  const hash = platform === 'kick' ? '#kick/destiny' : id ? `#${platform}/${id}` : '';
+  const payload = JSON.stringify({
+    title: `Destiny is live on ${PLATFORM_LABEL[platform] || platform}`,
+    body: title || '',
+    url: hash || './',
+    tag: 'live',
+  });
+  let sent = 0;
+  let dropped = 0;
+  const all = [...push.subs.values()];
+  for (let i = 0; i < all.length; i += 20) {
+    await Promise.all(
+      all.slice(i, i + 20).map(async (sub) => {
+        try {
+          await sendPush(sub, payload);
+          sent++;
+        } catch (e) {
+          const code = e && e.statusCode;
+          if (code === 404 || code === 410) {
+            push.subs.delete(sub.endpoint);
+            dropped++;
+          } else console.log('push: failed', code || (e && e.message) || e);
+        }
+      }),
+    );
+  }
+  if (dropped) savePush();
+  console.log(`push: ${platform} live, sent ${sent}, dropped ${dropped}`);
+}
+function pushOnStreamInfo() {
+  const streams = destinyStreams();
+  const now = new Set(streams.map((s) => s.platform));
+  const before = push.live;
+  push.live = now;
+  if (!before) return;
+  const promises = [];
+  for (const s of streams) {
+    if (before.has(s.platform)) continue;
+    if (Date.now() - (push.sentAt.get(s.platform) || 0) < 10 * 60 * 1000) continue;
+    push.sentAt.set(s.platform, Date.now());
+    promises.push(notifyLive(s).catch((e) => console.log('push: error', e && e.message)));
+  }
+  return Promise.all(promises);
+}
+
+function readJson(req, max = 4000) {
+  return new Promise((resolve) => {
+    let body = '';
+    req.on('data', (chunk) => {
+      body += chunk;
+      if (body.length > max) req.destroy();
+    });
+    req.on('end', () => {
+      try {
+        resolve(JSON.parse(body));
+      } catch {
+        resolve(null);
+      }
+    });
+    req.on('error', () => resolve(null));
+  });
+}
+const pushLimit = makeLimiter(20, 10 * 60 * 1000);
+async function pushSubscribe(req, res, on) {
+  res.setHeader('Cache-Control', 'no-store');
+  if (!pushLimit(clientIp(req))) return send(res, 429, 'text/plain; charset=utf-8', 'Too many requests');
+  const body = await readJson(req);
+  if (on) {
+    const sub = body && body.subscription;
+    if (!push.config()) return send(res, 404, 'text/plain; charset=utf-8', 'Notifications are off');
+    if (!validSub(sub)) return send(res, 400, 'text/plain; charset=utf-8', 'Bad subscription');
+    if (!push.subs.has(sub.endpoint) && push.subs.size >= PUSH_MAX) {
+      return send(res, 503, 'text/plain; charset=utf-8', 'Full');
+    }
+    push.subs.set(sub.endpoint, { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } });
+  } else {
+    const endpoint = body && body.endpoint;
+    if (typeof endpoint !== 'string') return send(res, 400, 'text/plain; charset=utf-8', 'Bad request');
+    push.subs.delete(endpoint);
+  }
+  savePush();
+  res.writeHead(204);
+  res.end();
+}
+
 // ---------- HTTP ----------
 
 const server = http.createServer((req, res) => {
@@ -759,6 +911,8 @@ function handle(req, res) {
   const url = new URL(req.url, 'http://localhost');
   if (req.method === 'POST' && url.pathname === '/api/csp-report') return cspReport(req, res);
   if (req.method === 'POST' && url.pathname === '/api/report') return errorReport(req, res);
+  if (req.method === 'POST' && url.pathname === '/api/push/subscribe') return pushSubscribe(req, res, true);
+  if (req.method === 'POST' && url.pathname === '/api/push/unsubscribe') return pushSubscribe(req, res, false);
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     return send(res, 405, 'text/plain; charset=utf-8', 'Method not allowed');
   }
@@ -767,6 +921,12 @@ function handle(req, res) {
     return send(res, 200, 'application/json', JSON.stringify(snapshot()));
   }
   if (url.pathname === '/api/live') return openStream(req, res);
+  if (url.pathname === '/api/push/key') {
+    res.setHeader('Cache-Control', 'no-store');
+    const c = push.config();
+    if (!c) return send(res, 404, 'text/plain; charset=utf-8', 'Notifications are off');
+    return send(res, 200, 'application/json', JSON.stringify({ key: c.pub }));
+  }
   if (url.pathname === '/api/version') {
     res.setHeader('Cache-Control', 'no-store');
     return send(res, 200, 'application/json', JSON.stringify(VERSION));
@@ -805,6 +965,8 @@ function start() {
     server.close();
     setTimeout(() => process.exit(0), 2000).unref();
   });
+  loadPush();
+  if (push.config()) console.log('push: on');
   if (process.env.NO_LIVE !== '1') connectLive();
 }
 
@@ -826,4 +988,6 @@ module.exports = {
   CSP,
   kickCache,
   masterCache,
+  push,
+  pushOnStreamInfo,
 };

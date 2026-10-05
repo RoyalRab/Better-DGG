@@ -8,6 +8,7 @@ import fs from 'node:fs';
 
 process.env.NO_LIVE = '1';
 const require = createRequire(import.meta.url);
+process.env.PUSH_FILE = `${process.env.TMPDIR || '/tmp'}/bdgg-test-push-${process.pid}.json`;
 const srv = require('../server.js');
 const pkg = require('../package.json');
 
@@ -293,4 +294,60 @@ test('the share target path serves the app', async () => {
   const r = await fetch(base + '/share?url=https%3A%2F%2Fkick.com%2Fdestiny');
   assert.equal(r.status, 200);
   assert.match(r.headers.get('content-type'), /text\/html/);
+});
+
+test('push: keys from the environment, subscriptions kept, notified when Destiny goes live', async () => {
+  delete process.env.VAPID_PUBLIC;
+  delete process.env.VAPID_PRIVATE;
+  assert.equal((await get('/api/push/key', '10.4.0.1')).status, 404, 'off without keys');
+  process.env.VAPID_PUBLIC = 'BPUBLIC';
+  process.env.VAPID_PRIVATE = 'private';
+  const key = await (await get('/api/push/key', '10.4.0.1')).json();
+  assert.deepEqual(key, { key: 'BPUBLIC' });
+  const post = (p, body, ip) =>
+    fetch(base + p, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-real-ip': ip },
+      body: JSON.stringify(body),
+    });
+  const sub = (endpoint) => ({ endpoint, keys: { p256dh: 'p', auth: 'a' } });
+  assert.equal(
+    (await post('/api/push/subscribe', { subscription: sub('https://push.example/one') }, '10.4.0.1')).status,
+    204,
+  );
+  assert.equal(
+    (await post('/api/push/subscribe', { subscription: sub('https://push.example/gone') }, '10.4.0.2')).status,
+    204,
+  );
+  assert.equal((await post('/api/push/subscribe', { subscription: { endpoint: 'ftp://x' } }, '10.4.0.1')).status, 400);
+  assert.equal(srv.push.subs.size, 2);
+  const sent = [];
+  srv.push.sender = async (s) => {
+    sent.push(s.endpoint);
+    if (s.endpoint.endsWith('/gone')) {
+      const e = new Error('gone');
+      e.statusCode = 410;
+      throw e;
+    }
+  };
+  srv.live.streamInfo = { streams: { kick: { live: true, id: 'destiny', status_text: 'already on' } } };
+  await srv.pushOnStreamInfo();
+  assert.deepEqual(sent, [], 'the first streamInfo is a baseline, not news');
+  srv.live.streamInfo = {
+    streams: { kick: { live: false }, youtube: { live: true, id: 'abc123', status_text: 'hi' } },
+  };
+  await srv.pushOnStreamInfo();
+  assert.deepEqual(sent.sort(), ['https://push.example/gone', 'https://push.example/one']);
+  assert.equal(srv.push.subs.size, 1, 'a gone subscription is dropped');
+  sent.length = 0;
+  srv.live.streamInfo = { streams: { kick: { live: false }, youtube: { live: false } } };
+  await srv.pushOnStreamInfo();
+  srv.live.streamInfo = { streams: { youtube: { live: true, id: 'abc123' } } };
+  await srv.pushOnStreamInfo();
+  assert.deepEqual(sent, [], 'not again within ten minutes');
+  assert.equal((await post('/api/push/unsubscribe', { endpoint: 'https://push.example/one' }, '10.4.0.1')).status, 204);
+  assert.equal(srv.push.subs.size, 0);
+  srv.push.sender = null;
+  delete process.env.VAPID_PUBLIC;
+  delete process.env.VAPID_PRIVATE;
 });

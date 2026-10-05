@@ -52,3 +52,38 @@ self.addEventListener('fetch', (e) => {
     ),
   );
 });
+
+// "Destiny is live" (web push from the server, see server.js). A tap opens
+// the app on the stream: an open window is told the hash, else one is opened.
+self.addEventListener('push', (e) => {
+  let data = {};
+  try {
+    data = e.data ? e.data.json() : {};
+  } catch {}
+  e.waitUntil(
+    self.registration.showNotification(data.title || 'DGG Remix', {
+      body: data.body || '',
+      icon: './icons/icon-192.png',
+      badge: './icons/icon-192.png',
+      tag: data.tag || 'live',
+      renotify: true,
+      data: { url: data.url || './' },
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const target = String((e.notification.data && e.notification.data.url) || './');
+  const hash = target.startsWith('#') ? target : '';
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      const win = list[0];
+      if (win) {
+        if (hash) win.postMessage({ type: 'open', hash });
+        return win.focus();
+      }
+      return self.clients.openWindow(new URL(hash ? './' + hash : target, self.location.href).href);
+    }),
+  );
+});

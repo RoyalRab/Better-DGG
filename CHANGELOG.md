@@ -2,6 +2,11 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.6.0 (2026-10-05)
+
+- Notifications: a setting tells you when Destiny goes live, even when the app is closed. A tap opens the stream.
+- The browser checks now run on GitHub for every change, not just the unit tests.
+
 ## 1.5.0 (2026-10-05)
 
 - Stream previews: rest the mouse on a tab, or hold a tab on a phone, to see a picture of the stream first.

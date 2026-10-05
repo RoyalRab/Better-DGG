@@ -29,6 +29,7 @@ export const settings = {
   kickQuality: store.get('kickQuality', 'auto'), // 'auto' or a height like 720
   dataSaver: store.get('dataSaver', true), // cap Kick at 480p on mobile data
   landscapeFull: store.get('landscapeFull', false), // phones: landscape fills the screen, chat over the stream
+  push: store.get('push', false), // 'Destiny is live' notifications (subscribed with the server)
 };
 
 export function saveSetting(key, value) {

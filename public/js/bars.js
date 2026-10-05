@@ -35,6 +35,17 @@ $('#update-yes').addEventListener('click', applyUpdateOrReload);
 export function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   let reloading = false;
+  // A tap on a "Destiny is live" notification (sw.js) names the stream.
+  navigator.serviceWorker.addEventListener('message', (e) => {
+    if (
+      e.data &&
+      e.data.type === 'open' &&
+      typeof e.data.hash === 'string' &&
+      /^#[\w-]+\/[\w./-]+$/.test(e.data.hash)
+    ) {
+      location.hash = e.data.hash;
+    }
+  });
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     // Only when the user asked for the update (not on the very first install).
     if (reloading || !waitingWorker) return;
