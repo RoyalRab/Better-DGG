@@ -272,10 +272,15 @@ export const HLS_JS = document.querySelector('meta[name="hls-js"]')?.content || 
 // Start a bit below full quality so the picture appears sooner on mobile
 // data, never fetch more pixels than the player shows, and keep little
 // already-played video around.
-// Stay near live: every stall adds delay, so when it has fallen behind it
-// plays up to 15% faster (hard to notice) until it's back, and jumps
-// straight to live when it's more than six segments behind.
-const LIVE_CATCH_UP = { liveSyncDurationCount: 3, liveMaxLatencyDurationCount: 6, maxLiveSyncPlaybackRate: 1.15 };
+// Stay near live. Kick's playlists are plain HLS with 2 s or 4 s segments
+// (no low-latency parts; Kick's own player reads its EXT-X-PREFETCH tags,
+// which hls.js can't), so the target is a fixed 5 s behind the newest
+// segment rather than hls.js's three segments, which was 12 s on a 4 s
+// stream. Every stall adds delay: hls.js eases the target out by a second
+// per stall (up to a segment's worth), and when it's behind it plays up to
+// 25% faster until it's back, jumping straight to live when it's more than
+// 12 s behind.
+const LIVE_CATCH_UP = { liveSyncDuration: 5, liveMaxLatencyDuration: 12, maxLiveSyncPlaybackRate: 1.25 };
 const HLS_CONFIG = {
   ...LIVE_CATCH_UP,
   capLevelToPlayerSize: true,

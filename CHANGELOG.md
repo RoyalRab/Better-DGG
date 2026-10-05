@@ -2,6 +2,11 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.2.1 (2026-10-05)
+
+- Kick streams in the app's own player stay closer to live: about 5 seconds behind instead of 10 to 15, and they catch up faster after buffering.
+- No more empty band above the Android buttons after an update or Refresh.
+
 ## 1.2.0 (2026-10-05)
 
 - Sleep timer in settings: pauses the stream after 15, 30 or 60 minutes.

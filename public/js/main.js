@@ -89,7 +89,9 @@ loadChangelog();
 //      a reload, a window that is suddenly taller by a button-bar's worth is
 //      drawing under the buttons, and the difference is their height.
 // Whenever Chrome reports 0, pad with whichever of those we have, or with
-// Android's standard 48 px after a reload when neither exists yet.
+// Android's standard 48 px after a reload when neither exists yet. A window
+// that is no taller than at launch gets what Chrome reported then (nothing,
+// as a rule): padding it anyway left an empty band above the buttons.
 if (standalone) {
   const probe = document.createElement('div');
   probe.style.cssText = 'position:fixed;top:-9999px;height:0;padding-bottom:env(safe-area-inset-bottom)';
@@ -102,22 +104,31 @@ if (standalone) {
   const freshLaunch = (!nav || nav.type === 'navigate') && !wasReloaded;
   const fresh = (v) => v && Date.now() - v.at < MONTH;
 
-  // A normal launch: note the window height, so a reload can be compared to it.
+  const reportedInset = () => parseFloat(getComputedStyle(probe).paddingBottom) || 0;
+  // A normal launch: note the window height and what Chrome reported, so a
+  // reload can be compared to it.
   function recordLaunchHeight() {
     if (!freshLaunch || document.hidden) return;
-    store.set(launchKey(), { h: window.innerHeight, screen: screen.height, at: Date.now() });
+    store.set(launchKey(), { h: window.innerHeight, screen: screen.height, inset: reportedInset(), at: Date.now() });
   }
 
-  // What the buttons are worth after a reload, judged from the window height.
+  // What the buttons are worth after a reload, judged from the window
+  // height: the extra height over a normal launch, or, when the window is no
+  // taller, whatever Chrome reported at that launch (usually 0: the window
+  // ends above the buttons, as it did then). Null when no launch is known.
   function heightFromLaunch() {
     const saved = store.get(launchKey(), null);
-    if (!fresh(saved) || saved.screen !== screen.height) return 0;
+    if (!fresh(saved) || saved.screen !== screen.height) return null;
     const extra = window.innerHeight - saved.h;
-    return extra >= 8 && extra <= 160 ? extra : 0;
+    if (extra >= 8 && extra <= 160) return extra;
+    return Math.abs(extra) < 8 ? saved.inset || 0 : null;
   }
+  // Without a launch to compare to: a window that stops short of the screen
+  // by more than a status bar's worth has the buttons outside it.
+  const buttonsOutside = () => screen.height - window.innerHeight >= 56;
 
   const checkInsets = () => {
-    const reported = parseFloat(getComputedStyle(probe).paddingBottom) || 0;
+    const reported = reportedInset();
     const root = document.documentElement.style;
     if (reported > 0) {
       store.set(insetKey(), { px: reported, at: Date.now() });
@@ -126,12 +137,13 @@ if (standalone) {
       const fromLaunch = heightFromLaunch();
       const saved = store.get(insetKey(), null);
       // Nothing measured yet (the first reload after installing): pad the
-      // usual height rather than nothing. Android's button bar is 48 px; a
-      // tablet's taskbar is taller. (Chrome on Android tablets calls itself a
-      // desktop browser, so this goes by touch, not by the Android name.)
+      // usual height rather than nothing, unless the window plainly ends
+      // above the buttons. Android's button bar is 48 px; a tablet's taskbar
+      // is taller. (Chrome on Android tablets calls itself a desktop browser,
+      // so this goes by touch, not by the Android name.)
       const tablet = Math.min(screen.width, screen.height) >= 600;
-      const floor = isTouch && !freshLaunch ? (tablet ? 64 : 48) : 0;
-      const px = fromLaunch || (fresh(saved) && saved.px > 0 ? saved.px : floor);
+      const floor = isTouch && !freshLaunch && !buttonsOutside() ? (tablet ? 64 : 48) : 0;
+      const px = fromLaunch ?? (fresh(saved) && saved.px > 0 && !buttonsOutside() ? saved.px : floor);
       if (px > 0) root.setProperty('--nav-fallback', px + 'px');
       else root.removeProperty('--nav-fallback');
     }
