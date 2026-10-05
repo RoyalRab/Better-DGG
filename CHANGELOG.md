@@ -2,6 +2,10 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.0.7 (2026-10-05)
+
+- Twitch streams no longer sit on Twitch's play button on phones: they start muted, the sound comes on a moment later, and if the phone won't allow that the stream keeps playing with the Tap for sound button.
+
 ## 1.0.6 (2026-10-05)
 
 - The chat's own "log in" link no longer leaves the chat panel blank with a broken-page icon: it opens destiny.gg's sign-in page in a new tab, and chat reloads when you come back.

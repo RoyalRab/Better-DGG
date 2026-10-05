@@ -17,7 +17,7 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 | Screen stays on | The phone doesn't dim or sleep while the app is open (can be turned off in settings). |
 | Installable app | Installs to the home screen with its own icon, opens full screen without the browser bar, and shows an install bar until it's installed or dismissed (a dismissed bar comes back after a week). |
 | Picture-in-picture | Pops the stream into a floating window from the ⋮ row, and Kick streams pop out on their own when you leave the app where the browser supports it. |
-| Autoplay with sound | Streams start by themselves. In the installed app they usually start with sound; otherwise there's one **Tap for sound** button (**Click for sound** on desktop). |
+| Autoplay with sound | Streams start by themselves. In the installed app they usually start with sound; otherwise there's one **Tap for sound** button (**Click for sound** on desktop). Twitch starts muted on phones and the sound comes on a moment later, or the button appears when the phone won't allow it. |
 | More room for the stream | No top bar. The player starts at the top of the screen, with a short tab row under it and the ⋮ button at the end of the row. |
 | One-tap switching | Every live embed is a tab under the player. Tap to switch, press and hold to add it to multi-view (a one-time tip says so). A stream starts loading the moment your finger touches its tab. |
 | Phone layouts | Portrait stacks player, tabs and chat. Landscape puts chat on the right with the tab row above it, so the stream gets the whole height. Chat can be hidden to give the stream the whole screen. |

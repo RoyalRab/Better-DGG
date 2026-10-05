@@ -8,6 +8,7 @@
 
 import { PLATFORM_NAMES } from './sources.js';
 import { state, isCurrent, streamName } from './state.js';
+import { isTouch } from './util.js';
 
 const scripts = {};
 export function loadScript(src) {
@@ -163,6 +164,14 @@ export async function mountYouTube(tile, muted) {
   };
 }
 
+// Twitch's player won't start with sound on its own inside a frame on a
+// phone, and it doesn't fall back to muted: it sits on its play button. So
+// on touch devices it's started muted (which phones allow), the sound is
+// turned on once it plays, and if the browser refuses that it goes back to
+// muted with the Tap for sound chip. A player that never starts (desktop,
+// sound refused) gets the same treatment after a few seconds.
+const TWITCH_START_TIMEOUT_MS = 4000;
+const TWITCH_UNMUTE_GRACE_MS = 1500;
 export async function mountTwitch(tile, muted) {
   await loadScript('https://player.twitch.tv/js/embed/v1.js');
   const holder = document.createElement('div');
@@ -173,38 +182,82 @@ export async function mountTwitch(tile, muted) {
       ? { video: tile.src.id, ...(tile.src.t ? { time: `${tile.src.t}s` } : {}) }
       : { channel: tile.src.id };
   const Twitch = window.Twitch;
+  const startMuted = muted || isTouch;
   const tw = new Twitch.Player(holder.id, {
     ...what,
     width: '100%',
     height: '100%',
     autoplay: true,
-    muted,
+    muted: startMuted,
     parent: [location.hostname],
   });
   const frame = holder.querySelector('iframe');
-  if (frame && !frame.title) frame.title = playerTitle(tile.src);
-  tw.addEventListener(Twitch.Player.READY, () => tile.onLoaded());
-  tw.addEventListener(Twitch.Player.PLAYING, () => tile.onPlaying());
-  tw.addEventListener(Twitch.Player.PAUSE, () => tile.onPaused());
+  if (frame) {
+    if (!frame.title) frame.title = playerTitle(tile.src);
+    // Hand the page's autoplay permission to Twitch's frame.
+    frame.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture');
+  }
+  let wantSound = !muted;
+  let playing = false;
+  let unmutedAt = 0;
+  let gone = false;
+  const safe = (fn) => {
+    try {
+      fn();
+    } catch {}
+  };
+  // Muted and playing, with the chip to turn the sound on.
+  function fallBackToMuted() {
+    wantSound = false;
+    safe(() => tw.setMuted(true));
+    safe(() => tw.play());
+    tile.onSoundBlocked();
+  }
+  tw.addEventListener(Twitch.Player.READY, () => {
+    tile.onLoaded();
+    setTimeout(() => {
+      if (!gone && !playing && !startMuted) fallBackToMuted();
+    }, TWITCH_START_TIMEOUT_MS);
+  });
+  tw.addEventListener(Twitch.Player.PLAYING, () => {
+    const first = !playing;
+    playing = true;
+    tile.onPlaying();
+    if (first && wantSound && startMuted) {
+      unmutedAt = Date.now();
+      safe(() => tw.setMuted(false));
+      safe(() => tw.setVolume(1));
+    }
+  });
+  tw.addEventListener(Twitch.Player.PAUSE, () => {
+    // Paused right after turning the sound on: the browser refused it.
+    if (unmutedAt && Date.now() - unmutedAt < TWITCH_UNMUTE_GRACE_MS) {
+      unmutedAt = 0;
+      fallBackToMuted();
+      return;
+    }
+    tile.onPaused();
+  });
   return {
     play() {
-      try {
-        tw.play();
-      } catch {}
+      safe(() => tw.play());
     },
     setMuted(m) {
-      try {
+      wantSound = !m;
+      unmutedAt = 0; // a real tap: a pause now is the person's own
+      safe(() => {
         tw.setMuted(m);
         if (!m) {
           tw.setVolume(1);
           tw.play();
         }
-      } catch {}
+      });
     },
     unmute() {
       this.setMuted(false);
     },
     destroy() {
+      gone = true;
       holder.remove();
     },
   };
