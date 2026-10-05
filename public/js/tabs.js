@@ -151,20 +151,6 @@ function maybeShowHint() {
   }, 2500);
 }
 
-// Streams that appear while the app is open get a short notice, so a new
-// embed isn't missed when its tab lands off the end of the row.
-let seenKeys = null;
-function announceNew(items) {
-  const keys = new Set(items.map((i) => key(i.src)));
-  if (seenKeys && !document.hidden) {
-    const fresh = items.filter((i) => !seenKeys.has(key(i.src)));
-    if (fresh.length && fresh.length <= 3) {
-      toast(`Now live: ${fresh.map((i) => i.name).join(', ')}`, 5000);
-    }
-  }
-  seenKeys = keys;
-}
-
 export function applyLive(data) {
   const items = liveItems(data);
   for (const i of items) knownNames.set(key(i.src), i.name);
@@ -172,7 +158,6 @@ export function applyLive(data) {
   $('#tabs').classList.add('loaded'); // no more placeholder tabs, even if the list is empty
   renderTabs();
   renderTileNames();
-  announceNew(items);
   document.dispatchEvent(new CustomEvent('livelist'));
 }
 
