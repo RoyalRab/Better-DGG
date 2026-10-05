@@ -2,6 +2,10 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.7.5 (2026-10-05)
+
+- Fixes the blank white screen the installed app showed on Android after pressing Home and coming back. The app no longer tries to pop the stream out by itself when you leave: the sound carries on in the background as before, and pop-out is the picture-in-picture button in the ⋮ row.
+
 ## 1.7.4 (2026-10-05)
 
 - Settings → Chat account now says to tick "Remember me" when signing in, since without it destiny.gg forgets you whenever the phone restarts Chrome in the background.

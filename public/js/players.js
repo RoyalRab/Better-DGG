@@ -598,40 +598,11 @@ export async function mountOwn(tile, muted) {
   // locked, another app open), and again when the screen locks while the
   // video is in picture-in-picture. Whenever that happens, carry on with the
   // audio-only copy. A video that keeps playing (in picture-in-picture, or on
-  // desktop) is left alone.
-  // Zero-tap pop-out: ask for picture-in-picture the moment the page goes
-  // to the background, before the browser pauses the video. Browsers may
-  // refuse it without a tap (Chrome on Android did, as of 2026); the answer
-  // is kept for the Display line in settings, so the phone's behaviour can
-  // be read off a screenshot. The Media Session handler in stage.js covers
-  // browsers that offer to pop out on their own.
+  // desktop) is left alone. The app never asks for picture-in-picture by
+  // itself: on Android that left the installed app as a blank white screen
+  // on return (1.7.1 to 1.7.4), so a pop-out is a tap on the ⋮ button, or
+  // the browser's own offer through the Media Session handler in stage.js.
   const inPip = () => document.pictureInPictureElement === v;
-  function autoPip() {
-    if (audioOnly || bg || v.paused || !started || v.muted) return;
-    if (!document.pictureInPictureEnabled || document.pictureInPictureElement || !v.requestPictureInPicture) return;
-    if (!isCurrent(tile.src) || !state.tiles.includes(tile)) return;
-    const at = new Date().toLocaleTimeString();
-    const note = (text) => (document.documentElement.dataset.autopip = text);
-    v.requestPictureInPicture().then(
-      () => {
-        note(`opened at ${at}`);
-        // The browser may have paused the video, and the audio-only copy may
-        // have started, while the request was in flight: the pop-out window
-        // needs the video playing, not a stopped one (which left a blank
-        // window on top of the app).
-        if (bg) leaveBackground();
-        else if (v.paused) resumeVideo();
-        setTimeout(() => {
-          if (document.hidden) {
-            note(
-              `opened at ${at}; after 1.5 s: ${inPip() ? 'still in the window' : 'window gone'}, ${v.paused ? 'paused' : 'playing'}`,
-            );
-          }
-        }, 1500);
-      },
-      (e) => note(`${(e && e.name) || 'refused'} at ${at}: ${(e && e.message) || ''}`),
-    );
-  }
   // The pop-out window closed while the app is still in the background: carry
   // on with sound, as if it had never opened.
   v.addEventListener('leavepictureinpicture', () => {
@@ -647,15 +618,11 @@ export async function mountOwn(tile, muted) {
       // Playing, or still starting: a locked phone won't start the video, but
       // it will play the audio-only copy.
       playingAtHide = !v.muted && (!v.paused || !started);
-      autoPip();
       // Fallback in case the browser pauses without telling us right away.
       hideTimer = setTimeout(() => {
         if (v.paused || !started) enterBackground();
       }, 700);
     } else {
-      // Back in the app: a pop-out the app opened itself comes back in, so
-      // it doesn't sit on top of the app as a blank window.
-      if (inPip() && document.exitPictureInPicture) document.exitPictureInPicture().catch(() => {});
       leaveBackground();
     }
   }
