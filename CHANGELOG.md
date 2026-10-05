@@ -2,6 +2,10 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.0.6 (2026-10-05)
+
+- The chat's own "log in" link no longer leaves the chat panel blank with a broken-page icon: it opens destiny.gg's sign-in page in a new tab, and chat reloads when you come back.
+
 ## 1.0.5 (2026-10-05)
 
 - Android: after Refresh or an update, the app always keeps the chat box clear of the navigation buttons, padding their standard height when it has nothing measured yet.

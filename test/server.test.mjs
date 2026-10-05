@@ -149,6 +149,8 @@ test('responses are compressed and carry security headers', async () => {
   assert.match(csp, /default-src 'self'/);
   assert.match(csp, /frame-ancestors 'none'/);
   assert.match(csp, /https:\/\/\*\.live-video\.net/);
+  // Only the chat embed may be framed from destiny.gg (its login page can't be).
+  assert.match(csp, /frame-src https:\/\/www\.destiny\.gg\/embed\/ /);
   assert.equal(r.headers.get('x-content-type-options'), 'nosniff');
   const report = await get('/api/csp-report', '10.4.0.1', {
     method: 'POST',

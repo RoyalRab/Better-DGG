@@ -5,7 +5,7 @@ import { state, isCurrent } from './state.js';
 import { $, settings, saveSetting, store, toast, isIOS, isAndroid, isTouch, standalone } from './util.js';
 import { OWN_PLAYER_TYPES } from './players.js';
 import { mountTile, setAddMode, updateWakeLock, layoutTiles, dropParked } from './stage.js';
-import { renderChat, loadChat, reloadChat } from './chat.js';
+import { renderChat, loadChat, reloadChat, openDgg } from './chat.js';
 import { applyUpdateOrReload } from './bars.js';
 
 // ---------- Sheets ----------
@@ -199,19 +199,8 @@ const DGG_LOGIN = '/login';
 const DGG_LOGOUT = '/';
 
 // ---------- Chat account ----------
-// The app can't see whether chat is signed in (it's destiny.gg's page in a
-// frame), so both are offered. Each opens destiny.gg, and chat reloads when
-// you come back to the app.
-
-function openDgg(path) {
-  window.open('https://www.destiny.gg' + path, '_blank', 'noopener');
-  const back = () => {
-    if (document.hidden) return;
-    document.removeEventListener('visibilitychange', back);
-    reloadChat();
-  };
-  document.addEventListener('visibilitychange', back);
-}
+// The app can't see whether chat is signed in, so both are offered (openDgg
+// in chat.js opens destiny.gg in a new tab and reloads chat on return).
 
 // Where to allow third-party cookies, for the browser this is.
 function cookieSteps() {

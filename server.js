@@ -221,6 +221,10 @@ function makeLimiter(limit, windowMs) {
 // reported to /api/csp-report and logged (what was blocked, nothing about the
 // visitor) so a missing site shows up in the logs.
 
+// frame-src names destiny.gg's chat embed only (a CSP path is a prefix
+// match, and it applies when a frame navigates): the chat's own "log in"
+// link would otherwise take the frame to a destiny.gg page that refuses to
+// be framed. chat.js catches the blocked navigation and opens a tab instead.
 const CSP = [
   "default-src 'self'",
   "script-src 'self' https://www.youtube.com https://s.ytimg.com https://player.twitch.tv",
@@ -229,7 +233,7 @@ const CSP = [
   "media-src 'self' blob: data: https://*.live-video.net",
   "connect-src 'self' https://*.live-video.net",
   "worker-src 'self' blob:",
-  'frame-src https://www.destiny.gg https://player.kick.com https://player.twitch.tv https://clips.twitch.tv ' +
+  'frame-src https://www.destiny.gg/embed/ https://player.kick.com https://player.twitch.tv https://clips.twitch.tv ' +
     'https://www.youtube.com https://www.youtube-nocookie.com https://rumble.com https://player.vimeo.com ' +
     'https://player.angelthump.com',
   "manifest-src 'self'",

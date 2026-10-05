@@ -11,6 +11,7 @@ export function renderChat() {
 // Chat loads once the first stream is playing (or after a few seconds), so
 // it doesn't compete with the stream for bandwidth at startup.
 let chatLoaded = false;
+let frameLoads = 0; // loads of the frame since the app last set its address
 // Until chat has loaded, the panel shows "Loading chat…" (the iframe stays
 // hidden so a blank page doesn't flash over it).
 const frame = $('#chat-frame');
@@ -20,6 +21,7 @@ frame.addEventListener('load', () => {
 
 export function loadChat(force = false) {
   if (chatLoaded || (!settings.showChat && !force)) return;
+  frameLoads = 0;
   frame.src = frame.dataset.src;
   chatLoaded = true;
 }
@@ -27,8 +29,49 @@ export function loadChat(force = false) {
 export function reloadChat() {
   if (!chatLoaded) return loadChat(true);
   frame.classList.remove('loaded');
+  frameLoads = 0;
   frame.src = frame.dataset.src;
 }
+
+// ---------- Signing in and out ----------
+// The app can't see whether chat is signed in (it's destiny.gg's page in a
+// frame). Sign in and out open destiny.gg in a new tab, and chat reloads
+// when you come back to the app.
+export function openDgg(path) {
+  window.open('https://www.destiny.gg' + path, '_blank', 'noopener');
+  const back = () => {
+    if (document.hidden) return;
+    document.removeEventListener('visibilitychange', back);
+    reloadChat();
+  };
+  document.addEventListener('visibilitychange', back);
+}
+
+// The chat's own "log in" link navigates the frame to destiny.gg's login
+// page, which refuses to be shown inside another site (the panel went
+// blank with a broken-page icon). The page's Content-Security-Policy only
+// lets the frame show the chat embed, so that navigation is blocked here,
+// and the login page opens in a new tab instead.
+document.addEventListener('securitypolicyviolation', (e) => {
+  if (!e.violatedDirective.startsWith('frame-src') || !/destiny\.gg/.test(e.blockedURI)) return;
+  let path = '/login';
+  try {
+    const u = new URL(e.blockedURI);
+    if (u.pathname && u.pathname !== '/') path = u.pathname + u.search;
+  } catch {}
+  reloadChat();
+  openDgg(path);
+});
+// A browser that doesn't report the block: the frame's second load is a page
+// other than the chat, so put the chat back.
+frame.addEventListener('load', () => {
+  if (!frame.getAttribute('src')) return;
+  frameLoads++;
+  if (frameLoads > 1) {
+    frameLoads = 0;
+    reloadChat();
+  }
+});
 
 // ---------- Resizing ----------
 // In landscape and on desktop, drag the line between the stream and chat (or
