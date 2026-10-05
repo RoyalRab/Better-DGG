@@ -3,7 +3,7 @@
 
 import { MAX_TILES, parseSource } from './sources.js';
 import { state } from './state.js';
-import { $, store } from './util.js';
+import { $, store, reloadApp } from './util.js';
 import { layoutTiles, mountTile, setTiles } from './stage.js';
 import { refreshTabs } from './tabs.js';
 import { openSheet, renderChangelog } from './menu.js';
@@ -27,7 +27,7 @@ function showUpdateReady(worker) {
 
 export function applyUpdateOrReload() {
   if (waitingWorker) waitingWorker.postMessage('skipWaiting');
-  else location.reload();
+  else reloadApp();
 }
 
 $('#update-yes').addEventListener('click', applyUpdateOrReload);
@@ -39,7 +39,7 @@ export function registerServiceWorker() {
     // Only when the user asked for the update (not on the very first install).
     if (reloading || !waitingWorker) return;
     reloading = true;
-    location.reload();
+    reloadApp();
   });
   navigator.serviceWorker
     .register('sw.js')

@@ -2,6 +2,10 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.0.8 (2026-10-05)
+
+- Tablets: the chat box stays clear of the taskbar after Refresh or an update (Android tablets present themselves as desktop browsers, so the padding fallback skipped them).
+
 ## 1.0.7 (2026-10-05)
 
 - Twitch streams no longer sit on Twitch's play button on phones: they start muted, the sound comes on a moment later, and if the phone won't allow that the stream keeps playing with the Tap for sound button.

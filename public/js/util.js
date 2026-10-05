@@ -61,3 +61,19 @@ export const rowLayoutQuery = window.matchMedia(
   '(orientation: landscape) and (min-aspect-ratio: 4/3), (min-width: 1000px) and (min-aspect-ratio: 1/1)',
 );
 export const isRowLayout = () => rowLayoutQuery.matches;
+
+// Reloads started by the app (Refresh, an update). The flag tells the next
+// page load it isn't a fresh launch from the icon, whatever the browser says.
+export function reloadApp() {
+  try {
+    sessionStorage.setItem('bdgg:reloaded', '1');
+  } catch {}
+  location.reload();
+}
+export const wasReloaded = (() => {
+  try {
+    return sessionStorage.getItem('bdgg:reloaded') === '1';
+  } catch {
+    return false;
+  }
+})();

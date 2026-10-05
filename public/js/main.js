@@ -12,7 +12,7 @@
 
 import { DEFAULT_SOURCE, key, parseHashList, validate } from './sources.js';
 import { state } from './state.js';
-import { settings, store, standalone, isAndroid } from './util.js';
+import { settings, store, standalone, isTouch, wasReloaded } from './util.js';
 import { setTiles, layoutTiles } from './stage.js';
 import { HLS_JS, hasMse, loadScript } from './players.js';
 import { startTabs } from './tabs.js';
@@ -86,7 +86,7 @@ if (standalone) {
   const insetKey = () => `navInset:${orientation()}`;
   const launchKey = () => `launchHeight:${orientation()}`;
   const nav = performance.getEntriesByType('navigation')[0];
-  const freshLaunch = !nav || nav.type === 'navigate';
+  const freshLaunch = (!nav || nav.type === 'navigate') && !wasReloaded;
   const fresh = (v) => v && Date.now() - v.at < MONTH;
 
   // A normal launch: note the window height, so a reload can be compared to it.
@@ -112,9 +112,12 @@ if (standalone) {
     } else {
       const fromLaunch = heightFromLaunch();
       const saved = store.get(insetKey(), null);
-      // Nothing measured yet (the first reload after installing): Android's
-      // standard button bar is 48 px, so pad that rather than nothing.
-      const floor = isAndroid && !freshLaunch ? 48 : 0;
+      // Nothing measured yet (the first reload after installing): pad the
+      // usual height rather than nothing. Android's button bar is 48 px; a
+      // tablet's taskbar is taller. (Chrome on Android tablets calls itself a
+      // desktop browser, so this goes by touch, not by the Android name.)
+      const tablet = Math.min(screen.width, screen.height) >= 600;
+      const floor = isTouch && !freshLaunch ? (tablet ? 64 : 48) : 0;
       const px = fromLaunch || (fresh(saved) && saved.px > 0 ? saved.px : floor);
       if (px > 0) root.setProperty('--nav-fallback', px + 'px');
       else root.removeProperty('--nav-fallback');
