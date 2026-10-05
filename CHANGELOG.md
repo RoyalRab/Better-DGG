@@ -2,6 +2,11 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.0.2 (2026-10-05)
+
+- The live tabs no longer go stale after the phone changes networks (Wi-Fi to cellular, or back): a quiet connection is replaced and the list is fetched again, and a request that hangs is cut off and retried.
+- A short "Now live" notice appears when a new embed shows up while the app is open, so a new tab at the end of the row isn't missed.
+
 ## 1.0.1 (2026-10-04)
 
 - Android: the chat box no longer ends up under the navigation buttons after a refresh.

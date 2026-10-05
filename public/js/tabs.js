@@ -151,6 +151,20 @@ function maybeShowHint() {
   }, 2500);
 }
 
+// Streams that appear while the app is open get a short notice, so a new
+// embed isn't missed when its tab lands off the end of the row.
+let seenKeys = null;
+function announceNew(items) {
+  const keys = new Set(items.map((i) => key(i.src)));
+  if (seenKeys && !document.hidden) {
+    const fresh = items.filter((i) => !seenKeys.has(key(i.src)));
+    if (fresh.length && fresh.length <= 3) {
+      toast(`Now live: ${fresh.map((i) => i.name).join(', ')}`, 5000);
+    }
+  }
+  seenKeys = keys;
+}
+
 export function applyLive(data) {
   const items = liveItems(data);
   for (const i of items) knownNames.set(key(i.src), i.name);
@@ -158,51 +172,91 @@ export function applyLive(data) {
   $('#tabs').classList.add('loaded'); // no more placeholder tabs, even if the list is empty
   renderTabs();
   renderTileNames();
+  announceNew(items);
   document.dispatchEvent(new CustomEvent('livelist'));
 }
 
+// A request that hangs (a dead connection the phone hasn't noticed yet) is
+// cut off, so the next try can use a fresh one.
 export async function refreshTabs() {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
   try {
-    const res = await fetch('api/embeds', { cache: 'no-store' });
-    if (res.ok) applyLive(await res.json());
-  } catch {}
+    const res = await fetch('api/embeds', { cache: 'no-store', signal: ctrl.signal });
+    if (res.ok) {
+      applyLive(await res.json());
+      lastFreshAt = Date.now();
+    }
+  } catch {
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
-// The server pushes the list the moment destiny.gg changes it. EventSource
-// reconnects by itself; polling covers browsers or networks where it fails.
-let lastLiveAt = 0;
+// The server pushes the list the moment destiny.gg changes it, and sends a
+// ping every 25 s in between. EventSource reconnects by itself when it
+// notices a drop, but a phone switching networks (Wi-Fi to cellular) can
+// leave it with a dead connection it believes is open: nothing arrives and
+// nothing errors. So the list is also polled when nothing has arrived for a
+// while, and the connection is replaced when it has gone quiet.
+let lastLiveAt = 0; // last message or ping on the live connection
+let lastFreshAt = 0; // last time the list came from anywhere
+const STALE_MS = 60000;
 export function startTabs() {
   refreshTabs();
   if ('EventSource' in window) openLive();
   setInterval(() => {
-    if (!document.hidden && Date.now() - lastLiveAt > 60000) refreshTabs();
-  }, 30000);
+    if (document.hidden) return;
+    const now = Date.now();
+    if (now - lastLiveAt > STALE_MS && now - lastFreshAt > 25000) refreshTabs();
+    if (source && now - lastLiveAt > STALE_MS * 2) reopenLive();
+  }, 15000);
 }
 // EventSource reconnects by itself after a dropped connection, but gives up
 // for good when the server answers with an error (a restart, or too many
 // connections from one place). Open a new one after a pause in that case.
 let liveBackoff = 2000;
+let source = null;
 function openLive() {
-  const source = new EventSource('api/live');
-  source.onmessage = (e) => {
+  const es = new EventSource('api/live');
+  source = es;
+  es.onopen = () => {
     lastLiveAt = Date.now();
+  };
+  es.onmessage = (e) => {
+    lastLiveAt = lastFreshAt = Date.now();
     liveBackoff = 2000;
     try {
       applyLive(JSON.parse(e.data));
     } catch {}
   };
-  source.addEventListener('ping', () => {
+  es.addEventListener('ping', () => {
     lastLiveAt = Date.now();
   });
-  source.onerror = () => {
-    if (source.readyState !== EventSource.CLOSED) return;
+  es.onerror = () => {
+    if (es.readyState !== EventSource.CLOSED || source !== es) return;
+    source = null;
     setTimeout(openLive, liveBackoff);
     liveBackoff = Math.min(liveBackoff * 2, 60000);
   };
 }
+function reopenLive() {
+  if (!('EventSource' in window)) return;
+  if (source) source.close();
+  source = null;
+  lastLiveAt = Date.now(); // give the new connection its own grace period
+  openLive();
+}
+// Back on screen, or back online: fetch the list now, and replace a live
+// connection that has gone quiet in the meantime.
+function wakeUp() {
+  refreshTabs();
+  if (source && Date.now() - lastLiveAt > STALE_MS) reopenLive();
+}
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) refreshTabs();
+  if (!document.hidden) wakeUp();
 });
+window.addEventListener('online', wakeUp);
 
 // Mouse wheels scroll the tab row sideways on desktop.
 $('#tabs').addEventListener(
