@@ -2,7 +2,7 @@
 
 An unofficial, fan-made web app for watching destiny.gg's live embeds with chat, built for an improved mobile experience. It also works on tablets, desktop browsers and ultrawide screens, and it installs to the home screen like an app. It isn't affiliated with destiny.gg.
 
-Live at https://dggremix.up.railway.app
+Live at https://mobile-dgg.com (also https://dggremix.up.railway.app)
 
 ## What's different from destiny.gg
 
@@ -53,6 +53,7 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 | Latest from Destiny | While nothing of his is live, settings list his newest YouTube videos and Kick VODs, and they play in the app. |
 | Kick VODs and clips | Links to Kick VODs and clips open in the app's own player, and the hash form destiny.gg uses (`#kick-vod/...`) works too. |
 | Live notifications | Settings → Notifications can tell you when Destiny goes live, even with the app closed (on iPhone and iPad only as an installed app). |
+| YouTube videos | YouTube videos that chatters embed show up as tabs next to the live streams (a small ▶ marks them), so you can watch along. A YouTube link shared to the app, or a `#youtube/<id>` link, plays too. |
 | Kick quality | Settings cap the quality of Kick streams in the app's own player (Auto, or up to 1080p, 720p, 480p or 360p) for a steadier picture on a slow connection. |
 | Error reports | Optional, off by default: when a player fails, the app sends what failed, its version and the kind of browser to the server log. Nothing about you. |
 | Real-time embed tabs | The tab row updates the moment someone embeds something, with live streams only (no VODs, clips or ordinary videos), each with its platform icon. The list recovers on its own after the phone changes networks. |

@@ -43,8 +43,10 @@ await page.goto(base + '/');
 await page.waitForTimeout(2500);
 const tabs = await page.$$eval('#tabs .tab', (bs) => bs.map((b) => b.innerText.trim()));
 check(
-  'tabs show the live list (not-live video filtered out)',
-  tabs.length >= 4 && !tabs.includes('a video'),
+  'tabs show the live list, with the embedded YouTube video marked as one',
+  tabs.length >= 5 &&
+    tabs.some((t) => t.startsWith('a video')) &&
+    (await page.$eval('#tabs .tab.video .name', (el) => el.textContent)) === 'a video',
   tabs.join(', '),
 );
 check('opens on a live stream', /^#kick\/drt0123$/.test(await page.evaluate(() => location.hash)));

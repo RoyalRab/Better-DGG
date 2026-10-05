@@ -655,6 +655,12 @@ body.no-chat #player[data-count='2'] {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* A YouTube video chatters embedded (not a live stream): a small play mark. */
+#tabs .tab.video .name::after {
+  content: ' ▶';
+  font-size: 9px;
+  color: var(--muted);
+}
 #tabs .platform-icon {
   flex: none;
   width: 13px;

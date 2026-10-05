@@ -170,7 +170,7 @@ export function liveItems(data) {
   for (const e of (data && data.embeds) || []) {
     const src = parseSource(`${e.platform}/${e.id}`);
     if (!src || items.some((i) => key(i.src) === key(src))) continue;
-    items.push({ src, name: e.name || src.id, title: e.title, preview: e.preview || null });
+    items.push({ src, name: e.name || src.id, title: e.title, preview: e.preview || null, video: !!e.video });
   }
   return items;
 }

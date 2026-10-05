@@ -82,6 +82,7 @@ test('live list keeps only live channels on supported platforms, with few fields
   ];
   assert.deepEqual(srv.embedList(), [
     { platform: 'kick', id: 'a', name: 'A', title: 'x', preview: null },
+    { platform: 'youtube', id: 'dQw4w9WgXcQ', name: null, title: null, preview: null, video: true },
     { platform: 'twitch', id: 'b', name: null, title: null, preview: null },
   ]);
   srv.live.streamInfo = {
@@ -185,11 +186,13 @@ test('Kick relay is rate limited per visitor', async () => {
 
 test('live connections are capped per visitor', async () => {
   const aborts = [];
+  const held = []; // an unreferenced Response can be collected, which closes its connection
   try {
     for (let i = 0; i < 10; i++) {
       const ac = new AbortController();
       aborts.push(ac);
       const r = await get('/api/live', '10.3.0.1', { signal: ac.signal });
+      held.push(r);
       assert.equal(r.status, 200);
     }
     assert.equal((await get('/api/live', '10.3.0.1')).status, 429);
@@ -197,6 +200,7 @@ test('live connections are capped per visitor', async () => {
     aborts.push(other);
     assert.equal((await get('/api/live', '10.3.0.2', { signal: other.signal })).status, 200);
   } finally {
+    assert.equal(held.length, 10);
     for (const ac of aborts) ac.abort();
   }
 });

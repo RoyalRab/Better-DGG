@@ -202,9 +202,10 @@ export function renderTabs() {
     const k = key(item.src);
     const b = tabButtons.get(k) || makeTabButton(item.src);
     b.querySelector('.name').textContent = item.name;
-    b.title = [item.name, item.title].filter(Boolean).join(' · ');
+    b.title = [item.name, item.title, item.video ? 'YouTube video' : ''].filter(Boolean).join(' · ');
     b.dataset.preview = item.preview || '';
     b.classList.toggle('offline', !!item.offline);
+    b.classList.toggle('video', !!item.video);
     b.classList.toggle('fav', favs.includes(k));
     if (state.tiles.some((t) => key(t.src) === k)) b.setAttribute('aria-current', 'true');
     else b.removeAttribute('aria-current');

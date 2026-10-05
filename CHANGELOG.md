@@ -2,6 +2,11 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.7.0 (2026-10-05)
+
+- YouTube videos that chatters embed now show up as tabs (with a small ▶), so you can watch them along with everyone, not just live streams.
+- New address: mobile-dgg.com. The old one keeps working.
+
 ## 1.6.0 (2026-10-05)
 
 - Notifications: a setting tells you when Destiny goes live, even when the app is closed. A tap opens the stream.

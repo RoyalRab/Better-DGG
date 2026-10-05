@@ -411,7 +411,9 @@ function connectLive() {
 
 const str = (v, max = 200) => (typeof v === 'string' ? v.slice(0, max) : null);
 
-// Only live channels belong in the list; VODs, clips and ordinary videos don't.
+// Live channels belong in the list, and YouTube videos (chatters embed
+// those to watch together; `live` is false for them). Other platforms'
+// VODs and clips don't.
 const LIVE_PLATFORMS = new Set(['kick', 'twitch', 'youtube', 'angelthump', 'rumble']);
 
 // Embeds destiny.gg's mods banned ({ platform, name, reason }) stay off the
@@ -442,9 +444,9 @@ function embedList() {
         live: meta.live === true,
       };
     })
-    .filter((e) => e.platform && e.id && e.live && LIVE_PLATFORMS.has(e.platform))
+    .filter((e) => e.platform && e.id && (e.live || e.platform === 'youtube') && LIVE_PLATFORMS.has(e.platform))
     .filter((e) => !live.banned.has(`${e.platform}/${e.id}`.toLowerCase()))
-    .map(({ live: _live, ...rest }) => rest);
+    .map(({ live: isLive, ...rest }) => (isLive ? rest : { ...rest, video: true }));
 }
 
 // The stream destiny.gg is hosting (dggApi:hosting), when there is one. The
@@ -759,7 +761,7 @@ const push = {
   config() {
     const pub = process.env.VAPID_PUBLIC;
     const priv = process.env.VAPID_PRIVATE;
-    return pub && priv ? { pub, priv, subject: process.env.VAPID_SUBJECT || 'https://dggremix.up.railway.app' } : null;
+    return pub && priv ? { pub, priv, subject: process.env.VAPID_SUBJECT || 'https://mobile-dgg.com' } : null;
   },
 };
 const validSub = (x) =>
