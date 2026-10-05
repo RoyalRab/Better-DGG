@@ -142,8 +142,10 @@ export function openSheet(scrollTo) {
   // The installed app's window geometry (main.js), for debugging the
   // Android button-bar padding from a screenshot.
   const insets = document.documentElement.dataset.insets;
-  $('#display-info').textContent = insets ? `Display: ${insets}` : '';
-  $('#display-info').hidden = !insets;
+  const autopip = document.documentElement.dataset.autopip;
+  const bits = [insets ? `Display: ${insets}` : '', autopip ? `Auto pop-out: ${autopip}` : ''].filter(Boolean);
+  $('#display-info').textContent = bits.join('. ');
+  $('#display-info').hidden = !bits.length;
   renderPush();
   $('#opt-awake').checked = settings.keepAwake;
   $('#opt-chat').checked = settings.showChat;
