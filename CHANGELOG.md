@@ -2,6 +2,10 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.7.3 (2026-10-05)
+
+- Fixes the blank screen that could sit on top of the app after pressing Home, until Back was pressed. When the browser accepts the app's own pop-out request, the video now keeps playing in the floating window instead of being stopped, and coming back to the app closes that window.
+
 ## 1.7.2 (2026-10-05)
 
 - The "Latest from Destiny" list now sits at the bottom of settings, above the change log, instead of at the top.

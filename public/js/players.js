@@ -568,6 +568,7 @@ export async function mountOwn(tile, muted) {
   }
   function enterBackground() {
     if (audioOnly || bg || !hls || v.muted || !playingAtHide || !document.hidden) return;
+    if (inPip()) return; // the pop-out window plays the video itself
     if (Date.now() - userPausedAt < 1500) return;
     if (!isCurrent(tile.src) || !state.tiles.includes(tile)) return;
     startAudioCopy(1);
@@ -604,17 +605,41 @@ export async function mountOwn(tile, muted) {
   // is kept for the Display line in settings, so the phone's behaviour can
   // be read off a screenshot. The Media Session handler in stage.js covers
   // browsers that offer to pop out on their own.
+  const inPip = () => document.pictureInPictureElement === v;
   function autoPip() {
     if (audioOnly || bg || v.paused || !started || v.muted) return;
     if (!document.pictureInPictureEnabled || document.pictureInPictureElement || !v.requestPictureInPicture) return;
     if (!isCurrent(tile.src) || !state.tiles.includes(tile)) return;
     const at = new Date().toLocaleTimeString();
+    const note = (text) => (document.documentElement.dataset.autopip = text);
     v.requestPictureInPicture().then(
-      () => (document.documentElement.dataset.autopip = `opened at ${at}`),
-      (e) =>
-        (document.documentElement.dataset.autopip = `${(e && e.name) || 'refused'} at ${at}: ${(e && e.message) || ''}`),
+      () => {
+        note(`opened at ${at}`);
+        // The browser may have paused the video, and the audio-only copy may
+        // have started, while the request was in flight: the pop-out window
+        // needs the video playing, not a stopped one (which left a blank
+        // window on top of the app).
+        if (bg) leaveBackground();
+        else if (v.paused) resumeVideo();
+        setTimeout(() => {
+          if (document.hidden) {
+            note(
+              `opened at ${at}; after 1.5 s: ${inPip() ? 'still in the window' : 'window gone'}, ${v.paused ? 'paused' : 'playing'}`,
+            );
+          }
+        }, 1500);
+      },
+      (e) => note(`${(e && e.name) || 'refused'} at ${at}: ${(e && e.message) || ''}`),
     );
   }
+  // The pop-out window closed while the app is still in the background: carry
+  // on with sound, as if it had never opened.
+  v.addEventListener('leavepictureinpicture', () => {
+    if (document.hidden) {
+      playingAtHide = true;
+      setTimeout(enterBackground, 0);
+    }
+  });
   let hideTimer = null;
   function onVisibility() {
     clearTimeout(hideTimer);
@@ -628,12 +653,15 @@ export async function mountOwn(tile, muted) {
         if (v.paused || !started) enterBackground();
       }, 700);
     } else {
+      // Back in the app: a pop-out the app opened itself comes back in, so
+      // it doesn't sit on top of the app as a blank window.
+      if (inPip() && document.exitPictureInPicture) document.exitPictureInPicture().catch(() => {});
       leaveBackground();
     }
   }
   document.addEventListener('visibilitychange', onVisibility);
   v.addEventListener('pause', () => {
-    if (document.hidden && !bg) setTimeout(enterBackground, 0);
+    if (document.hidden && !bg && !inPip()) setTimeout(enterBackground, 0);
   });
 
   return {
