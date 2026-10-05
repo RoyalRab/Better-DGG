@@ -2,6 +2,11 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.1.0 (2026-10-05)
+
+- Next and previous buttons on the lock screen, in the notification and on earbuds step through the live embeds.
+- Swipe left or right across the player to switch embeds (over Kick's player and while a stream loads).
+
 ## 1.0.8 (2026-10-05)
 
 - Tablets: the chat box stays clear of the taskbar after Refresh or an update (Android tablets present themselves as desktop browsers, so the padding fallback skipped them).

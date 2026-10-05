@@ -13,7 +13,8 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 | Feature | What it does |
 | --- | --- |
 | Keeps playing when the screen locks | Kick streams keep their sound when you lock the phone or switch apps. Chrome on Android pauses video in the background, so the app switches to an audio-only copy of the stream and back to the video when you return. |
-| Lock screen controls | Play and pause from the lock screen and notification, with the stream's name. |
+| Lock screen controls | Play, pause, next and previous from the lock screen and notification, with the stream's name. Next and previous step through the live embeds, and earbud buttons do the same. |
+| Swipe to switch | Swipe left or right across the player to go to the next or previous live embed (over Kick's player and while a stream loads; Twitch, YouTube and AngelThump take the touch themselves). |
 | Screen stays on | The phone doesn't dim or sleep while the app is open (can be turned off in settings). |
 | Installable app | Installs to the home screen with its own icon, opens full screen without the browser bar, and shows an install bar until it's installed or dismissed (a dismissed bar comes back after a week). |
 | Picture-in-picture | Pops the stream into a floating window from the ⋮ row, and Kick streams pop out on their own when you leave the app where the browser supports it. |

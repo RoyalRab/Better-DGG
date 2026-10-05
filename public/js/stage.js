@@ -466,6 +466,48 @@ export function watch(src, { add = false } = {}) {
   setTiles(list);
 }
 
+// The next or previous live embed, in tab order, relative to the stream with
+// the sound. Used by the lock screen and earbud buttons and by a swipe.
+export function stepStream(dir) {
+  const items = state.tabItems;
+  if (items.length < 2 || !state.current) return;
+  const i = items.findIndex((it) => key(it.src) === key(state.current));
+  const next = items[(i < 0 ? 0 : i + dir + items.length) % items.length];
+  if (next && !isCurrent(next.src)) watch(next.src);
+}
+
+// Swipe left or right across the player (one stream on screen) to step
+// through the live embeds. Touch only, so a mouse drag does nothing. Other
+// sites' players take the touch themselves, so this works over the app's own
+// player and the loading or failed states.
+const SWIPE_MIN_X = 60;
+const SWIPE_MAX_Y = 50;
+const SWIPE_MAX_MS = 700;
+let swipe = null;
+$('#player').addEventListener(
+  'pointerdown',
+  (e) => {
+    swipe = e.pointerType === 'touch' && e.isPrimary ? { x: e.clientX, y: e.clientY, at: Date.now() } : null;
+  },
+  { passive: true },
+);
+$('#player').addEventListener('pointercancel', () => {
+  swipe = null;
+});
+$('#player').addEventListener(
+  'pointerup',
+  (e) => {
+    const s = swipe;
+    swipe = null;
+    if (!s || state.tiles.length !== 1 || state.addMode) return;
+    const dx = e.clientX - s.x;
+    const dy = e.clientY - s.y;
+    if (Date.now() - s.at > SWIPE_MAX_MS || Math.abs(dx) < SWIPE_MIN_X || Math.abs(dy) > SWIPE_MAX_Y) return;
+    stepStream(dx < 0 ? 1 : -1);
+  },
+  { passive: true },
+);
+
 export function setAddMode(on) {
   state.addMode = on;
   $('#multi-btn').setAttribute('aria-pressed', String(on));
@@ -492,6 +534,12 @@ export function updateMediaSession() {
       if (p?.pause) p.pause();
       else p?.video?.pause();
     });
+  } catch {}
+  // Next and previous (lock screen, notification, earbud buttons) step
+  // through the live embeds.
+  try {
+    navigator.mediaSession.setActionHandler('nexttrack', () => stepStream(1));
+    navigator.mediaSession.setActionHandler('previoustrack', () => stepStream(-1));
   } catch {}
   // Chrome calls this to pop the playing video out automatically when you switch away.
   try {

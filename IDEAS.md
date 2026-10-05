@@ -6,8 +6,6 @@ The owner's backlog. Ideas from users arrive as GitHub issues labelled `idea` (S
 
 | Idea | Why | Effort |
 | --- | --- | --- |
-| Swipe left/right on the player to go to the next/previous live embed | Switching without reaching for the tab row | S |
-| Lock screen and earbud next/previous buttons switch embeds (Media Session `nexttrack`/`previoustrack`) | Change streams while listening with the screen off | S |
 | Sleep timer (stop after 15/30/60 min) | Falling asleep listening; saves battery and data | S |
 | Audio-only mode toggle | Listen with the video off to save data and battery; reuses `makeAudioOnlyHls` | S |
 | Data saver: cap Kick quality on cellular (`navigator.connection`, hls.js level cap) and a quality picker | Less data on mobile, sharper picture on Wi-Fi | M |
