@@ -5,6 +5,7 @@ import test, { after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 
 process.env.NO_LIVE = '1';
 const require = createRequire(import.meta.url);
@@ -14,6 +15,8 @@ const pkg = require('../package.json');
 
 let base;
 const kickCalls = [];
+const switchbotCalls = [];
+let switchbotAnswer = { statusCode: 100, body: {}, message: 'success' };
 const realFetch = globalThis.fetch;
 before(async () => {
   globalThis.fetch = async (url, opts) => {
@@ -51,6 +54,10 @@ before(async () => {
     if (u.startsWith('https://kick.com/api/v2/clips/')) return new Response('{}', { status: 404 });
     if (u.startsWith('https://vod.example/') || u.startsWith('https://clips.kick.com/')) {
       return new Response('#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1\n720p/index.m3u8\n');
+    }
+    if (u.startsWith('https://api.switch-bot.com/')) {
+      switchbotCalls.push({ url: u, opts });
+      return new Response(JSON.stringify(switchbotAnswer));
     }
     if (u.startsWith('https://ivs.example/')) {
       kickCalls.push(u);
@@ -354,4 +361,56 @@ test('push: keys from the environment, subscriptions kept, notified when Destiny
   srv.push.sender = null;
   delete process.env.VAPID_PUBLIC;
   delete process.env.VAPID_PRIVATE;
+});
+
+test('switchbot: chat donations press the button through the SwitchBot API', async () => {
+  delete process.env.SWITCHBOT_TOKEN;
+  const donation = 'DONATION {"nick":"generous","amount":500,"message":"hi","timestamp":1}';
+  assert.equal(srv.onChatMessage(donation), false, 'off without a token, secret and device');
+  process.env.SWITCHBOT_TOKEN = 'tok';
+  process.env.SWITCHBOT_SECRET = 'sec';
+  process.env.SWITCHBOT_DEVICE = 'DEV1';
+  process.env.SWITCHBOT_MIN_AMOUNT = '2';
+  srv.switchbot.gapMs = 0;
+  assert.deepEqual(srv.parseChatMessage('MSG {"nick":"a","data":"hi"}'), {
+    type: 'MSG',
+    data: { nick: 'a', data: 'hi' },
+  });
+  assert.equal(srv.parseChatMessage('NAMES'), null);
+  assert.equal(srv.parseChatMessage('MSG not json'), null);
+  assert.equal(srv.onChatMessage('MSG {"nick":"a","data":"hi"}'), false, 'ordinary chat');
+  assert.equal(srv.onChatMessage('DONATION {"nick":"a","amount":100}'), false, 'under the minimum');
+  assert.equal(srv.onChatMessage('SUBSCRIPTION {"nick":"a","tierLabel":"Tier I"}'), false, 'not a chosen event');
+  const logs = [];
+  const orig = console.log;
+  console.log = (...a) => logs.push(a.join(' '));
+  try {
+    assert.equal(srv.onChatMessage(donation), true);
+    await srv.switchbot.draining;
+    assert.equal(switchbotCalls.length, 1);
+    const [{ url, opts }] = switchbotCalls;
+    assert.equal(url, 'https://api.switch-bot.com/v1.1/devices/DEV1/commands');
+    assert.equal(opts.method, 'POST');
+    assert.deepEqual(JSON.parse(opts.body), { commandType: 'command', command: 'press', parameter: 'default' });
+    const h = opts.headers;
+    assert.equal(h.Authorization, 'tok');
+    const sign = crypto.createHmac('sha256', 'sec').update(`tok${h.t}${h.nonce}`).digest('base64').toUpperCase();
+    assert.equal(h.sign, sign, 'signed as SwitchBot API v1.1 wants');
+    assert.equal(srv.switchbot.pressed, 1);
+    assert.deepEqual(logs, ['switchbot: pressed for donation of $5.00 by generous']);
+    // Other events, when chosen, and a failed press that doesn't stop the next.
+    process.env.SWITCHBOT_EVENTS = 'donation, giftsub,massgift';
+    switchbotAnswer = { statusCode: 161, body: {}, message: 'device offline' };
+    assert.equal(srv.onChatMessage('GIFTSUB {"nick":"a","giftee":"b","tierLabel":"Tier I"}'), true);
+    assert.equal(srv.onChatMessage('MASSGIFT {"nick":"a","quantity":5}'), true);
+    await srv.switchbot.draining;
+    assert.equal(switchbotCalls.length, 3);
+    assert.deepEqual(logs.slice(1), [
+      'switchbot: failed for gift sub from a to b: SwitchBot answered 161 device offline',
+      'switchbot: failed for 5 gift subs from a: SwitchBot answered 161 device offline',
+    ]);
+  } finally {
+    console.log = orig;
+    delete process.env.SWITCHBOT_TOKEN;
+  }
 });

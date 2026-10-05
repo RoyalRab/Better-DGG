@@ -893,6 +893,169 @@ async function pushSubscribe(req, res, on) {
   res.end();
 }
 
+// ---------- Chat events: a SwitchBot button ----------
+// A SwitchBot Bot (the button pusher) presses a real button when something
+// happens in destiny.gg chat: a donation by default, or any of the
+// SWITCHBOT_EVENTS (donation, subscription, giftsub, massgift, comma
+// separated; SWITCHBOT_MIN_AMOUNT is a dollar floor for donations). It goes
+// through the SwitchBot cloud API, which needs a SwitchBot hub, the token and
+// secret from the SwitchBot app's developer options (SWITCHBOT_TOKEN and
+// SWITCHBOT_SECRET, never in the repo) and the Bot's id (SWITCHBOT_DEVICE;
+// scripts/switchbot-devices.js lists them). Without those the feature is off
+// and the chat socket isn't opened. The chat sends `TYPE {json}` lines;
+// anonymous connections see donations and subscriptions like everyone else.
+// Presses go one at a time, 3 s apart (a press takes about that long), with
+// at most 20 waiting; a failed press is logged and the next one still goes.
+const CHAT_URL = process.env.CHAT_URL || 'wss://chat.destiny.gg/ws';
+const SWITCHBOT_API = 'https://api.switch-bot.com/v1.1';
+const CHAT_EVENTS = { donation: 'DONATION', subscription: 'SUBSCRIPTION', giftsub: 'GIFTSUB', massgift: 'MASSGIFT' };
+const switchbot = {
+  queue: [], // reasons waiting for a press
+  draining: null, // the promise working through the queue, while there is one
+  pressed: 0,
+  gapMs: 3000,
+  sender: null, // (reason) => Promise; the SwitchBot API, or a test's stand-in
+  config() {
+    const { SWITCHBOT_TOKEN: token, SWITCHBOT_SECRET: secret, SWITCHBOT_DEVICE: device } = process.env;
+    if (!token || !secret || !device) return null;
+    const events = (process.env.SWITCHBOT_EVENTS || 'donation')
+      .toLowerCase()
+      .split(',')
+      .map((e) => e.trim())
+      .filter((e) => CHAT_EVENTS[e]);
+    const minAmount = Number(process.env.SWITCHBOT_MIN_AMOUNT) || 0;
+    return { token, secret, device, events, command: process.env.SWITCHBOT_COMMAND || 'press', minAmount };
+  },
+};
+
+function parseChatMessage(raw) {
+  const text = String(raw);
+  const space = text.indexOf(' ');
+  if (space < 1) return null;
+  const type = text.slice(0, space);
+  if (!/^[A-Z]{1,20}$/.test(type)) return null;
+  let data;
+  try {
+    data = JSON.parse(text.slice(space + 1));
+  } catch {
+    return null;
+  }
+  return data && typeof data === 'object' ? { type, data } : null;
+}
+
+// What a chat event is, in words for the log, or null when it's not one the
+// button is set to answer. Donation amounts are in cents, as chat-gui shows
+// them.
+function chatEvent(cfg, type, data) {
+  const name = Object.keys(CHAT_EVENTS).find((k) => CHAT_EVENTS[k] === type);
+  if (!name || !cfg.events.includes(name)) return null;
+  const nick = str(data.nick, 40) || 'someone';
+  if (type === 'DONATION') {
+    const dollars = (Number(data.amount) || 0) / 100;
+    if (dollars < cfg.minAmount) return null;
+    return `donation of $${dollars.toFixed(2)} by ${nick}`;
+  }
+  if (type === 'SUBSCRIPTION') return `subscription by ${nick}${data.tierLabel ? ` (${str(data.tierLabel, 40)})` : ''}`;
+  if (type === 'GIFTSUB') return `gift sub from ${nick} to ${str(data.giftee, 40) || 'someone'}`;
+  return `${Number(data.quantity) || 'some'} gift subs from ${nick}`;
+}
+
+// Returns true when the message queued a press.
+function onChatMessage(raw) {
+  const cfg = switchbot.config();
+  if (!cfg) return false;
+  const msg = parseChatMessage(raw);
+  if (!msg) return false;
+  const reason = chatEvent(cfg, msg.type, msg.data);
+  if (!reason) return false;
+  pressButton(reason);
+  return true;
+}
+
+function pressButton(reason) {
+  if (switchbot.queue.length >= 20) {
+    console.log(`switchbot: queue full, skipped ${reason}`);
+    return switchbot.draining;
+  }
+  switchbot.queue.push(reason);
+  if (!switchbot.draining) switchbot.draining = drainPresses().finally(() => (switchbot.draining = null));
+  return switchbot.draining;
+}
+async function drainPresses() {
+  while (switchbot.queue.length) {
+    const reason = switchbot.queue.shift();
+    try {
+      await (switchbot.sender || sendSwitchbot)(reason);
+      switchbot.pressed++;
+      console.log(`switchbot: pressed for ${reason}`);
+    } catch (e) {
+      console.log(`switchbot: failed for ${reason}: ${e.message}`);
+    }
+    await new Promise((r) => setTimeout(r, switchbot.gapMs));
+  }
+}
+
+// SwitchBot API v1.1: each request is signed with the secret over
+// token + timestamp + nonce, and a 2xx answer still carries its own
+// statusCode (100 is success; 161 is the Bot offline, 171 the hub).
+async function sendSwitchbot() {
+  const cfg = switchbot.config();
+  if (!cfg) throw new Error('not configured');
+  const t = String(Date.now());
+  const nonce = crypto.randomUUID();
+  const sign = crypto
+    .createHmac('sha256', cfg.secret)
+    .update(cfg.token + t + nonce)
+    .digest('base64')
+    .toUpperCase();
+  const res = await fetch(`${SWITCHBOT_API}/devices/${encodeURIComponent(cfg.device)}/commands`, {
+    method: 'POST',
+    headers: { Authorization: cfg.token, sign, t, nonce, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ commandType: 'command', command: cfg.command, parameter: 'default' }),
+    signal: AbortSignal.timeout(15000),
+  });
+  let body = null;
+  try {
+    body = await res.json();
+  } catch {}
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!body || body.statusCode !== 100) {
+    throw new Error(body ? `SwitchBot answered ${body.statusCode} ${body.message || ''}`.trim() : 'unreadable answer');
+  }
+}
+
+let chatRetryMs = 1000;
+function connectChat() {
+  const ws = new WebSocket(CHAT_URL, { headers: { 'User-Agent': 'better-dgg' } });
+  let alive = true;
+  const heartbeat = setInterval(() => {
+    if (!alive) return ws.terminate();
+    alive = false;
+    try {
+      ws.ping();
+    } catch {}
+  }, 30 * 1000);
+  ws.on('open', () => {
+    chatRetryMs = 1000;
+    console.log('chat: connected');
+  });
+  ws.on('pong', () => {
+    alive = true;
+  });
+  ws.on('message', (raw) => {
+    alive = true;
+    onChatMessage(raw.toString());
+  });
+  ws.on('unexpected-response', (_req, res) => console.log('chat: refused with HTTP', res.statusCode));
+  ws.on('error', (err) => console.log('chat: error', err.message));
+  ws.on('close', () => {
+    clearInterval(heartbeat);
+    console.log(`chat: closed, retrying in ${chatRetryMs / 1000}s`);
+    setTimeout(connectChat, chatRetryMs);
+    chatRetryMs = Math.min(chatRetryMs * 2, 60 * 1000);
+  });
+}
+
 // ---------- HTTP ----------
 
 const server = http.createServer((req, res) => {
@@ -969,7 +1132,12 @@ function start() {
   });
   loadPush();
   if (push.config()) console.log('push: on');
-  if (process.env.NO_LIVE !== '1') connectLive();
+  const sb = switchbot.config();
+  if (sb) console.log(`switchbot: on (${sb.events.join(', ') || 'no events'}; ${sb.command})`);
+  if (process.env.NO_LIVE !== '1') {
+    connectLive();
+    if (sb) connectChat();
+  }
 }
 
 if (require.main === module) start();
@@ -992,4 +1160,8 @@ module.exports = {
   masterCache,
   push,
   pushOnStreamInfo,
+  switchbot,
+  parseChatMessage,
+  onChatMessage,
+  pressButton,
 };

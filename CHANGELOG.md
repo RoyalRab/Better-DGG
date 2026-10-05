@@ -2,6 +2,10 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.8.0 (2026-10-05)
+
+- For whoever runs the server: it can now press a real button through a SwitchBot Bot whenever someone donates in chat (or subscribes, or gifts subs). Set up with a few variables on the server; see README → Development.
+
 ## 1.7.5 (2026-10-05)
 
 - Fixes the blank white screen the installed app showed on Android after pressing Home and coming back. The app no longer tries to pop the stream out by itself when you leave: the sound carries on in the background as before, and pop-out is the picture-in-picture button in the ⋮ row.
