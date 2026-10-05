@@ -386,7 +386,10 @@ export function renderStage() {
     t.el.classList.toggle('has-sound', hasSound);
   }
   document.body.classList.toggle('multi', state.tiles.length > 1);
+  document.body.classList.toggle('focus', !!state.focus);
   $('#multi-btn').setAttribute('aria-pressed', String(state.addMode));
+  $('#focus-btn').hidden = state.tiles.length < 2;
+  $('#focus-btn').setAttribute('aria-pressed', String(!!state.focus));
   const hash = state.tiles.map((t) => key(t.src)).join(',');
   history.replaceState(null, '', hash ? '#' + hash : location.pathname);
   if (state.tiles.length > 1)
@@ -408,11 +411,23 @@ export function renderStage() {
 
 // Pick the grid that gives each 16:9 stream the most room. Portrait phones
 // use fixed stacks from the stylesheet instead, since their height follows width.
+// Focus layout (multi-view): the stream with the sound is big, the others
+// small. Remembered across visits.
+state.focus = store.get('focusLayout', false);
+export function setFocusLayout(on) {
+  state.focus = on;
+  store.set('focusLayout', on);
+  renderStage();
+  layoutTiles();
+  toast(on ? 'Focus layout: the stream with the sound is big' : 'Equal tiles');
+}
+
 export function layoutTiles() {
   const stage = $('#player');
   const n = state.tiles.length;
   stage.style.removeProperty('--cols');
-  if (n < 2 || !isRowLayout()) return;
+  stage.style.setProperty('--others', String(Math.max(1, n - 1)));
+  if (n < 2 || state.focus || !isRowLayout()) return;
   const w = stage.clientWidth;
   const h = stage.clientHeight;
   let best = 1;
@@ -517,6 +532,20 @@ $('#player').addEventListener(
   },
   { passive: true },
 );
+// Landscape on phones (settings): a tap on the stream, or on the handle at
+// the bottom, brings the tab row up for a few seconds.
+let tabsTimer = 0;
+export function showTabsBriefly() {
+  if (!document.body.classList.contains('landscape-full')) return;
+  document.body.classList.add('show-tabs');
+  clearTimeout(tabsTimer);
+  tabsTimer = setTimeout(() => document.body.classList.remove('show-tabs'), 4000);
+}
+$('#player').addEventListener('click', (e) => {
+  if (!e.target.closest('button')) showTabsBriefly();
+});
+$('#tabs-handle').addEventListener('click', showTabsBriefly);
+
 $('#player').addEventListener('pointercancel', () => {
   swipe = null;
 });

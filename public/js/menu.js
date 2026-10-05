@@ -4,7 +4,7 @@
 import { state, isCurrent } from './state.js';
 import { $, settings, saveSetting, store, toast, isIOS, isAndroid, isTouch, standalone } from './util.js';
 import { OWN_PLAYER_TYPES } from './players.js';
-import { mountTile, setAddMode, updateWakeLock, layoutTiles, dropParked, pauseSound } from './stage.js';
+import { mountTile, setAddMode, updateWakeLock, layoutTiles, dropParked, pauseSound, setFocusLayout } from './stage.js';
 import { renderChat, loadChat, reloadChat, openDgg } from './chat.js';
 import { toggleFavorite } from './tabs.js';
 import { applyUpdateOrReload } from './bars.js';
@@ -93,6 +93,7 @@ export function openSheet(scrollTo) {
   $('#opt-chat').checked = settings.showChat;
   $('#opt-own').checked = settings.ownPlayer;
   $('#opt-chat-left').checked = settings.chatLeft;
+  $('#opt-landscape').checked = settings.landscapeFull;
   $('#opt-reports').checked = settings.errorReports;
   $('#opt-audio').checked = settings.audioOnly;
   $('#opt-quality').value = String(settings.kickQuality);
@@ -191,6 +192,28 @@ $('#opt-chat-left').addEventListener('change', (e) => {
   saveSetting('chatLeft', e.target.checked);
   renderChat();
 });
+// Landscape on phones: body.landscape-full, which app.css applies only in
+// landscape under 600 px tall on touch screens.
+function renderLandscape() {
+  document.body.classList.toggle('landscape-full', !!settings.landscapeFull);
+  document.body.classList.toggle('overlay-off', store.get('overlayOff', false));
+  const off = store.get('overlayOff', false);
+  const btn = $('#overlay-btn');
+  btn.setAttribute('aria-pressed', String(!off));
+  btn.setAttribute('aria-label', off ? 'Show chat over the stream' : 'Hide chat over the stream');
+  btn.title = btn.getAttribute('aria-label');
+  layoutTiles();
+}
+renderLandscape();
+$('#opt-landscape').addEventListener('change', (e) => {
+  saveSetting('landscapeFull', e.target.checked);
+  renderLandscape();
+});
+$('#overlay-btn').addEventListener('click', () => {
+  store.set('overlayOff', !store.get('overlayOff', false));
+  renderLandscape();
+});
+$('#focus-btn').addEventListener('click', () => setFocusLayout(!state.focus));
 $('#opt-reports').addEventListener('change', (e) => saveSetting('errorReports', e.target.checked));
 
 // ---------- Favorites ----------

@@ -15,6 +15,7 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 | Keeps playing when the screen locks | Kick streams keep their sound when you lock the phone or switch apps. Chrome on Android pauses video in the background, so the app switches to an audio-only copy of the stream and back to the video when you return. |
 | Lock screen controls | Play, pause, next and previous from the lock screen and notification, with the stream's name. Next and previous step through the live embeds, and earbud buttons do the same. |
 | Sleep timer | Settings → Sleep timer pauses the stream after 15, 30 or 60 minutes, for falling asleep listening. |
+| Landscape fullscreen | Settings can make a phone turned sideways show only the stream, with chat as a see-through panel on the right (a button hides it) and the tabs a tap on the stream or the handle at the bottom away. |
 | Audio only | Settings can play Kick streams as sound only in the app's own player: no picture, less data and battery. |
 | Data saver | On mobile data, Kick streams in the app's own player stay at 480p or below (on by default, where the browser reports the connection type: Chrome on Android does). |
 | Home screen shortcuts | Long-press the app icon for **Destiny's stream** or **Multi-view** (your last multi-view set). |
@@ -47,6 +48,7 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 | Keyboard shortcuts | On desktop: 1–9 switch tabs, ← → previous and next, M add to multi-view, C chat, F fullscreen, P picture-in-picture. |
 | Chat on the left | Settings can put chat on the left in landscape and on desktop. |
 | Remembers volume | Kick streams in the app's own player keep their own volume. |
+| Focus layout | In multi-view, a ⋮ button makes the stream with the sound big and the others small (in a row underneath on a phone, stacked beside it on a wider screen). |
 | Kick quality | Settings cap the quality of Kick streams in the app's own player (Auto, or up to 1080p, 720p, 480p or 360p) for a steadier picture on a slow connection. |
 | Error reports | Optional, off by default: when a player fails, the app sends what failed, its version and the kind of browser to the server log. Nothing about you. |
 | Real-time embed tabs | The tab row updates the moment someone embeds something, with live streams only (no VODs, clips or ordinary videos), each with its platform icon. The list recovers on its own after the phone changes networks. |

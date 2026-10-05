@@ -2,6 +2,11 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.4.0 (2026-10-05)
+
+- Landscape fullscreen for phones (settings): sideways, the stream fills the screen, chat sits see-through on the right with a button to hide it, and a tap on the stream or on the handle at the bottom brings the tabs up.
+- Focus layout for multi-view (⋮ row): the stream with the sound is big and the others small.
+
 ## 1.3.1 (2026-10-05)
 
 - The chat box no longer ends up under the Android buttons after an update, and there's no empty band above them either: the app now checks where the window ends instead of guessing.

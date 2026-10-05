@@ -223,6 +223,21 @@ input {
 #player[data-count='4'] {
   --cols: 2;
 }
+/* Focus layout (⋮ button, multi-view): the stream with the sound is big and
+   the others small. Portrait puts the small ones in a row underneath;
+   the row layout (below) stacks them beside it. --others is set by
+   layoutTiles in stage.js. */
+body.focus.multi #player {
+  --cols: 1;
+  grid-template-columns: repeat(var(--others, 1), minmax(0, 1fr));
+  grid-template-rows: minmax(0, 3fr) minmax(0, 1fr);
+  aspect-ratio: 4 / 3;
+  max-height: 72dvh;
+}
+body.focus.multi #player .tile.has-sound {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
 
 .tile {
   position: relative;
@@ -533,6 +548,9 @@ body.no-chat #player[data-count='2'] {
   color: var(--muted);
   cursor: pointer;
 }
+#actions button[hidden] {
+  display: none;
+}
 #actions button:hover,
 #actions button[aria-pressed='true'] {
   color: var(--text);
@@ -711,6 +729,14 @@ body.no-chat #player[data-count='2'] {
     width: auto;
     min-height: 0;
   }
+  body.focus.multi #player {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
+    grid-template-rows: repeat(var(--others, 1), minmax(0, 1fr));
+  }
+  body.focus.multi #player .tile.has-sound {
+    grid-column: 1;
+    grid-row: 1 / -1;
+  }
   /* Chat hidden: the tab row goes back under the full-width stream. */
   body.no-chat #stage {
     grid-template-columns: minmax(0, 1fr);
@@ -722,6 +748,106 @@ body.no-chat #player[data-count='2'] {
   body.no-chat #tabbar {
     grid-column: 1;
     grid-row: 2;
+  }
+}
+
+/* Landscape on phones (setting): the stream fills the screen, chat is a
+   see-through overlay on the right, and the tab row slides up from the
+   bottom on a tap (or the handle, which reaches over other sites' players). */
+#overlay-btn,
+#tabs-handle {
+  display: none;
+}
+@media (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
+  body.landscape-full #stage {
+    display: block;
+    position: relative;
+  }
+  body.landscape-full #watch {
+    display: block;
+  }
+  body.landscape-full #player,
+  body.landscape-full #player[data-count] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    aspect-ratio: auto;
+  }
+  body.landscape-full #chat-resizer {
+    display: none;
+  }
+  body.landscape-full #tabbar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 7;
+    transform: translateY(100%);
+    transition: transform 0.15s;
+  }
+  body.landscape-full.show-tabs #tabbar,
+  body.landscape-full #tabbar:focus-within {
+    transform: none;
+  }
+  body.landscape-full #chat {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 34%;
+    min-width: 220px;
+    z-index: 5;
+    opacity: 0.75;
+    background: transparent;
+  }
+  body.landscape-full.overlay-off #chat {
+    display: none;
+  }
+  body.landscape-full:not(.no-chat) #overlay-btn {
+    display: grid;
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 8;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border: 0;
+    border-radius: 8px;
+    background: rgb(0 0 0 / 0.5);
+    color: #fff;
+  }
+  body.landscape-full #overlay-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+  }
+  body.landscape-full #overlay-btn[aria-pressed='false'] {
+    opacity: 0.6;
+  }
+  body.landscape-full:not(.show-tabs) #tabs-handle {
+    display: block;
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    z-index: 8;
+    width: 64px;
+    height: 20px;
+    margin-left: -32px;
+    border: 0;
+    background: transparent;
+  }
+  body.landscape-full #tabs-handle::after {
+    content: '';
+    position: absolute;
+    left: 20px;
+    right: 20px;
+    bottom: 5px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgb(255 255 255 / 0.55);
   }
 }
 

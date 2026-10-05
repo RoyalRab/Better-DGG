@@ -28,6 +28,7 @@ export const settings = {
   audioOnly: store.get('audioOnly', false), // Kick in the app's own player: sound only
   kickQuality: store.get('kickQuality', 'auto'), // 'auto' or a height like 720
   dataSaver: store.get('dataSaver', true), // cap Kick at 480p on mobile data
+  landscapeFull: store.get('landscapeFull', false), // phones: landscape fills the screen, chat over the stream
 };
 
 export function saveSetting(key, value) {
