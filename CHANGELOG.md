@@ -2,6 +2,10 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.7.2 (2026-10-05)
+
+- The "Latest from Destiny" list now sits at the bottom of settings, above the change log, instead of at the top.
+
 ## 1.7.1 (2026-10-05)
 
 - Kick streams in the app's own player now ask to pop out into a floating window by themselves the moment you leave the app, before switching to sound only. Whether the browser allows that is up to the browser; the Display line in settings shows its answer.
