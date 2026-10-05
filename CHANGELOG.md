@@ -2,6 +2,10 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.0.4 (2026-10-05)
+
+- Android: the chat box no longer ends up under the navigation buttons after Refresh or an update, even on phones where Chrome never says how tall the buttons are. The app now compares the window to its size on a normal launch and pads the difference.
+
 ## 1.0.3 (2026-10-05)
 
 - The "Now live" notice from 1.0.2 is gone again; the tab row is enough.

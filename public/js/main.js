@@ -67,35 +67,63 @@ setTimeout(maybeShowMenuTip, 3000);
 loadChangelog();
 
 // ---------- Android's navigation buttons ----------
-// The installed app on Android 15+ draws under the navigation buttons, and
-// Chrome reports their height through env(safe-area-inset-bottom). After an
-// in-app reload Chrome sometimes reports 0 until the app is reopened, which
-// left the chat box under the buttons. So the app remembers the real height
-// whenever Chrome reports one (per orientation) and pads with that whenever
-// Chrome reports 0. A remembered value expires after a month.
+// The installed app on Android 15+ draws under the navigation buttons after
+// an in-app reload (Refresh, or an update), and Chrome then reports their
+// height as 0 through env(safe-area-inset-bottom), so the chat box ended up
+// under the buttons. Two ways to know their height without trusting that:
+//   1. whenever Chrome does report a height, remember it (per orientation);
+//   2. remember how tall the window is on a normal launch from the icon. After
+//      a reload, a window that is suddenly taller by a button-bar's worth is
+//      drawing under the buttons, and the difference is their height.
+// Whenever Chrome reports 0, pad with whichever of those we have.
 if (standalone) {
   const probe = document.createElement('div');
   probe.style.cssText = 'position:fixed;top:-9999px;height:0;padding-bottom:env(safe-area-inset-bottom)';
   document.body.appendChild(probe);
-  const key = () => `navInset:${matchMedia('(orientation: landscape)').matches ? 'landscape' : 'portrait'}`;
+  const MONTH = 30 * 24 * 60 * 60 * 1000;
+  const orientation = () => (matchMedia('(orientation: landscape)').matches ? 'landscape' : 'portrait');
+  const insetKey = () => `navInset:${orientation()}`;
+  const launchKey = () => `launchHeight:${orientation()}`;
+  const nav = performance.getEntriesByType('navigation')[0];
+  const freshLaunch = !nav || nav.type === 'navigate';
+  const fresh = (v) => v && Date.now() - v.at < MONTH;
+
+  // A normal launch: note the window height, so a reload can be compared to it.
+  function recordLaunchHeight() {
+    if (!freshLaunch || document.hidden) return;
+    store.set(launchKey(), { h: window.innerHeight, screen: screen.height, at: Date.now() });
+  }
+
+  // What the buttons are worth after a reload, judged from the window height.
+  function heightFromLaunch() {
+    const saved = store.get(launchKey(), null);
+    if (!fresh(saved) || saved.screen !== screen.height) return 0;
+    const extra = window.innerHeight - saved.h;
+    return extra >= 8 && extra <= 160 ? extra : 0;
+  }
+
   const checkInsets = () => {
     const reported = parseFloat(getComputedStyle(probe).paddingBottom) || 0;
     const root = document.documentElement.style;
     if (reported > 0) {
-      store.set(key(), { px: reported, at: Date.now() });
+      store.set(insetKey(), { px: reported, at: Date.now() });
       root.removeProperty('--nav-fallback');
     } else {
-      const saved = store.get(key(), null);
-      if (saved && saved.px > 0 && Date.now() - saved.at < 30 * 24 * 60 * 60 * 1000) {
-        root.setProperty('--nav-fallback', saved.px + 'px');
-      } else {
-        root.removeProperty('--nav-fallback');
-      }
+      const fromLaunch = heightFromLaunch();
+      const saved = store.get(insetKey(), null);
+      const px = fromLaunch || (fresh(saved) && saved.px > 0 ? saved.px : 0);
+      if (px > 0) root.setProperty('--nav-fallback', px + 'px');
+      else root.removeProperty('--nav-fallback');
     }
     layoutTiles();
   };
   checkInsets();
-  for (const ms of [300, 1000, 3000]) setTimeout(checkInsets, ms);
+  for (const ms of [300, 1000, 3000]) {
+    setTimeout(() => {
+      recordLaunchHeight();
+      checkInsets();
+    }, ms);
+  }
   window.addEventListener('resize', checkInsets);
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) checkInsets();
