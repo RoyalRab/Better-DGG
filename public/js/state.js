@@ -14,4 +14,9 @@ export const isCurrent = (src) => !!state.current && key(state.current) === key(
 
 // Display names from the live list, remembered after a stream drops out of it.
 export const knownNames = new Map();
-export const streamName = (src) => knownNames.get(key(src)) || src.id;
+const fallbackName = (src) => {
+  if (src.type === 'kick-vod') return `${src.id.split('/')[0]} (VOD)`;
+  if (src.type === 'kick-clip') return 'Kick clip';
+  return src.id;
+};
+export const streamName = (src) => knownNames.get(key(src)) || fallbackName(src);

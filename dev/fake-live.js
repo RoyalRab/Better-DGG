@@ -22,7 +22,18 @@ const embed = (platform, id, name, viewers) => ({
   count: 1,
   mediaItem: {
     identifier: { platform, mediaId: id },
-    metadata: { displayName: name, title: `${name} stream`, live: true, viewers },
+    metadata: {
+      displayName: name,
+      title: `${name} stream`,
+      live: true,
+      viewers,
+      previewUrl:
+        platform === 'kick'
+          ? `https://images.kick.com/video_thumbnails/${id}/x/480.webp`
+          : platform === 'twitch'
+            ? `https://static-cdn.jtvnw.net/previews-ttv/live_user_${id}-640x360.jpg`
+            : `https://thumbnail.angelthump.com/thumbnails/${id}.jpeg`,
+    },
   },
 });
 
@@ -49,6 +60,33 @@ wss.on('connection', (ws, req) => {
   const send = (type, data) => ws.send(JSON.stringify({ type, data }));
   send('dggApi:streamInfo', { streams: { kick: null, youtube: { live: false } } });
   send('dggApi:embeds', base());
+  // Destiny's latest videos and Kick VODs, as destiny.gg sends them.
+  send('dggApi:videos', [
+    {
+      id: 'aNVnLSyUgkE',
+      title: 'This Should Horrify You',
+      mediumThumbnailUrl: 'https://i.ytimg.com/vi/aNVnLSyUgkE/mqdefault.jpg',
+      url: 'https://www.youtube.com/watch?v=aNVnLSyUgkE',
+      embedUrl: '/bigscreen#youtube/aNVnLSyUgkE',
+    },
+    {
+      id: 'AU5qK6HmzOc',
+      title: 'Should You Be Worried?',
+      mediumThumbnailUrl: 'https://i.ytimg.com/vi/AU5qK6HmzOc/mqdefault.jpg',
+      url: 'https://www.youtube.com/watch?v=AU5qK6HmzOc',
+      embedUrl: '/bigscreen#youtube/AU5qK6HmzOc',
+    },
+  ]);
+  send('dggApi:youtubeVods', [
+    {
+      id: '489b8b26-8a97-400f-9845-13d8f6fa6d1b',
+      platform: 'kick',
+      title: 'late night chill',
+      mediumThumbnailUrl: 'https://images.kick.com/video_thumbnails/0PMYoN0I2p4i/1AdCugQTmCPL/720.webp',
+      url: 'https://kick.com/Destiny/videos/01a0f035-19d8-7dca-a86e-5d55f51a5672',
+      embedUrl: '/bigscreen#kick-vod/Destiny/489b8b26-8a97-400f-9845-13d8f6fa6d1b',
+    },
+  ]);
   const timers = [
     setTimeout(() => send('dggApi:embeds', base()), 2000),
     setTimeout(() => send('dggApi:embeds', [...base(), embed('kick', 'newone', 'newone', 5)]), 6000),

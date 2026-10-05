@@ -49,6 +49,9 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 | Chat on the left | Settings can put chat on the left in landscape and on desktop. |
 | Remembers volume | Kick streams in the app's own player keep their own volume. |
 | Focus layout | In multi-view, a ⋮ button makes the stream with the sound big and the others small (in a row underneath on a phone, stacked beside it on a wider screen). |
+| Stream previews | Rest the mouse on a tab, or hold it on a phone, to see a picture of what's on before switching. |
+| Latest from Destiny | While nothing of his is live, settings list his newest YouTube videos and Kick VODs, and they play in the app. |
+| Kick VODs and clips | Links to Kick VODs and clips open in the app's own player, and the hash form destiny.gg uses (`#kick-vod/...`) works too. |
 | Kick quality | Settings cap the quality of Kick streams in the app's own player (Auto, or up to 1080p, 720p, 480p or 360p) for a steadier picture on a slow connection. |
 | Error reports | Optional, off by default: when a player fails, the app sends what failed, its version and the kind of browser to the server log. Nothing about you. |
 | Real-time embed tabs | The tab row updates the moment someone embeds something, with live streams only (no VODs, clips or ordinary videos), each with its platform icon. The list recovers on its own after the phone changes networks. |

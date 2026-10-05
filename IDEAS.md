@@ -13,9 +13,6 @@ The owner's backlog. Ideas from users arrive as GitHub issues labelled `idea` (S
 
 | Idea | Why | Effort |
 | --- | --- | --- |
-| Destiny's latest VOD/videos (`dggApi:youtubeVods`, `dggApi:videos`) in the menu when he's offline | Something to watch when nothing's live | M |
-| Preview thumbnails when holding or hovering a tab (the feed has `previewUrl`) | See what's on before switching | M |
-| Kick VODs and clips (shared links to them are ignored today) | Watch what someone links without leaving the app | M |
 
 ## Maintenance
 

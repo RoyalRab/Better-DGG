@@ -111,16 +111,21 @@ if (standalone) {
   const checkInsets = () => {
     const reported = parseFloat(getComputedStyle(probe).paddingBottom) || 0;
     const root = document.documentElement.style;
+    let pad = 0;
     if (reported > 0) {
       store.set(insetKey(), { px: reported, at: Date.now() });
       root.removeProperty('--nav-fallback');
     } else if (mayBeUnderButtons()) {
       const saved = store.get(insetKey(), null);
-      const px = fresh(saved) && saved.px > 0 ? saved.px : tablet ? 64 : 48;
-      root.setProperty('--nav-fallback', px + 'px');
+      pad = fresh(saved) && saved.px > 0 ? saved.px : tablet ? 64 : 48;
+      root.setProperty('--nav-fallback', pad + 'px');
     } else {
       root.removeProperty('--nav-fallback');
     }
+    // Shown in settings, so a phone's numbers can be read off a screenshot.
+    document.documentElement.dataset.insets =
+      `screen ${screen.width}×${screen.height}, window ${window.innerWidth}×${window.innerHeight}, ` +
+      `inset reported ${reported}, padding ${pad}`;
     layoutTiles();
   };
   checkInsets();

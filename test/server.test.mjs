@@ -26,6 +26,31 @@ before(async () => {
         JSON.stringify(live ? { livestream: {}, playback_url: `https://ivs.example/${slug}/master.m3u8` } : {}),
       );
     }
+    if (u === 'https://kick.com/api/v1/video/489b8b26-8a97-400f-9845-13d8f6fa6d1b') {
+      return new Response(
+        JSON.stringify({ uuid: '489b8b26-8a97-400f-9845-13d8f6fa6d1b', source: 'https://vod.example/a/master.m3u8' }),
+      );
+    }
+    if (u.startsWith('https://kick.com/api/v1/video/')) return new Response('{}', { status: 404 });
+    if (u === 'https://kick.com/Destiny/videos/01a0f035-19d8-7dca-a86e-5d55f51a5672') {
+      return new Response(
+        '<html><script>self.__next_f.push("{\\"id\\":\\"01a0f035-19d8-7dca-a86e-5d55f51a5672\\",\\"recording_url\\":\\"https://stream.kick.com/x/y/master.m3u8\\"}")</script></html>',
+      );
+    }
+    if (u.startsWith('https://kick.com/') && u.includes('/videos/')) return new Response('nope', { status: 404 });
+    if (u.startsWith('https://stream.kick.com/'))
+      return new Response('#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1\n720p/index.m3u8\n');
+    if (u === 'https://kick.com/api/v2/clips/clip_01JHV4PM1Q1FW2BCGKR258FW37') {
+      return new Response(
+        JSON.stringify({
+          clip: { video_url: 'https://clips.kick.com/clips/87/clip_01JHV4PM1Q1FW2BCGKR258FW37/playlist.m3u8' },
+        }),
+      );
+    }
+    if (u.startsWith('https://kick.com/api/v2/clips/')) return new Response('{}', { status: 404 });
+    if (u.startsWith('https://vod.example/') || u.startsWith('https://clips.kick.com/')) {
+      return new Response('#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1\n720p/index.m3u8\n');
+    }
     if (u.startsWith('https://ivs.example/')) {
       kickCalls.push(u);
       if (u.includes('/restarting/')) return new Response('[{"error":"Can not find channel"}]', { status: 404 });
@@ -55,8 +80,8 @@ test('live list keeps only live channels on supported platforms, with few fields
     { mediaItem: { identifier: { platform: 'twitch', mediaId: 'b' }, metadata: { live: true } } },
   ];
   assert.deepEqual(srv.embedList(), [
-    { platform: 'kick', id: 'a', name: 'A', title: 'x' },
-    { platform: 'twitch', id: 'b', name: null, title: null },
+    { platform: 'kick', id: 'a', name: 'A', title: 'x', preview: null },
+    { platform: 'twitch', id: 'b', name: null, title: null, preview: null },
   ]);
   srv.live.streamInfo = {
     streams: { kick: { live: true, id: 'destiny', status_text: 'hi' }, youtube: { live: false } },
@@ -95,6 +120,58 @@ test('Kick relay shares one lookup between viewers asking at once', async () => 
   assert.equal(restarting.status, 503, 'listed live on Kick but no video yet: try again soon');
   assert.equal(restarting.headers.get('retry-after'), '6');
   assert.equal((await get('/api/stream/kick/bad%20name.m3u8', '10.1.1.1')).status, 400);
+});
+
+test('Kick VODs and clips are looked up and their playlists relayed', async () => {
+  const vod = await get('/api/stream/kick-vod/Destiny/489b8b26-8a97-400f-9845-13d8f6fa6d1b.m3u8', '10.1.2.1');
+  assert.equal(vod.status, 200);
+  assert.match(await vod.text(), /https:\/\/vod\.example\/a\/720p\/index\.m3u8/);
+  assert.equal(
+    (await get('/api/stream/kick-vod/Destiny/00000000-0000-0000-0000-000000000000.m3u8', '10.1.2.1')).status,
+    404,
+  );
+  // The id from a VOD page's address: found in the page's own data.
+  const fromPage = await get('/api/stream/kick-vod/Destiny/01a0f035-19d8-7dca-a86e-5d55f51a5672.m3u8', '10.1.2.1');
+  assert.equal(fromPage.status, 200);
+  assert.match(await fromPage.text(), /https:\/\/stream\.kick\.com\/x\/y\/720p\/index\.m3u8/);
+  assert.equal((await get('/api/stream/kick-vod/Destiny/not-a-uuid.m3u8', '10.1.2.1')).status, 400);
+  const clip = await get('/api/stream/kick-clip/clip_01JHV4PM1Q1FW2BCGKR258FW37.m3u8', '10.1.2.1');
+  assert.equal(clip.status, 200);
+  assert.match(
+    await clip.text(),
+    /https:\/\/clips\.kick\.com\/clips\/87\/clip_01JHV4PM1Q1FW2BCGKR258FW37\/720p\/index\.m3u8/,
+  );
+  assert.equal((await get('/api/stream/kick-clip/clip_NOPE00000000.m3u8', '10.1.2.1')).status, 404);
+  assert.equal((await get('/api/stream/kick-clip/junk.m3u8', '10.1.2.1')).status, 400);
+});
+
+test("Destiny's latest videos come from the feed, with few fields", () => {
+  srv.live.videos = [
+    { id: 'aNVnLSyUgkE', title: 'T', mediumThumbnailUrl: 'https://i.ytimg.com/vi/aNVnLSyUgkE/mqdefault.jpg', extra: 1 },
+  ];
+  srv.live.kickVods = [
+    {
+      id: 'x',
+      platform: 'kick',
+      title: 'V',
+      mediumThumbnailUrl: 'https://images.kick.com/a.webp',
+      url: 'https://kick.com/Destiny/videos/01a0',
+      embedUrl: '/bigscreen#kick-vod/Destiny/489b8b26-8a97-400f-9845-13d8f6fa6d1b',
+    },
+    { id: 'y', platform: 'kick', embedUrl: '/bigscreen#nope' },
+  ];
+  assert.deepEqual(srv.snapshot().videos, [
+    { platform: 'youtube', id: 'aNVnLSyUgkE', title: 'T', thumb: 'https://i.ytimg.com/vi/aNVnLSyUgkE/mqdefault.jpg' },
+    {
+      platform: 'kick-vod',
+      id: 'Destiny/489b8b26-8a97-400f-9845-13d8f6fa6d1b',
+      title: 'V',
+      thumb: 'https://images.kick.com/a.webp',
+      url: 'https://kick.com/Destiny/videos/01a0',
+    },
+  ]);
+  srv.live.videos = null;
+  srv.live.kickVods = null;
 });
 
 test('Kick relay is rate limited per visitor', async () => {

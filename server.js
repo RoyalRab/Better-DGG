@@ -230,9 +230,9 @@ const CSP = [
   "default-src 'self'",
   "script-src 'self' https://www.youtube.com https://s.ytimg.com https://player.twitch.tv",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data:",
-  "media-src 'self' blob: data: https://*.live-video.net",
-  "connect-src 'self' https://*.live-video.net",
+  "img-src 'self' data: https://images.kick.com https://clips.kick.com https://i.ytimg.com https://static-cdn.jtvnw.net https://thumbnail.angelthump.com",
+  "media-src 'self' blob: data: https://*.live-video.net https://stream.kick.com https://clips.kick.com",
+  "connect-src 'self' https://*.live-video.net https://stream.kick.com https://clips.kick.com",
   "worker-src 'self' blob:",
   'frame-src https://www.destiny.gg/embed/ https://player.kick.com https://player.twitch.tv https://clips.twitch.tv ' +
     'https://www.youtube.com https://www.youtube-nocookie.com https://rumble.com https://player.vimeo.com ' +
@@ -342,6 +342,8 @@ const live = {
   streamInfo: null, // dggApi:streamInfo data, as sent
   banned: new Set(), // dggApi:bannedEmbeds, as "platform/name" in lower case
   hosting: null, // dggApi:hosting data, as sent (null when nobody is hosted)
+  videos: null, // dggApi:videos: Destiny's latest YouTube videos
+  kickVods: null, // dggApi:youtubeVods: Destiny's latest Kick VODs (the name is destiny.gg's)
 };
 
 let retryMs = 1000;
@@ -386,6 +388,12 @@ function connectLive() {
     } else if (msg.type === 'dggApi:hosting') {
       live.hosting = msg.data;
       broadcast();
+    } else if (msg.type === 'dggApi:videos' && Array.isArray(msg.data)) {
+      live.videos = msg.data;
+      broadcast();
+    } else if (msg.type === 'dggApi:youtubeVods' && Array.isArray(msg.data)) {
+      live.kickVods = msg.data;
+      broadcast();
     }
   });
   ws.on('unexpected-response', (_req, res) => console.log('live: refused with HTTP', res.statusCode));
@@ -429,6 +437,7 @@ function embedList() {
         id: str(id.mediaId || e.id, 120),
         name: str(meta.displayName, 80),
         title: str(meta.title),
+        preview: /^https:\/\//.test(meta.previewUrl || '') ? str(meta.previewUrl, 300) : null,
         live: meta.live === true,
       };
     })
@@ -448,12 +457,38 @@ function hostedStream() {
   return { platform, id, name: str(h.displayName || h.name || h.mediaItem?.metadata?.displayName, 80) || id };
 }
 
+// Destiny's latest videos (dggApi:videos, YouTube) and Kick VODs
+// (dggApi:youtubeVods, despite the name), for when nothing of his is live.
+// A Kick VOD's id is the one destiny.gg's bigscreen uses (#kick-vod/<channel>/<id>).
+function latestVideos() {
+  const out = [];
+  for (const v of (live.videos || []).slice(0, 4)) {
+    const id = str(v?.id, 20);
+    if (id && /^[\w-]{11}$/.test(id))
+      out.push({ platform: 'youtube', id, title: str(v.title, 120), thumb: str(v.mediumThumbnailUrl, 300) });
+  }
+  for (const v of (live.kickVods || []).slice(0, 4)) {
+    const m = /^\/bigscreen#kick-vod\/([\w-]{1,64})\/([\da-f-]{36})$/.exec(str(v?.embedUrl, 200) || '');
+    if (m && v.platform === 'kick') {
+      out.push({
+        platform: 'kick-vod',
+        id: `${m[1]}/${m[2]}`,
+        title: str(v.title, 120),
+        thumb: str(v.mediumThumbnailUrl, 300),
+        url: str(v.url, 200),
+      });
+    }
+  }
+  return out;
+}
+
 function snapshot() {
   return {
     connected: live.connected,
     destiny: destinyStreams(),
     hosting: hostedStream(),
     embeds: embedList(),
+    videos: latestVideos(),
   };
 }
 
@@ -619,6 +654,91 @@ async function serveKickPlaylist(req, res, slug) {
   }
 }
 
+// Kick VODs and clips: the browser can fetch their playlists and video
+// itself (they allow any origin), but finding the playlist takes Kick's API,
+// which doesn't, so the lookup and the top playlist come from here. A VOD's
+// id is the uuid destiny.gg's bigscreen uses (#kick-vod/<channel>/<uuid>);
+// a clip's is its clip_... id.
+const KICK_UUID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/;
+const KICK_CLIP = /^clip_[A-Z0-9]{10,40}$/;
+const vodCache = new Map(); // id -> { at, url }
+
+// Kick has two ids for a VOD: the one its API and destiny.gg use, and the
+// one in the page's address (kick.com/<channel>/videos/<id>), which the API
+// doesn't know. For the second kind the VOD page itself carries the playlist
+// address in its data, so that is where it comes from.
+const VOD_SOURCE = /["\\]*recording_url["\\]*:["\\]*(https:\/\/stream\.kick\.com\/[^"\\]+\.m3u8)/;
+async function kickVodUrl(channel, uuid) {
+  const hit = vodCache.get('vod:' + uuid);
+  if (hit && Date.now() - hit.at < 10 * 60 * 1000) return hit.url;
+  return shared('vod:' + uuid, async () => {
+    const r = await fetch(`https://kick.com/api/v1/video/${uuid}`, {
+      headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0 (compatible; better-dgg)' },
+      signal: AbortSignal.timeout(8000),
+    });
+    let url = null;
+    if (r.ok) {
+      const j = await r.json();
+      url = typeof j?.source === 'string' && /^https:\/\//.test(j.source) ? j.source : null;
+    } else if (r.status === 404 && channel) {
+      const page = await fetch(`https://kick.com/${encodeURIComponent(channel)}/videos/${uuid}`, {
+        headers: { Accept: 'text/html', 'User-Agent': BROWSER_UA },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (page.ok) {
+        const m = VOD_SOURCE.exec(await page.text());
+        if (m) url = m[1];
+      } else if (page.status !== 404) throw new Error('kick page ' + page.status);
+    } else throw new Error('kick api ' + r.status);
+    vodCache.set('vod:' + uuid, { at: Date.now(), url });
+    if (vodCache.size > 500) vodCache.delete(vodCache.keys().next().value);
+    return url;
+  });
+}
+
+async function kickClipUrl(id) {
+  const hit = vodCache.get('clip:' + id);
+  if (hit && Date.now() - hit.at < 10 * 60 * 1000) return hit.url;
+  return shared('clip:' + id, async () => {
+    const r = await fetch(`https://kick.com/api/v2/clips/${id}`, {
+      headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0 (compatible; better-dgg)' },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error('kick api ' + r.status);
+    const j = await r.json();
+    const u = j?.clip?.video_url || j?.clip?.clip_url;
+    const url = typeof u === 'string' && /^https:\/\/clips\.kick\.com\//.test(u) ? u : null;
+    vodCache.set('clip:' + id, { at: Date.now(), url });
+    if (vodCache.size > 500) vodCache.delete(vodCache.keys().next().value);
+    return url;
+  });
+}
+
+const BROWSER_UA =
+  'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36';
+
+async function serveKickVideo(req, res, kind, channel, id) {
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  if (!kickLimit(clientIp(req))) {
+    res.setHeader('Retry-After', '60');
+    return send(res, 429, 'text/plain; charset=utf-8', 'Too many requests, try again in a minute');
+  }
+  if (kind === 'kick-vod' ? !KICK_UUID.test(id) || !KICK_SLUG.test(channel || '') : !KICK_CLIP.test(id)) {
+    return send(res, 400, 'text/plain; charset=utf-8', 'Bad id');
+  }
+  try {
+    const url = kind === 'kick-vod' ? await kickVodUrl(channel, id) : await kickClipUrl(id);
+    if (!url) return send(res, 404, 'text/plain; charset=utf-8', 'Not found');
+    const out = await kickMaster(`${kind}:${id}`, url);
+    send(res, 200, 'application/vnd.apple.mpegurl', out);
+  } catch (e) {
+    console.log(`kick: ${kind} ${id} ${e && e.message ? e.message : e}`);
+    send(res, 502, 'text/plain; charset=utf-8', 'Kick unavailable');
+  }
+}
+
 // ---------- HTTP ----------
 
 const server = http.createServer((req, res) => {
@@ -653,6 +773,17 @@ function handle(req, res) {
   }
   const kick = url.pathname.match(/^\/api\/stream\/kick\/([^/]+)\.m3u8$/);
   if (kick) return serveKickPlaylist(req, res, decodeURIComponent(kick[1]));
+  // A VOD's app id is <channel>/<uuid>.
+  const video = url.pathname.match(/^\/api\/stream\/(kick-vod|kick-clip)\/(?:([^/]+)\/)?([^/]+)\.m3u8$/);
+  if (video) {
+    return serveKickVideo(
+      req,
+      res,
+      video[1],
+      video[2] ? decodeURIComponent(video[2]) : '',
+      decodeURIComponent(video[3]),
+    );
+  }
   if (url.pathname === '/healthz') return send(res, 200, 'text/plain', 'ok');
   // The manifest's share target: the app reads ?url= and ?text= itself.
   if (url.pathname === '/share') url.pathname = '/';

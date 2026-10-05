@@ -13,7 +13,23 @@ test('parses destiny.gg hash links', () => {
 
 test('parses platform links', () => {
   assert.deepEqual(parseSource('https://kick.com/destiny'), { type: 'kick', id: 'destiny' });
-  assert.deepEqual(parseSource('kick.com/destiny/videos/abc-123'), { type: 'kick-vod', id: 'destiny/videos/abc-123' });
+  assert.deepEqual(parseSource('kick.com/Destiny/videos/01a0f035-19d8-7dca-a86e-5d55f51a5672'), {
+    type: 'kick-vod',
+    id: 'Destiny/01a0f035-19d8-7dca-a86e-5d55f51a5672',
+  });
+  assert.deepEqual(parseSource('#kick-vod/Destiny/489b8b26-8a97-400f-9845-13d8f6fa6d1b'), {
+    type: 'kick-vod',
+    id: 'Destiny/489b8b26-8a97-400f-9845-13d8f6fa6d1b',
+  });
+  assert.equal(parseSource('kick.com/destiny/videos/abc-123'), null, 'a VOD needs a uuid');
+  assert.deepEqual(parseSource('https://kick.com/destiny/clips/clip_01JHV4PM1Q1FW2BCGKR258FW37'), {
+    type: 'kick-clip',
+    id: 'clip_01JHV4PM1Q1FW2BCGKR258FW37',
+  });
+  assert.deepEqual(parseSource('https://player.kick.com/destiny?clip=clip_01JHV4PM1Q1FW2BCGKR258FW37'), {
+    type: 'kick-clip',
+    id: 'clip_01JHV4PM1Q1FW2BCGKR258FW37',
+  });
   assert.deepEqual(parseSource('https://www.twitch.tv/videos/123456'), { type: 'twitch-vod', id: '123456' });
   assert.deepEqual(parseSource('https://clips.twitch.tv/FunnyClip'), { type: 'twitch-clip', id: 'FunnyClip' });
   assert.deepEqual(parseSource('https://youtu.be/dQw4w9WgXcQ?t=10s'), { type: 'youtube', id: 'dQw4w9WgXcQ', t: 10 });
@@ -38,7 +54,7 @@ test('rejects junk', () => {
 });
 
 test('hash lists keep up to four unique playable streams', () => {
-  const list = parseHashList('#kick/a,twitch/b,kick/A,kick-vod/x/videos/y,kick/c,kick/d,kick/e');
+  const list = parseHashList('#kick/a,twitch/b,kick/A,facebook/x,kick/c,kick/d,kick/e');
   assert.deepEqual(list.map(key), ['kick/a', 'twitch/b', 'kick/c', 'kick/d']);
   assert.deepEqual(parseHashList(''), []);
 });

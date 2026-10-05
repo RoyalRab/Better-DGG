@@ -1,10 +1,20 @@
 // The ⋮ action row, the settings sheet (settings, actions, version and change log), the cast sheet
 // and the install bar.
 
-import { state, isCurrent } from './state.js';
+import { state, isCurrent, knownNames } from './state.js';
+import { parseSource, key } from './sources.js';
 import { $, settings, saveSetting, store, toast, isIOS, isAndroid, isTouch, standalone } from './util.js';
 import { OWN_PLAYER_TYPES } from './players.js';
-import { mountTile, setAddMode, updateWakeLock, layoutTiles, dropParked, pauseSound, setFocusLayout } from './stage.js';
+import {
+  mountTile,
+  setAddMode,
+  updateWakeLock,
+  layoutTiles,
+  dropParked,
+  pauseSound,
+  setFocusLayout,
+  watch,
+} from './stage.js';
 import { renderChat, loadChat, reloadChat, openDgg } from './chat.js';
 import { toggleFavorite } from './tabs.js';
 import { applyUpdateOrReload } from './bars.js';
@@ -87,8 +97,53 @@ function renderSheetActions() {
   $('#sheet-actions').replaceChildren(...rows);
 }
 
+// Destiny's latest videos and Kick VODs (from the live snapshot), shown in
+// settings only while none of his streams is live. Tapping one plays it in
+// the app (YouTube's player, or the app's own player for a Kick VOD).
+function renderLatest() {
+  const videos = (state.live && state.live.videos) || [];
+  const destinyLive = state.tabItems.some((i) => i.destiny);
+  const show = !destinyLive && videos.length > 0;
+  $('#latest').hidden = !show;
+  if (!show) return;
+  const rows = videos.map((v) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'latest-item';
+    const img = document.createElement('img');
+    img.alt = '';
+    img.loading = 'lazy';
+    if (v.thumb) img.src = v.thumb;
+    const text = document.createElement('span');
+    const title = document.createElement('b');
+    title.textContent = v.title || (v.platform === 'youtube' ? 'YouTube video' : 'Kick VOD');
+    const kind = document.createElement('small');
+    kind.textContent = v.platform === 'youtube' ? 'YouTube' : 'Kick VOD';
+    text.append(title, kind);
+    b.append(img, text);
+    b.addEventListener('click', () => {
+      const src = parseSource(`${v.platform}/${v.id}`);
+      if (!src) return;
+      knownNames.set(key(src), v.platform === 'youtube' ? 'Destiny (YouTube)' : 'Destiny (VOD)');
+      $('#sheet').close();
+      watch(src);
+    });
+    return b;
+  });
+  $('#latest-list').replaceChildren(...rows);
+}
+document.addEventListener('livelist', () => {
+  if ($('#sheet').open) renderLatest();
+});
+
 export function openSheet(scrollTo) {
   renderSheetActions();
+  renderLatest();
+  // The installed app's window geometry (main.js), for debugging the
+  // Android button-bar padding from a screenshot.
+  const insets = document.documentElement.dataset.insets;
+  $('#display-info').textContent = insets ? `Display: ${insets}` : '';
+  $('#display-info').hidden = !insets;
   $('#opt-awake').checked = settings.keepAwake;
   $('#opt-chat').checked = settings.showChat;
   $('#opt-own').checked = settings.ownPlayer;

@@ -114,6 +114,17 @@ export async function mountTile(tile) {
     retry.textContent = 'Try again';
     retry.addEventListener('click', () => mountTile(tile));
     msg.append(text, retry);
+    // A Kick VOD only plays in the app's own player; offer Kick's page instead.
+    if (tile.src.type === 'kick-vod') {
+      text.textContent = "Couldn't play this video here.";
+      const link = document.createElement('a');
+      link.className = 'retry';
+      link.href = `https://kick.com/${encodeURIComponent(tile.src.id.split('/')[0])}/videos`;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = 'Open on Kick';
+      msg.appendChild(link);
+    }
     tile.body.replaceChildren(msg);
     return;
   }

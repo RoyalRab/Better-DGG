@@ -13,6 +13,7 @@ const DIGITS = /^\d{1,20}$/;
 export const PLATFORM_NAMES = {
   kick: 'Kick',
   'kick-vod': 'Kick VOD',
+  'kick-clip': 'Kick clip',
   twitch: 'Twitch',
   'twitch-vod': 'Twitch VOD',
   'twitch-clip': 'Twitch clip',
@@ -25,7 +26,7 @@ export const PLATFORM_NAMES = {
 };
 
 // Platforms this app can't play itself; picking one opens destiny.gg's bigscreen.
-export const OPEN_ON_DGG = new Set(['kick-vod', 'facebook']);
+export const OPEN_ON_DGG = new Set(['facebook']);
 
 export const key = (src) => `${src.type}/${src.id}`;
 
@@ -62,7 +63,9 @@ export function parseSource(raw) {
   const t = Number(String(url.searchParams.get('t') || '').replace(/s$/, '')) || null;
 
   if (host === 'kick.com' || host === 'player.kick.com') {
-    if (parts[1] === 'videos' && parts[2]) return validate({ type: 'kick-vod', id: `${parts[0]}/videos/${parts[2]}` });
+    if (parts[1] === 'videos' && parts[2]) return validate({ type: 'kick-vod', id: `${parts[0]}/${parts[2]}` });
+    if (parts[1] === 'clips' && parts[2]) return validate({ type: 'kick-clip', id: parts[2] });
+    if (url.searchParams.get('clip')) return validate({ type: 'kick-clip', id: url.searchParams.get('clip') });
     return parts[0] ? validate({ type: 'kick', id: parts[0] }) : null;
   }
   if (host === 'clips.twitch.tv') {
@@ -118,8 +121,16 @@ export function validate(src) {
     case 'twitch-vod':
     case 'vimeo':
       return DIGITS.test(src.id) ? out : null;
-    case 'kick-vod':
-      return /^[\w-]{1,64}\/(videos\/)?[\w-]{1,64}$/.test(src.id) ? out : null;
+    case 'kick-vod': {
+      // <channel>/<uuid>, as in destiny.gg's #kick-vod/ links (an older
+      // <channel>/videos/<uuid> form is accepted and normalised).
+      const m = /^([\w-]{1,64})\/(?:videos\/)?([\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12})$/i.exec(src.id);
+      if (!m) return null;
+      out.id = `${m[1]}/${m[2].toLowerCase()}`;
+      return out;
+    }
+    case 'kick-clip':
+      return /^clip_[A-Z0-9]{10,40}$/.test(src.id) ? out : null;
     default:
       return NAME.test(src.id) ? out : null;
   }
@@ -159,7 +170,7 @@ export function liveItems(data) {
   for (const e of (data && data.embeds) || []) {
     const src = parseSource(`${e.platform}/${e.id}`);
     if (!src || items.some((i) => key(i.src) === key(src))) continue;
-    items.push({ src, name: e.name || src.id, title: e.title });
+    items.push({ src, name: e.name || src.id, title: e.title, preview: e.preview || null });
   }
   return items;
 }

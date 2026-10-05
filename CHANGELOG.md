@@ -2,6 +2,13 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.5.0 (2026-10-05)
+
+- Stream previews: rest the mouse on a tab, or hold a tab on a phone, to see a picture of the stream first.
+- Latest from Destiny: while nothing of his is live, settings list his newest YouTube videos and Kick VODs, playable in the app.
+- Kick VODs and clips play in the app's own player, from a shared link or a destiny.gg link.
+- Settings show the installed app's window size and button-bar inset (a "Display" line), to help pin down the padding problem on Android.
+
 ## 1.4.0 (2026-10-05)
 
 - Landscape fullscreen for phones (settings): sideways, the stream fills the screen, chat sits see-through on the right with a button to hide it, and a tap on the stream or on the handle at the bottom brings the tabs up.

@@ -191,6 +191,11 @@
         <h2 id="sheet-title">Settings</h2>
         <p class="hint tagline">Improved mobile experience.</p>
         <div id="sheet-actions" class="links" aria-label="Actions (also under ⋮)"></div>
+        <section id="latest" hidden>
+          <h3 class="sheet-subhead">Latest from Destiny</h3>
+          <p class="hint">Nothing of his is live right now. His newest videos and Kick VODs:</p>
+          <div id="latest-list"></div>
+        </section>
         <label class="toggle"><input type="checkbox" id="opt-awake" /> Keep the screen on while the app is open</label>
         <label class="toggle"><input type="checkbox" id="opt-chat" /> Show chat</label>
         <label class="toggle"
@@ -311,6 +316,7 @@
           <a id="repo-link" href="https://github.com/RoyalRab/Better-DGG" target="_blank" rel="noopener">GitHub</a>.
         </p>
         <p class="hint" id="version"></p>
+        <p class="hint" id="display-info"></p>
         <section id="changelog" aria-labelledby="changelog-title" hidden></section>
         <div class="row end"><button type="button" id="sheet-close">Close</button></div>
       </form>

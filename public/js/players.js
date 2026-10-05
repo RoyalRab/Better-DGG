@@ -287,7 +287,9 @@ const HLS_CONFIG = {
   abrEwmaDefaultEstimate: 1_500_000,
   backBufferLength: 30,
 };
-export const OWN_PLAYER_TYPES = new Set(['kick']);
+// Kick VODs and clips play here too (there's no embeddable player for them).
+export const OWN_PLAYER_TYPES = new Set(['kick', 'kick-vod', 'kick-clip']);
+export const isLiveType = (type) => type === 'kick';
 // Mobile data, as far as the browser says (Chrome on Android does; others don't).
 export const onMobileData = () => {
   const c = navigator.connection;
@@ -357,6 +359,7 @@ export async function mountOwn(tile, muted) {
   // behind a card with the stream's name. It keeps playing when the phone
   // locks without any switching.
   const audioOnly = !!settings.audioOnly;
+  const isLive = isLiveType(tile.src.type);
   const v = document.createElement(audioOnly ? 'audio' : 'video');
   v.className = 'own-player';
   v.controls = true;
@@ -484,6 +487,7 @@ export async function mountOwn(tile, muted) {
   }
   // Shown only when the stream has fallen behind; nothing covers it while live.
   function renderLiveChip() {
+    if (!isLive) return;
     const edge = liveEdge();
     const behind = edge == null || !started ? 0 : Math.round(edge - v.currentTime);
     liveChip.hidden = behind <= BEHIND_SECONDS;
@@ -558,6 +562,7 @@ export async function mountOwn(tile, muted) {
     });
     h2.loadSource(url);
     h2.attachMedia(audio);
+    if (!isLive) h2.once(window.Hls.Events.MANIFEST_PARSED, () => (audio.currentTime = v.currentTime));
     audio.play().catch(() => {});
     bg = { audio, hls: h2 };
   }
@@ -573,6 +578,7 @@ export async function mountOwn(tile, muted) {
     if (!bg) return;
     const { audio, hls: h2 } = bg;
     bg = null;
+    if (!isLive && audio.currentTime > 0) v.currentTime = audio.currentTime;
     h2.destroy();
     audio.pause();
     audio.removeAttribute('src');

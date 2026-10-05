@@ -63,6 +63,49 @@ export function renderFavButton() {
   $('#fav-btn').setAttribute('aria-pressed', String(!!c && isFavorite(c)));
 }
 
+// A preview picture of the stream (the feed's previewUrl) above the tab:
+// on hover with a mouse, and while a finger holds the tab (gone when the
+// hold adds the stream). One element for all tabs.
+const preview = document.createElement('div');
+preview.id = 'preview';
+preview.hidden = true;
+const previewImg = document.createElement('img');
+previewImg.alt = '';
+previewImg.decoding = 'async';
+preview.appendChild(previewImg);
+document.body.appendChild(preview);
+let previewTimer = 0;
+let hoverPoll = 0;
+let previewMax = 0;
+function showPreview(b, hovering) {
+  const url = b.dataset.preview;
+  if (!url) return;
+  previewImg.src = url;
+  const r = b.getBoundingClientRect();
+  preview.style.left = Math.max(8, Math.min(window.innerWidth - 8 - 192, r.left + r.width / 2 - 96)) + 'px';
+  preview.style.top = r.top + 'px';
+  preview.hidden = false;
+  // The mouse sliding down onto a stream's iframe can leave this document
+  // without a leave event, so while shown, keep checking that the tab is
+  // still hovered, and never keep it up for more than a few seconds.
+  clearInterval(hoverPoll);
+  clearTimeout(previewMax);
+  previewMax = setTimeout(hidePreview, 4000);
+  if (hovering) {
+    hoverPoll = setInterval(() => {
+      if (!b.matches(':hover') || !b.isConnected) hidePreview();
+    }, 250);
+  }
+}
+export function hidePreview() {
+  clearTimeout(previewTimer);
+  clearTimeout(previewMax);
+  clearInterval(hoverPoll);
+  preview.hidden = true;
+}
+window.addEventListener('blur', hidePreview);
+document.addEventListener('visibilitychange', hidePreview);
+
 function makeTabButton(src) {
   const b = document.createElement('button');
   b.type = 'button';
@@ -78,26 +121,39 @@ function makeTabButton(src) {
     pressed = true;
     // Start loading right away; the click (or a long-press) decides what happens to it.
     if (e.button === 0) prepare(src);
+    if (e.pointerType === 'touch') {
+      clearTimeout(previewTimer);
+      previewTimer = setTimeout(() => showPreview(b), 250);
+    }
     holdTimer = setTimeout(() => {
       if (held) return; // contextmenu got there first
       held = true;
+      hidePreview();
       cancelPrepare();
       buzz();
       watch(src, { add: true });
     }, 550);
   });
+  b.addEventListener('pointerenter', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(() => showPreview(b, true), 350);
+  });
   b.addEventListener('pointerup', () => {
     pressed = false;
     clearTimeout(holdTimer);
+    hidePreview();
   });
   // Scrolling the row, or sliding off the tab while pressing, isn't a tap.
   // (Touch also "leaves" right after lifting the finger, before the click.)
   b.addEventListener('pointercancel', () => {
     pressed = false;
     clearTimeout(holdTimer);
+    hidePreview();
     cancelPrepare();
   });
   b.addEventListener('pointerleave', () => {
+    hidePreview();
     if (!pressed) return;
     pressed = false;
     clearTimeout(holdTimer);
@@ -107,6 +163,7 @@ function makeTabButton(src) {
   b.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     clearTimeout(holdTimer);
+    hidePreview();
     cancelPrepare();
     if (!held) {
       buzz();
@@ -146,6 +203,7 @@ export function renderTabs() {
     const b = tabButtons.get(k) || makeTabButton(item.src);
     b.querySelector('.name').textContent = item.name;
     b.title = [item.name, item.title].filter(Boolean).join(' · ');
+    b.dataset.preview = item.preview || '';
     b.classList.toggle('offline', !!item.offline);
     b.classList.toggle('fav', favs.includes(k));
     if (state.tiles.some((t) => key(t.src) === k)) b.setAttribute('aria-current', 'true');
@@ -189,6 +247,7 @@ function maybeShowHint() {
 }
 
 export function applyLive(data) {
+  state.live = data;
   const items = liveItems(data);
   for (const i of items) knownNames.set(key(i.src), i.name);
   state.tabItems = items;
