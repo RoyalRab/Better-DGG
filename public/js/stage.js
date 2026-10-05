@@ -12,6 +12,7 @@ import {
   mountOwn,
   mountTwitch,
   mountYouTube,
+  ownStreamUrl,
 } from './players.js';
 import { renderTabs } from './tabs.js';
 import { renderPip, closeDocPipFor, inDocPip } from './pip.js';
@@ -67,6 +68,7 @@ export async function mountTile(tile) {
   if (tile.player) tile.player.destroy();
   tile.player = null;
   tile.wantPlaying = false;
+  clearTimeout(tile.ownTimer);
   tile.body.replaceChildren();
   setLoading(tile, true);
   // A tile loading ahead of a tap (see prepare) is about to have the sound.
@@ -77,8 +79,9 @@ export async function mountTile(tile) {
   const muted = !wantSound || !(hasTapped() || soundAllowed);
   tile.soundBlocked = false;
   let mounted;
+  const ownWanted = settings.ownPlayer && OWN_PLAYER_TYPES.has(tile.src.type) && !tile.ownFailed;
   try {
-    if (settings.ownPlayer && OWN_PLAYER_TYPES.has(tile.src.type) && !tile.ownFailed) {
+    if (ownWanted) {
       try {
         mounted = await mountOwn(tile, !wantSound);
       } catch {
@@ -88,6 +91,7 @@ export async function mountTile(tile) {
         mounted?.destroy();
         return;
       }
+      if (!mounted) watchForOwn(tile, token);
     }
     if (!mounted) tile.soundBlocked = wantSound && muted && canControlSound(tile.src);
     if (mounted) {
@@ -121,6 +125,26 @@ export async function mountTile(tile) {
   tile.player = mounted;
   renderSoundChip(tile);
   renderPip();
+}
+
+// When the app's own player couldn't get the stream (a restart on Kick's
+// side, mostly), the site's player stands in. Keep asking for a while and
+// go back to the app's player once the stream is there again.
+function watchForOwn(tile, token) {
+  let tries = 0;
+  const probe = async () => {
+    if (token !== tile.token || !state.tiles.includes(tile) || tries++ >= 10) return;
+    try {
+      const r = await fetch(ownStreamUrl(tile.src), { cache: 'no-store' });
+      if (token !== tile.token) return;
+      if (r.ok) {
+        mountTile(tile);
+        return;
+      }
+    } catch {}
+    tile.ownTimer = setTimeout(probe, 30000);
+  };
+  tile.ownTimer = setTimeout(probe, 30000);
 }
 
 function makeTile(src) {
@@ -160,6 +184,7 @@ function makeTile(src) {
     renderSoundChip(tile);
   };
   tile.remount = () => mountTile(tile);
+  tile.onWaiting = () => setLoading(tile, true);
   chip.addEventListener('click', () => {
     tile.soundBlocked = false;
     renderSoundChip(tile);

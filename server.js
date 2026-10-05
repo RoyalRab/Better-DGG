@@ -605,7 +605,16 @@ async function serveKickPlaylist(req, res, slug) {
     if (!url) return send(res, 404, 'text/plain; charset=utf-8', 'Not live');
     const out = await kickMaster(key, url);
     send(res, 200, 'application/vnd.apple.mpegurl', out);
-  } catch {
+  } catch (e) {
+    const msg = e && e.message ? e.message : String(e);
+    console.log(`kick: ${slug} ${msg}`);
+    // Kick lists the stream live but its video is gone for the moment (a
+    // restart, seen when several streams dropped at once): worth asking
+    // again shortly, which the app does.
+    if (msg === 'upstream 404') {
+      res.setHeader('Retry-After', '6');
+      return send(res, 503, 'text/plain; charset=utf-8', 'Stream restarting');
+    }
     send(res, 502, 'text/plain; charset=utf-8', 'Kick unavailable');
   }
 }

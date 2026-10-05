@@ -329,12 +329,26 @@ export function makeAudioOnlyHls(config) {
   return h;
 }
 
+export const ownStreamUrl = (src) =>
+  new URL(`api/stream/${src.type}/${encodeURIComponent(src.id)}.m3u8`, location.href).toString();
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 export async function mountOwn(tile, muted) {
-  const url = new URL(`api/stream/${tile.src.type}/${encodeURIComponent(tile.src.id)}.m3u8`, location.href).toString();
+  const url = ownStreamUrl(tile.src);
   // A press that turns into a scroll drops the tile while this is in flight.
   const token = tile.token;
   const cancelled = () => token !== tile.token;
-  const check = await fetch(url, { cache: 'no-store' });
+  let check = await fetch(url, { cache: 'no-store' });
+  // The relay answers 503 when Kick still lists the stream live but its
+  // video is gone for the moment (a restart). That tends to pass within a
+  // minute, and the site's own player couldn't play either, so wait a
+  // little before falling back.
+  for (let tries = 0; check.status === 503 && tries < 5; tries++) {
+    tile.onWaiting?.();
+    await sleep(6000);
+    if (cancelled()) throw new Error('cancelled');
+    check = await fetch(url, { cache: 'no-store' });
+  }
   if (!check.ok) throw new Error('not playable: ' + check.status);
   if (cancelled()) throw new Error('cancelled');
 

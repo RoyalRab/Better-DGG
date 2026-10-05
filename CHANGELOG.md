@@ -2,6 +2,11 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.3.1 (2026-10-05)
+
+- The chat box no longer ends up under the Android buttons after an update, and there's no empty band above them either: the app now checks where the window ends instead of guessing.
+- When a Kick stream drops for a moment (a restart on Kick's side), the app's own player waits up to half a minute for it instead of switching to Kick's player at once, and if it did switch, it comes back to the app's player on its own once the stream is there again.
+
 ## 1.3.0 (2026-10-05)
 
 - Audio only: a setting plays Kick streams as sound only in the app's own player, for less data and battery.

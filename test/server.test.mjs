@@ -28,6 +28,7 @@ before(async () => {
     }
     if (u.startsWith('https://ivs.example/')) {
       kickCalls.push(u);
+      if (u.includes('/restarting/')) return new Response('[{"error":"Can not find channel"}]', { status: 404 });
       return new Response(
         '#EXTM3U\n#EXT-X-MEDIA:TYPE=AUDIO,URI="audio.m3u8"\n#EXT-X-STREAM-INF:BANDWIDTH=1\n720p.m3u8\n',
       );
@@ -90,6 +91,9 @@ test('Kick relay shares one lookup between viewers asking at once', async () => 
   assert.equal(kickCalls.filter((u) => u.includes('kick.com')).length, 1);
   assert.equal(kickCalls.filter((u) => u.includes('ivs.example')).length, 1);
   assert.equal((await get('/api/stream/kick/offline.m3u8', '10.1.1.1')).status, 404);
+  const restarting = await get('/api/stream/kick/restarting.m3u8', '10.1.1.1');
+  assert.equal(restarting.status, 503, 'listed live on Kick but no video yet: try again soon');
+  assert.equal(restarting.headers.get('retry-after'), '6');
   assert.equal((await get('/api/stream/kick/bad%20name.m3u8', '10.1.1.1')).status, 400);
 });
 

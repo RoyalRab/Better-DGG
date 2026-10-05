@@ -59,7 +59,7 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 | Resizable chat | In landscape and on desktop, drag the line between the stream and chat (or use the arrow keys on it) to change chat's width; the tab row above chat follows. Double-click resets it. |
 | What's new | Settings list what changed in each version, and a bar mentions it once after an update. |
 | Accessible | Visible keyboard focus, a label on every button, stream changes announced to screen readers, and less motion when the system asks for it. |
-| Recovers from errors | A **Try again** button when a player fails to load. A frozen Kick stream reloads itself, and a **Jump to live** button appears when it falls behind. |
+| Recovers from errors | A **Try again** button when a player fails to load. A frozen Kick stream reloads itself, a **Jump to live** button appears when it falls behind, and a Kick stream that drops for a moment is waited for rather than handed to Kick's player. |
 | Remembers multi-view | Offers to restore your last multi-view set when you open the app. |
 | Smooth deploys | New versions only take over once they're running, and open apps reconnect to the live tabs within a second. |
 

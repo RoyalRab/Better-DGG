@@ -12,7 +12,7 @@
 
 import { DEFAULT_SOURCE, key, parseHashList, parseSource, validate } from './sources.js';
 import { state } from './state.js';
-import { settings, store, standalone, isTouch, wasReloaded, saveSetting } from './util.js';
+import { settings, store, standalone, isTouch, isIOS, saveSetting } from './util.js';
 import { setTiles, layoutTiles, watch, stepStream, setAddMode, soundTile } from './stage.js';
 import { HLS_JS, hasMse, loadScript } from './players.js';
 import { startTabs } from './tabs.js';
@@ -80,82 +80,51 @@ setTimeout(maybeShowMenuTip, 3000);
 loadChangelog();
 
 // ---------- Android's navigation buttons ----------
-// The installed app on Android 15+ draws under the navigation buttons after
-// an in-app reload (Refresh, or an update), and Chrome then reports their
-// height as 0 through env(safe-area-inset-bottom), so the chat box ended up
-// under the buttons. Two ways to know their height without trusting that:
-//   1. whenever Chrome does report a height, remember it (per orientation);
-//   2. remember how tall the window is on a normal launch from the icon. After
-//      a reload, a window that is suddenly taller by a button-bar's worth is
-//      drawing under the buttons, and the difference is their height.
-// Whenever Chrome reports 0, pad with whichever of those we have, or with
-// Android's standard 48 px after a reload when neither exists yet. A window
-// that is no taller than at launch gets what Chrome reported then (nothing,
-// as a rule): padding it anyway left an empty band above the buttons.
+// The installed app on Android 15+ sometimes draws under the navigation
+// buttons (after an in-app reload such as an update, and on some phones
+// from the icon too) while Chrome reports their height as 0 through
+// env(safe-area-inset-bottom), so the chat box ended up under the buttons.
+// Whether it is under them shows in the geometry: a window that reaches
+// within a status bar's worth of the bottom of the screen is covering the
+// button bar; one that stops 48 px or more short of it isn't. Comparing
+// against the last launch's height (the previous attempt) got both cases
+// wrong, since the window is the same height either way on some phones.
+// Whenever Chrome reports 0 and the window reaches the buttons, pad with
+// the height Chrome last reported (per orientation), or Android's standard
+// 48 px (64 px for a tablet's taskbar) when it never has.
 if (standalone) {
   const probe = document.createElement('div');
   probe.style.cssText = 'position:fixed;top:-9999px;height:0;padding-bottom:env(safe-area-inset-bottom)';
   document.body.appendChild(probe);
   const MONTH = 30 * 24 * 60 * 60 * 1000;
-  const orientation = () => (matchMedia('(orientation: landscape)').matches ? 'landscape' : 'portrait');
-  const insetKey = () => `navInset:${orientation()}`;
-  const launchKey = () => `launchHeight:${orientation()}`;
-  const nav = performance.getEntriesByType('navigation')[0];
-  const freshLaunch = (!nav || nav.type === 'navigate') && !wasReloaded;
+  const landscape = () => matchMedia('(orientation: landscape)').matches;
+  const insetKey = () => `navInset:${landscape() ? 'landscape' : 'portrait'}`;
   const fresh = (v) => v && Date.now() - v.at < MONTH;
-
-  const reportedInset = () => parseFloat(getComputedStyle(probe).paddingBottom) || 0;
-  // A normal launch: note the window height and what Chrome reported, so a
-  // reload can be compared to it.
-  function recordLaunchHeight() {
-    if (!freshLaunch || document.hidden) return;
-    store.set(launchKey(), { h: window.innerHeight, screen: screen.height, inset: reportedInset(), at: Date.now() });
-  }
-
-  // What the buttons are worth after a reload, judged from the window
-  // height: the extra height over a normal launch, or, when the window is no
-  // taller, whatever Chrome reported at that launch (usually 0: the window
-  // ends above the buttons, as it did then). Null when no launch is known.
-  function heightFromLaunch() {
-    const saved = store.get(launchKey(), null);
-    if (!fresh(saved) || saved.screen !== screen.height) return null;
-    const extra = window.innerHeight - saved.h;
-    if (extra >= 8 && extra <= 160) return extra;
-    return Math.abs(extra) < 8 ? saved.inset || 0 : null;
-  }
-  // Without a launch to compare to: a window that stops short of the screen
-  // by more than a status bar's worth has the buttons outside it.
-  const buttonsOutside = () => screen.height - window.innerHeight >= 56;
+  // A phone's button bar moves to the side in landscape; a tablet's taskbar
+  // stays at the bottom. (Chrome on Android tablets calls itself a desktop
+  // browser, so this goes by touch and size, not by the Android name; iOS
+  // reports its insets properly, so it's left out.)
+  const tablet = Math.min(screen.width, screen.height) >= 600;
+  const mayBeUnderButtons = () =>
+    isTouch && !isIOS && (tablet || !landscape()) && screen.height - window.innerHeight < 56;
 
   const checkInsets = () => {
-    const reported = reportedInset();
+    const reported = parseFloat(getComputedStyle(probe).paddingBottom) || 0;
     const root = document.documentElement.style;
     if (reported > 0) {
       store.set(insetKey(), { px: reported, at: Date.now() });
       root.removeProperty('--nav-fallback');
-    } else {
-      const fromLaunch = heightFromLaunch();
+    } else if (mayBeUnderButtons()) {
       const saved = store.get(insetKey(), null);
-      // Nothing measured yet (the first reload after installing): pad the
-      // usual height rather than nothing, unless the window plainly ends
-      // above the buttons. Android's button bar is 48 px; a tablet's taskbar
-      // is taller. (Chrome on Android tablets calls itself a desktop browser,
-      // so this goes by touch, not by the Android name.)
-      const tablet = Math.min(screen.width, screen.height) >= 600;
-      const floor = isTouch && !freshLaunch && !buttonsOutside() ? (tablet ? 64 : 48) : 0;
-      const px = fromLaunch ?? (fresh(saved) && saved.px > 0 && !buttonsOutside() ? saved.px : floor);
-      if (px > 0) root.setProperty('--nav-fallback', px + 'px');
-      else root.removeProperty('--nav-fallback');
+      const px = fresh(saved) && saved.px > 0 ? saved.px : tablet ? 64 : 48;
+      root.setProperty('--nav-fallback', px + 'px');
+    } else {
+      root.removeProperty('--nav-fallback');
     }
     layoutTiles();
   };
   checkInsets();
-  for (const ms of [300, 1000, 3000]) {
-    setTimeout(() => {
-      recordLaunchHeight();
-      checkInsets();
-    }, ms);
-  }
+  for (const ms of [300, 1000, 3000]) setTimeout(checkInsets, ms);
   window.addEventListener('resize', checkInsets);
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) checkInsets();

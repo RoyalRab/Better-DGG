@@ -67,21 +67,10 @@ export const rowLayoutQuery = window.matchMedia(
 );
 export const isRowLayout = () => rowLayoutQuery.matches;
 
-// Reloads started by the app (Refresh, an update). The flag tells the next
-// page load it isn't a fresh launch from the icon, whatever the browser says.
+// Reloads started by the app (Refresh, an update).
 export function reloadApp() {
-  try {
-    sessionStorage.setItem('bdgg:reloaded', '1');
-  } catch {}
   location.reload();
 }
-export const wasReloaded = (() => {
-  try {
-    return sessionStorage.getItem('bdgg:reloaded') === '1';
-  } catch {
-    return false;
-  }
-})();
 
 // Opt-in error reports: what failed, the app version and the kind of browser
 // (the server works that out from the request), nothing about the person.
