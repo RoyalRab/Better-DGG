@@ -63,3 +63,19 @@ test('live list: Destiny first, no duplicates, names fall back to ids', () => {
   );
   assert.deepEqual(liveItems(null), []);
 });
+
+test('a hosted stream becomes a tab after Destiny', () => {
+  const items = liveItems({
+    destiny: [{ platform: 'kick', id: 'destiny', title: 'x' }],
+    hosting: { platform: 'twitch', id: 'friend', name: 'Friend' },
+    embeds: [
+      { platform: 'twitch', id: 'friend', name: 'Friend' },
+      { platform: 'kick', id: 'other', name: 'Other' },
+    ],
+  });
+  assert.deepEqual(
+    items.map((i) => `${key(i.src)}:${i.name}`),
+    ['kick/destiny:Destiny (Kick)', 'twitch/friend:Host: Friend', 'kick/other:Other'],
+  );
+  assert.equal(items[1].hosting, true);
+});

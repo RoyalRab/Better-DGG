@@ -106,12 +106,18 @@ renderOnline();
 // ---------- Restore multi-view ----------
 // If the last session ended in multi-view, offer to bring it back.
 
-export function offerRestore() {
+export function offerRestore(now = false) {
   const saved = (store.get('lastMulti', []) || [])
     .map((k) => parseSource(k))
     .filter(Boolean)
     .slice(0, MAX_TILES);
   if (saved.length < 2) return;
+  // The home-screen shortcut: straight back into the last multi-view.
+  if (now) {
+    state.current = saved[0];
+    setTiles(saved);
+    return;
+  }
   $('#restore-text').textContent = `Restore your multi-view (${saved.length} streams)?`;
   showBar('#restore-bar', true);
   const hide = () => showBar('#restore-bar', false);

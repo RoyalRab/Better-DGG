@@ -33,6 +33,7 @@
     <link rel="icon" href="icons/favicon-64.png?v=5" type="image/png" />
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=5" />
     <meta name="hls-js" content="vendor/hls.min.js" />
+    <meta name="app-version" content="dev" />
     <link rel="stylesheet" href="app.css" />
   </head>
   <body>
@@ -90,6 +91,17 @@
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm13 0h2v3h3v2h-3v3h-2v-3h-3v-2h3v-3z" />
+              </svg>
+            </button>
+            <button
+              aria-label="Favorite this stream"
+              title="Favorite this stream"
+              type="button"
+              id="fav-btn"
+              aria-pressed="false"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
               </svg>
             </button>
             <button aria-label="Cast to TV" title="Cast to TV" type="button" id="cast-btn">
@@ -167,6 +179,19 @@
           ><input type="checkbox" id="opt-own" /> Play Kick streams in the app's own player, so they keep playing when
           the screen locks and can pop out or be cast</label
         >
+        <label class="toggle"
+          ><input type="checkbox" id="opt-chat-left" /> Chat on the left (landscape and desktop)</label
+        >
+        <h3 class="sheet-subhead">Sleep timer</h3>
+        <p class="hint">
+          Pauses the stream after a while, for falling asleep listening. <span id="sleep-status"></span>
+        </p>
+        <div class="links" id="sleep-buttons">
+          <button type="button" data-sleep="15">15 min</button>
+          <button type="button" data-sleep="30">30 min</button>
+          <button type="button" data-sleep="60">60 min</button>
+          <button type="button" data-sleep="0">Off</button>
+        </div>
         <h3 class="sheet-subhead">Chat account</h3>
         <p class="hint">
           Chat uses your destiny.gg account. Both open destiny.gg (to sign out, use the account menu there), and chat
@@ -217,6 +242,10 @@
           To install on iPhone or iPad: tap Share, then <b>Add to Home Screen</b>.
         </p>
         <h3 class="sheet-subhead">Ideas and problems</h3>
+        <label class="toggle"
+          ><input type="checkbox" id="opt-reports" /> Send error reports (what failed, the app version and the kind of
+          browser; nothing about you)</label
+        >
         <p class="hint">
           Have an idea, or did something break? Both go to the project's page on GitHub (you need a GitHub account to
           post).

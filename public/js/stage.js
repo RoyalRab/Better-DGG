@@ -3,7 +3,7 @@
 
 import { MAX_TILES, OPEN_ON_DGG, PLATFORM_NAMES, key } from './sources.js';
 import { state, isCurrent, streamName } from './state.js';
-import { $, settings, store, toast, announce, isRowLayout, isTouch } from './util.js';
+import { $, settings, store, toast, announce, isRowLayout, isTouch, report } from './util.js';
 import {
   OWN_PLAYER_TYPES,
   canControlSound,
@@ -101,6 +101,7 @@ export async function mountTile(tile) {
     setLoading(tile, false);
     const msg = document.createElement('div');
     msg.className = 'empty';
+    report('player-load-failed', `${tile.src.type}/${tile.src.id}`);
     const text = document.createElement('p');
     text.textContent = "Couldn't load the player. Check your connection.";
     const retry = document.createElement('button');
@@ -516,6 +517,50 @@ export function setAddMode(on) {
 
 export const soundTile = () => state.tiles.find((t) => isCurrent(t.src)) || null;
 
+// Pause the stream with the sound (lock screen, sleep timer).
+export function pauseSound() {
+  const p = soundTile()?.player;
+  if (p?.pause) p.pause();
+  else p?.video?.pause();
+}
+
+// A stream on screen that left the live list gets a notice over it, with
+// the most-embedded live stream as the way out. Called after each live list.
+export function renderEnded() {
+  const live = state.tabItems;
+  for (const t of state.tiles) {
+    const existing = t.body.querySelector('.ended');
+    const gone = live.length > 0 && !live.some((i) => key(i.src) === key(t.src));
+    if (!gone) {
+      existing?.remove();
+      continue;
+    }
+    if (existing) continue;
+    const box = document.createElement('div');
+    box.className = 'ended';
+    const text = document.createElement('p');
+    text.textContent = `${streamName(t.src)} isn't in the live list any more.`;
+    box.appendChild(text);
+    const top = live.find((i) => !state.tiles.some((x) => key(x.src) === key(i.src)));
+    if (top) {
+      const go = document.createElement('button');
+      go.type = 'button';
+      go.textContent = `Watch ${top.name}`;
+      go.addEventListener('click', () => {
+        if (!isCurrent(t.src)) setAudio(t.src);
+        watch(top.src);
+      });
+      box.appendChild(go);
+    }
+    const stay = document.createElement('button');
+    stay.type = 'button';
+    stay.textContent = 'Keep watching';
+    stay.addEventListener('click', () => box.remove());
+    box.appendChild(stay);
+    t.body.appendChild(box);
+  }
+}
+
 // ---------- Lock screen controls ----------
 
 export function updateMediaSession() {
@@ -529,11 +574,7 @@ export function updateMediaSession() {
   });
   try {
     navigator.mediaSession.setActionHandler('play', () => soundTile()?.player?.play());
-    navigator.mediaSession.setActionHandler('pause', () => {
-      const p = soundTile()?.player;
-      if (p?.pause) p.pause();
-      else p?.video?.pause();
-    });
+    navigator.mediaSession.setActionHandler('pause', pauseSound);
   } catch {}
   // Next and previous (lock screen, notification, earbud buttons) step
   // through the live embeds.

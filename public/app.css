@@ -577,6 +577,39 @@ body.no-chat #player[data-count='2'] {
   opacity: 0.55;
   font-style: italic;
 }
+/* Favorites are pinned to the front with a small star. */
+#tabs .tab.fav .name::before {
+  content: '★ ';
+  color: var(--remix);
+  font-size: 0.85em;
+}
+#fav-btn[aria-pressed='true'] svg {
+  fill: var(--remix);
+}
+/* The stream with the sound left the live list: say so, and offer the most-embedded one. */
+.tile-body > .ended {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-content: center;
+  gap: 10px;
+  padding: 16px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.72);
+  color: var(--text);
+}
+.tile-body > .ended p {
+  margin: 0;
+}
+.tile-body > .ended button {
+  height: 36px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+}
 #tabs .name {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -620,6 +653,16 @@ body.no-chat #player[data-count='2'] {
     margin: 0 -5px;
     cursor: col-resize;
     touch-action: none;
+  }
+  body.chat-left #stage {
+    grid-template-columns: min(var(--chat-w, clamp(300px, 26vw, 440px)), calc(100% - 320px)) auto minmax(0, 1fr);
+  }
+  body.chat-left #player {
+    grid-column: 3;
+  }
+  body.chat-left #tabbar,
+  body.chat-left #chat {
+    grid-column: 1;
   }
   #chat-resizer::after {
     content: '';

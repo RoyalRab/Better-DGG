@@ -148,6 +148,14 @@ export function liveItems(data) {
       items.push({ src, destiny: true, name: `Destiny (${PLATFORM_NAMES[d.platform] || d.platform})`, title: d.title });
     }
   }
+  // The stream destiny.gg is hosting, right after Destiny's own.
+  const h = data && data.hosting;
+  if (h && h.platform && h.id) {
+    const src = parseSource(`${h.platform}/${h.id}`);
+    if (src && !items.some((i) => key(i.src) === key(src))) {
+      items.push({ src, hosting: true, name: `Host: ${h.name || src.id}`, title: 'Hosted on destiny.gg' });
+    }
+  }
   for (const e of (data && data.embeds) || []) {
     const src = parseSource(`${e.platform}/${e.id}`);
     if (!src || items.some((i) => key(i.src) === key(src))) continue;

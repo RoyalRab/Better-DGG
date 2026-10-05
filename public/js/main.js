@@ -10,10 +10,10 @@
 //   menu.js     the ⋮ action row, settings sheet, change log, cast and install
 //   bars.js     update, what's new, offline and restore bars
 
-import { DEFAULT_SOURCE, key, parseHashList, validate } from './sources.js';
+import { DEFAULT_SOURCE, key, parseHashList, parseSource, validate } from './sources.js';
 import { state } from './state.js';
-import { settings, store, standalone, isTouch, wasReloaded } from './util.js';
-import { setTiles, layoutTiles } from './stage.js';
+import { settings, store, standalone, isTouch, wasReloaded, saveSetting } from './util.js';
+import { setTiles, layoutTiles, watch, stepStream, setAddMode, soundTile } from './stage.js';
 import { HLS_JS, hasMse, loadScript } from './players.js';
 import { startTabs } from './tabs.js';
 import { renderChat, loadChat } from './chat.js';
@@ -37,7 +37,7 @@ function start() {
     DEFAULT_SOURCE;
   state.current = pick;
   setTiles([pick]);
-  offerRestore();
+  offerRestore(restoreNow);
 }
 document.addEventListener('livelist', start);
 
@@ -52,6 +52,19 @@ renderChat();
 // Fetch the player library while the app works out what to play.
 if (settings.ownPlayer && hasMse()) loadScript(HLS_JS).catch(() => {});
 setTimeout(loadChat, 4000);
+// The home-screen "Multi-view" shortcut (?restore=1) brings the last
+// multi-view straight back; a shared link (?url= or ?text=, the manifest's
+// share target) opens the stream it points at. Either way the address is
+// cleaned up so a reload doesn't repeat it.
+const params = new URLSearchParams(location.search);
+const restoreNow = params.get('restore') === '1';
+if (params.has('url') || params.has('text')) {
+  const shared = [params.get('url'), params.get('text'), params.get('title')].filter(Boolean).join(' ');
+  const found = shared.match(/https?:\/\/\S+/g) || [];
+  const src = [...found, shared.trim()].map((x) => parseSource(x)).find(Boolean);
+  if (src) location.hash = key(src);
+}
+if (location.search) history.replaceState(null, '', location.pathname + location.hash);
 const fromHash = parseHashList(location.hash);
 if (fromHash.length) {
   state.current = fromHash[0];
@@ -136,6 +149,37 @@ if (standalone) {
     if (!document.hidden) checkInsets();
   });
 }
+
+// ---------- Keyboard shortcuts (desktop) ----------
+// 1–9 switch to that tab, ← → previous/next, M add to multi-view, C chat,
+// F fullscreen on the stream with the sound, P picture-in-picture. Ignored
+// while typing (chat is its own frame and never sees these).
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  if (document.querySelector('dialog[open]')) return;
+  const k = e.key;
+  if (k >= '1' && k <= '9') {
+    const item = state.tabItems[Number(k) - 1];
+    if (item) watch(item.src);
+  } else if (k === 'ArrowRight') stepStream(1);
+  else if (k === 'ArrowLeft') stepStream(-1);
+  else if (k === 'm' || k === 'M') setAddMode(!state.addMode);
+  else if (k === 'c' || k === 'C') {
+    saveSetting('showChat', !settings.showChat);
+    renderChat();
+    loadChat();
+  } else if (k === 'f' || k === 'F') {
+    const el = soundTile()?.el;
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else el?.requestFullscreen?.();
+  } else if (k === 'p' || k === 'P') {
+    const b = document.getElementById('pip-btn');
+    if (b && !b.hidden) b.click();
+  } else return;
+  e.preventDefault();
+});
 
 // For tests and debugging in the browser console.
 window.dggRemix = { state, key };

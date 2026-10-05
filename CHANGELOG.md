@@ -2,6 +2,17 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.2.0 (2026-10-05)
+
+- Sleep timer in settings: pauses the stream after 15, 30 or 60 minutes.
+- Favorites: ★ in the ⋮ row pins the current stream to the front of the tab row.
+- Embeds banned by destiny.gg's mods stay off the list, and a stream destiny.gg hosts gets a tab after Destiny's.
+- When the stream you're watching leaves the live list, a notice offers the most-embedded live stream.
+- Long-press the app icon for Destiny's stream or your last multi-view; share a stream link from another app to open it here (Android).
+- Desktop keyboard shortcuts: 1–9, ← →, M, C, F, P. Chat can go on the left.
+- Kick streams in the app's own player remember their volume. Holding a tab buzzes once when it adds.
+- Optional error reports (off by default) send player failures to the server log, with nothing about you.
+
 ## 1.1.0 (2026-10-05)
 
 - Next and previous buttons on the lock screen, in the notification and on earbuds step through the live embeds.

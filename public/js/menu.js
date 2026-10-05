@@ -4,8 +4,9 @@
 import { state, isCurrent } from './state.js';
 import { $, settings, saveSetting, store, toast, isIOS, isAndroid, isTouch, standalone } from './util.js';
 import { OWN_PLAYER_TYPES } from './players.js';
-import { mountTile, setAddMode, updateWakeLock, layoutTiles, dropParked } from './stage.js';
+import { mountTile, setAddMode, updateWakeLock, layoutTiles, dropParked, pauseSound } from './stage.js';
 import { renderChat, loadChat, reloadChat, openDgg } from './chat.js';
+import { toggleFavorite } from './tabs.js';
 import { applyUpdateOrReload } from './bars.js';
 
 // ---------- Sheets ----------
@@ -91,6 +92,9 @@ export function openSheet(scrollTo) {
   $('#opt-awake').checked = settings.keepAwake;
   $('#opt-chat').checked = settings.showChat;
   $('#opt-own').checked = settings.ownPlayer;
+  $('#opt-chat-left').checked = settings.chatLeft;
+  $('#opt-reports').checked = settings.errorReports;
+  renderSleep();
   $('#sheet').showModal();
   // Scroll inside the sheet only (scrollIntoView could also move the page behind it).
   if (scrollTo) $('#sheet').scrollTop = $(scrollTo).offsetTop - 8;
@@ -180,6 +184,58 @@ $('#opt-chat').addEventListener('change', (e) => {
   renderChat();
   loadChat();
 });
+$('#opt-chat-left').addEventListener('change', (e) => {
+  saveSetting('chatLeft', e.target.checked);
+  renderChat();
+});
+$('#opt-reports').addEventListener('change', (e) => saveSetting('errorReports', e.target.checked));
+
+// ---------- Favorites ----------
+$('#fav-btn').addEventListener('click', () => {
+  if (state.current) toggleFavorite(state.current);
+});
+
+// ---------- Sleep timer ----------
+// Pauses the stream with the sound when the time is up. The end time is
+// kept, so a reload or an update doesn't lose it.
+let sleepTick = null;
+function renderSleep() {
+  const until = store.get('sleepUntil', 0);
+  const left = until - Date.now();
+  const status = $('#sleep-status');
+  if (left > 0) {
+    const m = Math.ceil(left / 60000);
+    status.textContent = `Pausing in ${m} min.`;
+  } else status.textContent = '';
+  for (const b of $('#sleep-buttons').querySelectorAll('button')) {
+    const v = Number(b.dataset.sleep);
+    b.setAttribute('aria-pressed', String(left > 0 ? false : v === 0));
+  }
+}
+function checkSleep() {
+  const until = store.get('sleepUntil', 0);
+  if (!until) return;
+  if (Date.now() >= until) {
+    store.set('sleepUntil', 0);
+    pauseSound();
+    toast('Sleep timer: paused', 5000);
+    renderSleep();
+  } else if ($('#sheet').open) renderSleep();
+}
+$('#sleep-buttons').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-sleep]');
+  if (!b) return;
+  const min = Number(b.dataset.sleep);
+  store.set('sleepUntil', min > 0 ? Date.now() + min * 60000 : 0);
+  toast(min > 0 ? `Sleep timer: pausing in ${min} min` : 'Sleep timer off');
+  renderSleep();
+});
+if (store.get('sleepUntil', 0) > Date.now()) sleepTick = setInterval(checkSleep, 15000);
+$('#sleep-buttons').addEventListener('click', () => {
+  clearInterval(sleepTick);
+  sleepTick = setInterval(checkSleep, 15000);
+});
+
 $('#opt-own').addEventListener('change', (e) => {
   saveSetting('ownPlayer', e.target.checked);
   dropParked();

@@ -14,6 +14,10 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 | --- | --- |
 | Keeps playing when the screen locks | Kick streams keep their sound when you lock the phone or switch apps. Chrome on Android pauses video in the background, so the app switches to an audio-only copy of the stream and back to the video when you return. |
 | Lock screen controls | Play, pause, next and previous from the lock screen and notification, with the stream's name. Next and previous step through the live embeds, and earbud buttons do the same. |
+| Sleep timer | Settings → Sleep timer pauses the stream after 15, 30 or 60 minutes, for falling asleep listening. |
+| Home screen shortcuts | Long-press the app icon for **Destiny's stream** or **Multi-view** (your last multi-view set). |
+| Share into the app | Share a Kick, Twitch, YouTube, AngelThump or Rumble link from another app to DGG Remix to open it (Android, installed app). |
+| Haptic tap | A short buzz confirms that holding a tab added it to multi-view. |
 | Swipe to switch | Swipe left or right across the player to go to the next or previous live embed (over Kick's player and while a stream loads; Twitch, YouTube and AngelThump take the touch themselves). |
 | Screen stays on | The phone doesn't dim or sleep while the app is open (can be turned off in settings). |
 | Installable app | Installs to the home screen with its own icon, opens full screen without the browser bar, and shows an install bar until it's installed or dismissed (a dismissed bar comes back after a week). |
@@ -34,6 +38,14 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 
 | Feature | What it does |
 | --- | --- |
+| Favorites | ★ in the ⋮ row pins the current stream to the front of the tab row (after Destiny), with a star on its tab. |
+| Hidden banned embeds | Embeds destiny.gg's mods have banned stay off the list, as on the bigscreen. |
+| Hosted stream | When destiny.gg hosts someone, the hosted stream is a tab right after Destiny's. |
+| Stream ended | When the stream you're watching leaves the live list, a notice offers the most-embedded live stream. |
+| Keyboard shortcuts | On desktop: 1–9 switch tabs, ← → previous and next, M add to multi-view, C chat, F fullscreen, P picture-in-picture. |
+| Chat on the left | Settings can put chat on the left in landscape and on desktop. |
+| Remembers volume | Kick streams in the app's own player keep their own volume. |
+| Error reports | Optional, off by default: when a player fails, the app sends what failed, its version and the kind of browser to the server log. Nothing about you. |
 | Real-time embed tabs | The tab row updates the moment someone embeds something, with live streams only (no VODs, clips or ordinary videos), each with its platform icon. The list recovers on its own after the phone changes networks. |
 | Opens on something live | Opens the last stream you watched if it's still live, then Destiny if he's live, then the first tab. A stream on screen that ends keeps a dimmed tab. |
 | Multi-view | Up to four streams at once, with a speaker button on each to move the sound and an ✕ to remove it. The grid is sized to give each stream the most room, including on ultrawides. The address bar link reopens the same set. |
@@ -52,7 +64,7 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 
 Tap a tab to watch it. To watch more than one stream, press and hold a tab, or choose **Add a stream to multi-view** in the ⋮ menu and then tap a tab. In multi-view, tapping a tab replaces the stream that has the sound.
 
-When an update is ready, a bar at the top offers to refresh into it. The ⋮ button at the end of the tab row slides out a row of icons: Refresh app, Picture-in-picture, Add a stream to multi-view, Cast to TV, Reload chat, Install (when available) and the gear for settings. ✕ puts them away; a one-time tip points it out, and settings list the same actions with their names. Settings has the toggles (keep the screen on, show chat, play Kick in the app's own player), a Chat account section (**Sign in** and **Sign out**, which open destiny.gg), a **Share link** button, **Suggest an idea** and **Report a problem** buttons, the app's version and what changed in it; older versions are folded under **Earlier versions**. The full history is in `CHANGELOG.md`.
+When an update is ready, a bar at the top offers to refresh into it. The ⋮ button at the end of the tab row slides out a row of icons: Refresh app, Picture-in-picture, Add a stream to multi-view, Cast to TV, Reload chat, Install (when available) and the gear for settings. ✕ puts them away; a one-time tip points it out, and settings list the same actions with their names. Settings has the toggles (keep the screen on, show chat, chat on the left, play Kick in the app's own player, error reports), the sleep timer, a Chat account section (**Sign in** and **Sign out**, which open destiny.gg), a **Share link** button, **Suggest an idea** and **Report a problem** buttons, the app's version and what changed in it; older versions are folded under **Earlier versions**. The full history is in `CHANGELOG.md`.
 
 ## Installing
 

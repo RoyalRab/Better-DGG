@@ -163,3 +163,53 @@ test('responses are compressed and carry security headers', async () => {
   assert.equal((await get('/api/embeds', '10.4.0.1', { method: 'POST' })).status, 405);
   assert.equal(await (await get('/healthz')).text(), 'ok');
 });
+
+test('banned embeds stay off the list, and a hosted stream is sent', () => {
+  const item = (platform, id) => ({
+    platform,
+    id,
+    mediaItem: { identifier: { platform, mediaId: id }, metadata: { displayName: id, title: 't', live: true } },
+  });
+  srv.live.embeds = [item('kick', 'Good'), item('twitch', 'BadOne')];
+  srv.live.banned = new Set(['twitch/badone']);
+  assert.deepEqual(
+    srv.embedList().map((e) => `${e.platform}/${e.id}`),
+    ['kick/Good'],
+  );
+  srv.live.hosting = { platform: 'kick', id: 'friend', displayName: 'Friend' };
+  assert.deepEqual(srv.snapshot().hosting, { platform: 'kick', id: 'friend', name: 'Friend' });
+  srv.live.hosting = null;
+  assert.equal(srv.snapshot().hosting, null);
+  srv.live.banned = new Set();
+});
+
+test('error reports are logged with the browser family, within a limit', async () => {
+  const logs = [];
+  const orig = console.log;
+  console.log = (...a) => logs.push(a.join(' '));
+  try {
+    const r = await fetch(base + '/api/report', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'user-agent': 'Mozilla/5.0 (Linux; Android 10; K) Chrome/154.0 Mobile Safari/537.36',
+        'x-real-ip': '10.9.0.1',
+      },
+      body: JSON.stringify({ kind: 'own-player-failed', detail: 'someone\nline2', version: '1.2.0' }),
+    });
+    assert.equal(r.status, 204);
+    await new Promise((res) => setTimeout(res, 50));
+    assert.ok(
+      logs.some((l) => l.startsWith('report: own-player-failed v1.2.0 Android/Chrome someone line2')),
+      logs.join(' | '),
+    );
+  } finally {
+    console.log = orig;
+  }
+});
+
+test('the share target path serves the app', async () => {
+  const r = await fetch(base + '/share?url=https%3A%2F%2Fkick.com%2Fdestiny');
+  assert.equal(r.status, 200);
+  assert.match(r.headers.get('content-type'), /text\/html/);
+});

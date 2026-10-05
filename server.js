@@ -121,6 +121,7 @@ setText(
     .replace('href="app.css"', `href="${versioned('/app.css')}"`)
     .replace('src="js/main.js"', `src="${versioned('/js/main.js')}"`)
     .replace('content="vendor/hls.min.js"', `content="${HLS_PATH.slice(1)}"`)
+    .replace('<meta name="app-version" content="dev" />', `<meta name="app-version" content="${VERSION.version}" />`)
     .replace('</head>', `${preload}\n</head>`),
 );
 
@@ -270,6 +271,66 @@ function cspReport(req, res) {
   });
 }
 
+// ---------- Opt-in error reports ----------
+// The app posts { kind, detail } when the person turned reports on in
+// settings. They go to the log with the app version and the browser family,
+// nothing that identifies the person.
+const reportLimit = makeLimiter(20, 10 * 60 * 1000);
+function browserFamily(ua) {
+  const os = /iPhone|iPad/.test(ua)
+    ? 'iOS'
+    : /Android/.test(ua)
+      ? 'Android'
+      : /Windows/.test(ua)
+        ? 'Windows'
+        : /Mac/.test(ua)
+          ? 'macOS'
+          : /Linux/.test(ua)
+            ? 'Linux'
+            : 'other';
+  const browser = /Edg\//.test(ua)
+    ? 'Edge'
+    : /SamsungBrowser/.test(ua)
+      ? 'Samsung'
+      : /Firefox/.test(ua)
+        ? 'Firefox'
+        : /Chrome\//.test(ua)
+          ? 'Chrome'
+          : /Safari/.test(ua)
+            ? 'Safari'
+            : 'other';
+  return `${os}/${browser}`;
+}
+function errorReport(req, res) {
+  let body = '';
+  req.setEncoding('utf8');
+  req.on('data', (chunk) => {
+    body += chunk;
+    if (body.length > 2000) req.destroy();
+  });
+  req.on('end', () => {
+    res.writeHead(204);
+    res.end();
+    if (!reportLimit(clientIp(req))) return;
+    try {
+      const r = JSON.parse(body) || {};
+      const kind = String(r.kind || '')
+        .replace(/[^\w-]/g, '')
+        .slice(0, 40);
+      const detail = String(r.detail || '')
+        .replace(/[\r\n]+/g, ' ')
+        .slice(0, 300);
+      const version = String(r.version || '')
+        .replace(/[^\w.]/g, '')
+        .slice(0, 20);
+      if (!kind) return;
+      console.log(
+        `report: ${kind} v${version || '?'} ${browserFamily(String(req.headers['user-agent'] || ''))} ${detail}`,
+      );
+    } catch {}
+  });
+}
+
 // ---------- destiny.gg live feed ----------
 // destiny.gg's bigscreen gets its list of embeds from this websocket. Each
 // message is JSON like { type: 'dggApi:embeds', data: [...] }. We keep the
@@ -279,6 +340,8 @@ const live = {
   connected: false,
   embeds: null, // dggApi:embeds data, as sent
   streamInfo: null, // dggApi:streamInfo data, as sent
+  banned: new Set(), // dggApi:bannedEmbeds, as "platform/name" in lower case
+  hosting: null, // dggApi:hosting data, as sent (null when nobody is hosted)
 };
 
 let retryMs = 1000;
@@ -317,6 +380,12 @@ function connectLive() {
     } else if (msg.type === 'dggApi:streamInfo') {
       live.streamInfo = msg.data;
       broadcast();
+    } else if (msg.type === 'dggApi:bannedEmbeds' && Array.isArray(msg.data)) {
+      live.banned = bannedSet(msg.data);
+      broadcast();
+    } else if (msg.type === 'dggApi:hosting') {
+      live.hosting = msg.data;
+      broadcast();
     }
   });
   ws.on('unexpected-response', (_req, res) => console.log('live: refused with HTTP', res.statusCode));
@@ -336,6 +405,18 @@ const str = (v, max = 200) => (typeof v === 'string' ? v.slice(0, max) : null);
 // Only live channels belong in the list; VODs, clips and ordinary videos don't.
 const LIVE_PLATFORMS = new Set(['kick', 'twitch', 'youtube', 'angelthump', 'rumble']);
 
+// Embeds destiny.gg's mods banned ({ platform, name, reason }) stay off the
+// list, as on the bigscreen.
+function bannedSet(list) {
+  const out = new Set();
+  for (const b of list) {
+    const platform = str(b?.platform, 40);
+    const name = str(b?.name, 120);
+    if (platform && name) out.add(`${platform}/${name}`.toLowerCase());
+  }
+  return out;
+}
+
 function embedList() {
   return (live.embeds || [])
     .map((e) => {
@@ -352,13 +433,26 @@ function embedList() {
       };
     })
     .filter((e) => e.platform && e.id && e.live && LIVE_PLATFORMS.has(e.platform))
+    .filter((e) => !live.banned.has(`${e.platform}/${e.id}`.toLowerCase()))
     .map(({ live: _live, ...rest }) => rest);
+}
+
+// The stream destiny.gg is hosting (dggApi:hosting), when there is one. The
+// message's shape isn't documented; take a platform and an id or name from it.
+function hostedStream() {
+  const h = live.hosting;
+  if (!h || typeof h !== 'object') return null;
+  const platform = str(h.platform || h.mediaItem?.identifier?.platform, 40);
+  const id = str(h.id || h.mediaId || h.name || h.mediaItem?.identifier?.mediaId, 120);
+  if (!platform || !id || !LIVE_PLATFORMS.has(platform)) return null;
+  return { platform, id, name: str(h.displayName || h.name || h.mediaItem?.metadata?.displayName, 80) || id };
 }
 
 function snapshot() {
   return {
     connected: live.connected,
     destiny: destinyStreams(),
+    hosting: hostedStream(),
     embeds: embedList(),
   };
 }
@@ -535,6 +629,7 @@ function handle(req, res) {
   res.setHeader('Content-Security-Policy', CSP);
   const url = new URL(req.url, 'http://localhost');
   if (req.method === 'POST' && url.pathname === '/api/csp-report') return cspReport(req, res);
+  if (req.method === 'POST' && url.pathname === '/api/report') return errorReport(req, res);
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     return send(res, 405, 'text/plain; charset=utf-8', 'Method not allowed');
   }
@@ -550,6 +645,8 @@ function handle(req, res) {
   const kick = url.pathname.match(/^\/api\/stream\/kick\/([^/]+)\.m3u8$/);
   if (kick) return serveKickPlaylist(req, res, decodeURIComponent(kick[1]));
   if (url.pathname === '/healthz') return send(res, 200, 'text/plain', 'ok');
+  // The manifest's share target: the app reads ?url= and ?text= itself.
+  if (url.pathname === '/share') url.pathname = '/';
   serveFile(req, res, url);
 }
 

@@ -5,6 +5,7 @@ import { layoutTiles } from './stage.js';
 
 export function renderChat() {
   document.body.classList.toggle('no-chat', !settings.showChat);
+  document.body.classList.toggle('chat-left', !!settings.chatLeft);
   layoutTiles();
 }
 
@@ -116,8 +117,8 @@ resizer.addEventListener('pointerdown', (e) => {
   resizer.setPointerCapture(e.pointerId);
   // Iframes would swallow the pointer while dragging over them.
   document.body.classList.add('resizing');
-  const right = stageEl.getBoundingClientRect().right;
-  const move = (ev) => setChatWidth(right - ev.clientX, false);
+  const { left, right } = stageEl.getBoundingClientRect();
+  const move = (ev) => setChatWidth(settings.chatLeft ? ev.clientX - left : right - ev.clientX, false);
   const done = () => {
     document.body.classList.remove('resizing');
     resizer.removeEventListener('pointermove', move);

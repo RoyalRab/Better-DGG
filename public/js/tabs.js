@@ -5,7 +5,7 @@
 import { key, liveItems } from './sources.js';
 import { state, knownNames, streamName } from './state.js';
 import { $, store, toast, isTouch } from './util.js';
-import { watch, renderTileNames, prepare, cancelPrepare } from './stage.js';
+import { watch, renderTileNames, prepare, cancelPrepare, renderEnded } from './stage.js';
 
 // Small one-color platform marks, like the tabs on destiny.gg's bigscreen.
 const PLATFORM_ICONS = {
@@ -39,6 +39,30 @@ function platformIcon(type) {
 let tabButtons = new Map(); // key -> button
 let lastSelection = '';
 
+// A short buzz confirms a hold added the stream (phones that can).
+function buzz() {
+  try {
+    if (isTouch && navigator.vibrate) navigator.vibrate(25);
+  } catch {}
+}
+
+// ---------- Favorites ----------
+// Pinned to the front of the row (after Destiny), toggled with ★ in the ⋮ row.
+export const favorites = () => store.get('favorites', []) || [];
+export const isFavorite = (src) => favorites().includes(key(src));
+export function toggleFavorite(src) {
+  const k = key(src);
+  const list = favorites();
+  const on = !list.includes(k);
+  store.set('favorites', on ? [...list, k] : list.filter((x) => x !== k));
+  toast(on ? `${streamName(src)} added to favorites` : `${streamName(src)} removed from favorites`);
+  renderTabs();
+}
+export function renderFavButton() {
+  const c = state.current;
+  $('#fav-btn').setAttribute('aria-pressed', String(!!c && isFavorite(c)));
+}
+
 function makeTabButton(src) {
   const b = document.createElement('button');
   b.type = 'button';
@@ -58,6 +82,7 @@ function makeTabButton(src) {
       if (held) return; // contextmenu got there first
       held = true;
       cancelPrepare();
+      buzz();
       watch(src, { add: true });
     }, 550);
   });
@@ -83,7 +108,10 @@ function makeTabButton(src) {
     e.preventDefault();
     clearTimeout(holdTimer);
     cancelPrepare();
-    if (!held) watch(src, { add: true });
+    if (!held) {
+      buzz();
+      watch(src, { add: true });
+    }
     held = true;
   });
   b.addEventListener('click', () => {
@@ -104,7 +132,14 @@ export function renderTabs() {
   const offline = state.tiles
     .filter((t) => !listed.has(key(t.src)))
     .map((t) => ({ src: t.src, name: streamName(t.src), title: 'Not in the live list right now', offline: true }));
-  const items = [...offline, ...state.tabItems];
+  // Destiny first, then favorites, then the rest in the feed's order.
+  const favs = favorites();
+  const ranked = [...state.tabItems].sort((a, b) => {
+    const ra = a.destiny ? 0 : favs.includes(key(a.src)) ? 1 : 2;
+    const rb = b.destiny ? 0 : favs.includes(key(b.src)) ? 1 : 2;
+    return ra - rb;
+  });
+  const items = [...offline, ...ranked];
   const next = new Map();
   items.forEach((item, i) => {
     const k = key(item.src);
@@ -112,6 +147,7 @@ export function renderTabs() {
     b.querySelector('.name').textContent = item.name;
     b.title = [item.name, item.title].filter(Boolean).join(' · ');
     b.classList.toggle('offline', !!item.offline);
+    b.classList.toggle('fav', favs.includes(k));
     if (state.tiles.some((t) => key(t.src) === k)) b.setAttribute('aria-current', 'true');
     else b.removeAttribute('aria-current');
     if (nav.children[i] !== b) nav.insertBefore(b, nav.children[i] || null);
@@ -119,6 +155,7 @@ export function renderTabs() {
   });
   while (nav.children.length > items.length) nav.lastElementChild.remove();
   tabButtons = next;
+  renderFavButton();
 
   const selection = state.tiles.map((t) => key(t.src)).join(',');
   if (selection !== lastSelection) {
@@ -158,6 +195,7 @@ export function applyLive(data) {
   $('#tabs').classList.add('loaded'); // no more placeholder tabs, even if the list is empty
   renderTabs();
   renderTileNames();
+  renderEnded();
   document.dispatchEvent(new CustomEvent('livelist'));
 }
 

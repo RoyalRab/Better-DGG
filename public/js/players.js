@@ -8,7 +8,7 @@
 
 import { PLATFORM_NAMES } from './sources.js';
 import { state, isCurrent, streamName } from './state.js';
-import { isTouch } from './util.js';
+import { isTouch, store, report } from './util.js';
 
 const scripts = {};
 export function loadScript(src) {
@@ -339,6 +339,13 @@ export async function mountOwn(tile, muted) {
   // Let the browser pop it out on its own when you leave the app, where supported.
   v.autoPictureInPicture = true;
   v.setAttribute('autopictureinpicture', '');
+  // Some streams are much louder than others: the volume is kept per stream.
+  const volumeKey = `volume:${tile.src.type}/${tile.src.id}`;
+  const savedVolume = store.get(volumeKey, null);
+  if (typeof savedVolume === 'number' && savedVolume >= 0 && savedVolume <= 1) v.volume = savedVolume;
+  v.addEventListener('volumechange', () => {
+    if (!v.muted) store.set(volumeKey, Math.round(v.volume * 100) / 100);
+  });
   tile.body.appendChild(v);
 
   // hls.js plays the stream through Media Source in the page. Chrome's
@@ -387,6 +394,7 @@ export async function mountOwn(tile, muted) {
     }
     gaveUp = true;
     tile.ownFailed = true;
+    report('own-player-failed', tile.src.id);
     if (stillMine()) tile.remount();
   }
   let timer = setTimeout(giveUp, OWN_START_TIMEOUT_MS);
@@ -479,7 +487,10 @@ export async function mountOwn(tile, muted) {
       h2.destroy();
       audio.pause();
       if (retriesLeft > 0 && document.hidden) startAudioCopy(retriesLeft - 1);
-      else resumeVideo();
+      else {
+        report('background-audio-failed', `${tile.src.id} ${data.details || ''}`);
+        resumeVideo();
+      }
     });
     h2.loadSource(url);
     h2.attachMedia(audio);

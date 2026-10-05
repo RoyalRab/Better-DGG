@@ -28,5 +28,38 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "Destiny's stream",
+      "short_name": "Destiny",
+      "url": "./#kick/destiny",
+      "icons": [
+        {
+          "src": "icons/icon-192.png?v=5",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Multi-view",
+      "short_name": "Multi-view",
+      "url": "./?restore=1",
+      "icons": [
+        {
+          "src": "icons/icon-192.png?v=5",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "share_target": {
+    "action": "./share",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }

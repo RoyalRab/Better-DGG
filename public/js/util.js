@@ -23,6 +23,8 @@ export const settings = {
   keepAwake: store.get('keepAwake', true),
   ownPlayer: store.get('ownPlayer', true),
   showChat: store.get('showChat', true),
+  chatLeft: store.get('chatLeft', false),
+  errorReports: store.get('errorReports', false),
 };
 
 export function saveSetting(key, value) {
@@ -77,3 +79,18 @@ export const wasReloaded = (() => {
     return false;
   }
 })();
+
+// Opt-in error reports: what failed, the app version and the kind of browser
+// (the server works that out from the request), nothing about the person.
+export function report(kind, detail = '') {
+  if (!settings.errorReports) return;
+  try {
+    const version = document.querySelector('meta[name="app-version"]')?.content || '';
+    fetch('api/report', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ kind, detail: String(detail).slice(0, 300), version }),
+      keepalive: true,
+    }).catch(() => {});
+  } catch {}
+}
