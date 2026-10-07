@@ -3,7 +3,7 @@
 
 import { state, isCurrent, knownNames } from './state.js';
 import { parseSource, key } from './sources.js';
-import { $, settings, saveSetting, store, toast, isIOS, isAndroid, isTouch, standalone } from './util.js';
+import { $, settings, saveSetting, store, toast, isIOS, isAndroid, isTouch, standalone, applyTheme } from './util.js';
 import { OWN_PLAYER_TYPES } from './players.js';
 import {
   mountTile,
@@ -140,6 +140,7 @@ export function openSheet(scrollTo) {
   renderSheetActions();
   renderLatest();
   renderInstall();
+  renderThemes();
   // The installed app's window geometry (main.js), for debugging the
   // Android button-bar padding from a screenshot.
   const insets = document.documentElement.dataset.insets;
@@ -836,6 +837,56 @@ if (!standalone && navigator.getInstalledRelatedApps) {
 setTimeout(() => {
   if (!installPrompt) showInstallBar();
 }, 3000);
+
+// ---------- Theme ----------
+// Colour schemes for the app (app.css has each one's colours under
+// html[data-theme]); Custom takes a background and an accent colour and
+// derives the rest. The swatch shows each theme's background and accent.
+const THEMES = [
+  { id: 'dark', name: 'Dark', bg: '#0b0d12', accent: '#2f7cf6' },
+  { id: 'purple', name: 'Purple', bg: '#0e0a1a', accent: '#9b5cf6' },
+  { id: 'synthwave', name: 'Synthwave', bg: '#150c2a', accent: '#ff3ea5' },
+  { id: 'glitchwave', name: 'Glitchwave', bg: '#05070f', accent: '#ff2bd6' },
+  { id: 'oled', name: 'OLED black', bg: '#000000', accent: '#2f7cf6' },
+  { id: 'green', name: 'Kick green', bg: '#070b08', accent: '#53fc18' },
+  { id: 'custom', name: 'Custom', bg: null, accent: null },
+];
+function renderThemes() {
+  const current = THEMES.some((t) => t.id === settings.theme) ? settings.theme : 'dark';
+  const custom = settings.themeCustom;
+  $('#theme-row').replaceChildren(
+    ...THEMES.map((t) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', String(t.id === current));
+      b.dataset.theme = t.id;
+      const sw = document.createElement('span');
+      sw.className = 'swatch';
+      sw.style.setProperty('--sw-bg', t.bg || custom.bg);
+      sw.style.setProperty('--sw-accent', t.accent || custom.accent);
+      const label = document.createElement('span');
+      label.textContent = t.name;
+      b.append(sw, label);
+      b.addEventListener('click', () => {
+        saveSetting('theme', t.id);
+        applyTheme();
+        renderThemes();
+      });
+      return b;
+    }),
+  );
+  $('#theme-custom').hidden = current !== 'custom';
+  $('#theme-bg').value = custom.bg;
+  $('#theme-accent').value = custom.accent;
+}
+for (const id of ['#theme-bg', '#theme-accent']) {
+  $(id).addEventListener('input', () => {
+    saveSetting('themeCustom', { bg: $('#theme-bg').value, accent: $('#theme-accent').value });
+    applyTheme();
+    renderThemes();
+  });
+}
 
 // ---------- More from destiny.gg ----------
 // Everything the site offers beyond the stream and chat, so nothing needs a

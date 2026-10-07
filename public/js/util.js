@@ -30,7 +30,42 @@ export const settings = {
   dataSaver: store.get('dataSaver', true), // cap Kick at 480p on mobile data
   landscapeFull: store.get('landscapeFull', false), // phones: landscape fills the screen, chat over the stream
   push: store.get('push', false), // 'Destiny is live' notifications (subscribed with the server)
+  theme: store.get('theme', 'dark'), // a THEMES id (menu.js); 'custom' uses themeCustom
+  themeCustom: store.get('themeCustom', { bg: '#0b0d12', accent: '#2f7cf6' }),
 };
+
+// Black or white text, whichever reads on this colour.
+export function onColor(hex) {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return '#fff';
+  const n = parseInt(m[1], 16);
+  const lum = (0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
+  return lum > 0.6 ? '#000' : '#fff';
+}
+
+// Sets the theme on <html> (app.css has the colours per theme; Custom gets
+// its two colours as variables) and matches the browser's own bar to it.
+export function applyTheme() {
+  const root = document.documentElement;
+  const id = /^[a-z]+$/.test(settings.theme) ? settings.theme : 'dark';
+  root.dataset.theme = id;
+  const c = settings.themeCustom || {};
+  const ok = (v) => /^#[0-9a-f]{6}$/i.test(v);
+  if (id === 'custom' && ok(c.bg) && ok(c.accent)) {
+    root.style.setProperty('--c-bg', c.bg);
+    root.style.setProperty('--c-accent', c.accent);
+    root.style.setProperty('--on-accent', onColor(c.accent));
+  } else {
+    for (const v of ['--c-bg', '--c-accent', '--on-accent']) root.style.removeProperty(v);
+    if (id === 'custom') root.dataset.theme = 'dark';
+  }
+  requestAnimationFrame(() => {
+    const panel = getComputedStyle(document.body).getPropertyValue('--panel').trim();
+    const meta = document.querySelector('meta[name=theme-color]');
+    if (meta && panel) meta.setAttribute('content', panel);
+  });
+}
+applyTheme();
 
 export function saveSetting(key, value) {
   settings[key] = value;

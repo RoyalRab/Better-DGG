@@ -42,6 +42,7 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 | Feature | What it does |
 | --- | --- |
 | Favorites | ★ in the ⋮ row pins the current stream to the front of the tab row (after Destiny), with a star on its tab. |
+| Themes | Settings → Theme: Dark, Purple, Synthwave, Glitchwave (Blood Dragon neon), OLED black, Kick green, or Custom with your own background and accent colours. Chat is destiny.gg's page and keeps its own look. |
 | More from destiny.gg | Settings link to the rest of the site, as destiny.gg's own menu does: Subscribe, Donate, Merch, VODs, Events, Schedule, TTS queue, The Vault and the Wiki. |
 | Pop out chat | On desktop, Settings → Chat account has **Pop out chat**, which opens destiny.gg's chat in its own small window (the bigscreen's Popout). |
 | Hidden banned embeds | Embeds destiny.gg's mods have banned stay off the list, as on the bigscreen. |
@@ -76,7 +77,7 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 
 Tap a tab to watch it. To watch more than one stream, press and hold a tab, or choose **Add a stream to multi-view** in the ⋮ menu and then tap a tab. In multi-view, tapping a tab replaces the stream that has the sound.
 
-When an update is ready, a bar at the top offers to refresh into it. The ⋮ button at the end of the tab row slides out a row of icons: Refresh app, Picture-in-picture, Add a stream to multi-view, Cast to TV, Reload chat, Install (when available) and the gear for settings. ✕ puts them away; a one-time tip points it out, and settings list the same actions with their names. Settings has the toggles (keep the screen on, show chat, chat on the left, play Kick in the app's own player, error reports), the sleep timer, a Chat account section (**Sign in** and **Sign out**, which open destiny.gg; **Pop out chat** on desktop), a **Share link** button, **Get the app** (install steps for your browser), **More from destiny.gg** (links to the rest of the site), **Suggest an idea** and **Report a problem** buttons, the app's version and what changed in it; older versions are folded under **Earlier versions**. The full history is in `CHANGELOG.md`.
+When an update is ready, a bar at the top offers to refresh into it. The ⋮ button at the end of the tab row slides out a row of icons: Refresh app, Picture-in-picture, Add a stream to multi-view, Cast to TV, Reload chat, Install (when available) and the gear for settings. ✕ puts them away; a one-time tip points it out, and settings list the same actions with their names. Settings has the toggles (keep the screen on, show chat, chat on the left, play Kick in the app's own player, error reports), the theme picker, the sleep timer, a Chat account section (**Sign in** and **Sign out**, which open destiny.gg; **Pop out chat** on desktop), a **Share link** button, **Get the app** (install steps for your browser), **More from destiny.gg** (links to the rest of the site), **Suggest an idea** and **Report a problem** buttons, the app's version and what changed in it; older versions are folded under **Earlier versions**. The full history is in `CHANGELOG.md`.
 
 ## Installing
 

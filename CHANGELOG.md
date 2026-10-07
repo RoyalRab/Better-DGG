@@ -2,6 +2,10 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.10.0 (2026-10-07)
+
+- Themes: Settings → Theme recolours the app. Dark (as before), Purple, Synthwave, Glitchwave (Blood Dragon neon), OLED black, Kick green, or Custom with your own background and accent colours. The phone's status bar follows the theme. Chat is destiny.gg's own page and keeps its look.
+
 ## 1.9.0 (2026-10-07)
 
 - Everyone gets told how to install the app, whatever the browser: the bar at the top installs in one tap where the browser allows it and otherwise has a How button; ⋮ has an Install button; and Settings → Get the app gives the steps for your browser (Chrome, Samsung Internet, Firefox and Edge on Android, Safari and other browsers on iPhone and iPad, Chrome, Edge, Opera and Safari on a computer, and Firefox, which can't install), with every other browser folded underneath. Once the app is installed, the bar stays away.

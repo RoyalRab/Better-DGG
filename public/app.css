@@ -1,10 +1,15 @@
 :root {
+  /* The Dark theme. Other themes redefine these on html[data-theme] below;
+     the Custom theme derives them from two colours the person picks. */
   --bg: #0b0d12;
   --panel: #11151d;
   --line: #232937;
   --text: #e6e8ee;
   --muted: #8c93a3;
   --accent: #2f7cf6;
+  --on-accent: #fff; /* text on accent-coloured buttons */
+  --bar: #1a2130; /* notice bars */
+  --raised: #222838; /* toasts */
   /* Space to keep clear at the bottom: what the browser reports, or what the
      app remembered from last time (see main.js). */
   --safe-bottom: max(env(safe-area-inset-bottom), var(--nav-fallback, 0px));
@@ -12,6 +17,70 @@
   --remix: #ffd166;
   --remix-text: #151a23;
   color-scheme: dark;
+}
+
+/* Themes (Settings → Theme). Chat is destiny.gg's page and keeps its own look. */
+html[data-theme='purple'] {
+  --bg: #0e0a1a;
+  --panel: #171028;
+  --line: #2c2147;
+  --text: #ece6f7;
+  --muted: #9d93b8;
+  --accent: #9b5cf6;
+  --bar: #1f1736;
+  --raised: #271d45;
+}
+html[data-theme='synthwave'] {
+  --bg: #150c2a;
+  --panel: #1d1140;
+  --line: #3a2470;
+  --text: #f4e9ff;
+  --muted: #b79ad9;
+  --accent: #ff3ea5;
+  --bar: #261654;
+  --raised: #2f1b66;
+}
+html[data-theme='glitchwave'] {
+  /* Blood Dragon: magenta on near-black blue, cyan-tinted lines and text */
+  --bg: #05070f;
+  --panel: #0b1020;
+  --line: #163b4f;
+  --text: #e8f7ff;
+  --muted: #6fb8cf;
+  --accent: #ff2bd6;
+  --bar: #0c1a2a;
+  --raised: #112236;
+}
+html[data-theme='oled'] {
+  --bg: #000;
+  --panel: #000;
+  --line: #1c1c1c;
+  --text: #e6e6e6;
+  --muted: #8a8a8a;
+  --bar: #0d0d0d;
+  --raised: #161616;
+}
+html[data-theme='green'] {
+  --bg: #070b08;
+  --panel: #0c130e;
+  --line: #1f2d22;
+  --text: #e6f0e8;
+  --muted: #8ba58f;
+  --accent: #53fc18;
+  --on-accent: #000;
+  --bar: #142016;
+  --raised: #192719;
+}
+html[data-theme='custom'] {
+  /* --c-bg, --c-accent and --on-accent are set on <html> from the picked colours (util.js). */
+  --bg: var(--c-bg);
+  --panel: color-mix(in srgb, var(--c-bg) 88%, white);
+  --line: color-mix(in srgb, var(--c-bg) 72%, white);
+  --bar: color-mix(in srgb, var(--c-bg) 80%, white);
+  --raised: color-mix(in srgb, var(--c-bg) 76%, white);
+  --muted: color-mix(in srgb, var(--c-bg) 35%, white);
+  --text: color-mix(in srgb, var(--c-bg) 6%, white);
+  --accent: var(--c-accent);
 }
 
 * {
@@ -59,7 +128,7 @@ input {
   align-items: center;
   gap: 10px;
   padding: 8px 8px 8px 12px;
-  background: #1a2130;
+  background: var(--bar);
   border-bottom: 1px solid var(--line);
   font-size: 13px;
 }
@@ -78,7 +147,7 @@ input {
   border: 0;
   border-radius: 8px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 600;
   cursor: pointer;
 }
@@ -96,7 +165,7 @@ input {
   align-items: center;
   gap: 10px;
   padding: 6px 8px 6px 12px;
-  background: #1a2130;
+  background: var(--bar);
   border-bottom: 1px solid var(--line);
   font-size: 13px;
 }
@@ -111,7 +180,7 @@ input {
   border: 0;
   border-radius: 8px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 600;
   cursor: pointer;
 }
@@ -967,7 +1036,7 @@ dialog button {
 dialog button.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 600;
 }
 .toggle {
@@ -1008,6 +1077,42 @@ dialog button.primary {
 }
 .links button {
   gap: 8px;
+}
+.theme-row button {
+  gap: 8px;
+}
+.theme-row button[aria-checked='true'] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.theme-row .swatch {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: linear-gradient(135deg, var(--sw-bg) 50%, var(--sw-accent) 50%);
+}
+.theme-custom {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 12px;
+}
+.theme-custom label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.theme-custom input {
+  width: 44px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
 }
 .links button svg {
   flex: none;
@@ -1055,7 +1160,7 @@ details.hint p {
   max-width: calc(100vw - 32px);
   padding: 10px 14px;
   border-radius: 10px;
-  background: #222838;
+  background: var(--raised);
   box-shadow: 0 4px 20px rgb(0 0 0 / 0.5);
   opacity: 0;
   pointer-events: none;

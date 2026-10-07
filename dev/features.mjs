@@ -113,6 +113,30 @@ async function open(opts, url = '/') {
   check(install.others >= 10, `and fold the other browsers' steps (${install.others})`);
   check(install.links.includes('Subscribe') && install.links.includes('Donate'), 'destiny.gg links are listed');
   check(install.popout && install.installBtn, 'desktop gets Pop out chat and the Install button');
+  // Themes: a preset recolours the app, Custom takes two colours, and the choice is kept.
+  await page.click('#theme-row button[data-theme="synthwave"]');
+  const theme = await page.evaluate(() => ({
+    id: document.documentElement.dataset.theme,
+    accent: getComputedStyle(document.body).getPropertyValue('--accent').trim(),
+    themeColor: document.querySelector('meta[name=theme-color]').getAttribute('content'),
+    saved: localStorage.getItem('bdgg:theme'),
+  }));
+  check(theme.id === 'synthwave' && theme.accent === '#ff3ea5', `a theme recolours the app (${theme.accent})`);
+  check(
+    theme.themeColor === '#1d1140' && theme.saved === '"synthwave"',
+    'and the browser bar and the saved choice follow',
+  );
+  await page.click('#theme-row button[data-theme="custom"]');
+  await page.$eval('#theme-accent', (i) => {
+    i.value = '#ffffff';
+    i.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  const custom = await page.evaluate(() => ({
+    hidden: document.querySelector('#theme-custom').hidden,
+    onAccent: document.documentElement.style.getPropertyValue('--on-accent'),
+  }));
+  check(!custom.hidden && custom.onAccent === '#000', 'Custom shows the colour pickers and picks readable button text');
+  await page.click('#theme-row button[data-theme="dark"]');
   // Sleep timer: set 15 min, then make it expire.
   await page.click('#sleep-buttons button[data-sleep="15"]');
   const status = await page.$eval('#sleep-status', (e) => e.textContent);
