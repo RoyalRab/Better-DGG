@@ -41,6 +41,7 @@
       <img src="icons/icon-192.png" alt="" width="28" height="28" />
       <span id="install-text">Install DGG Remix for full screen and quick access</span>
       <button type="button" id="install-yes">Install</button>
+      <button type="button" id="install-how" hidden>How</button>
       <button type="button" id="install-no" aria-label="Not now">✕</button>
     </div>
 
@@ -253,6 +254,13 @@
               /></svg
             ><span>Sign out</span>
           </button>
+          <button type="button" id="chat-popout" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"
+              /></svg
+            ><span>Pop out chat</span>
+          </button>
         </div>
         <details id="cookie-help" class="hint">
           <summary>Chat still shows you signed out?</summary>
@@ -275,13 +283,25 @@
             <span>Share link</span>
           </button>
         </div>
+        <h3 class="sheet-subhead" id="install-head">Get the app</h3>
+        <p class="hint" id="install-status"></p>
+        <div class="links" id="install-links" hidden>
+          <button type="button" id="install-now">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z" /></svg
+            ><span>Install now</span>
+          </button>
+        </div>
+        <p class="hint" id="install-steps"></p>
+        <details class="hint" id="install-others">
+          <summary>Other browsers and devices</summary>
+          <div id="install-all"></div>
+        </details>
         <p class="hint" id="android-tip" hidden>
-          <b>Android:</b> install from Chrome, and don't let Chrome sleep (Android Settings → Battery) so sound keeps
-          playing when locked.
+          <b>Android:</b> don't let Chrome sleep (Android Settings → Battery) so sound keeps playing when locked.
         </p>
-        <p id="ios-install" class="hint" hidden>
-          To install on iPhone or iPad: tap Share, then <b>Add to Home Screen</b>.
-        </p>
+        <h3 class="sheet-subhead">More from destiny.gg</h3>
+        <p class="hint">The rest of the site, in your browser.</p>
+        <div class="links" id="dgg-links"></div>
         <h3 class="sheet-subhead" id="push-head">Notifications</h3>
         <label class="toggle" id="push-row"
           ><input type="checkbox" id="opt-push" /> Tell me when Destiny goes live (a notification from this app, even

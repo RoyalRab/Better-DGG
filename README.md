@@ -23,7 +23,7 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 | Haptic tap | A short buzz confirms that holding a tab added it to multi-view. |
 | Swipe to switch | Swipe left or right across the player to go to the next or previous live embed (over Kick's player and while a stream loads; Twitch, YouTube and AngelThump take the touch themselves). |
 | Screen stays on | The phone doesn't dim or sleep while the app is open (can be turned off in settings). |
-| Installable app | Installs to the home screen with its own icon, opens full screen without the browser bar, and shows an install bar until it's installed or dismissed (a dismissed bar comes back after a week). |
+| Installable app | Installs to the home screen with its own icon and opens full screen without the browser bar. Every browser gets told how: a bar at the top installs in one tap where the browser allows it and otherwise opens the steps, the ⋮ row has an Install button, and Settings → **Get the app** gives the steps for your browser with every other browser folded underneath. A dismissed bar comes back after a week, and it stays away once the app is installed. |
 | Picture-in-picture | Pops the stream into a floating window from the ⋮ row (P on desktop). Desktop Chrome can also pop a Kick stream out by itself when you switch tabs. |
 | Autoplay with sound | Streams start by themselves. In the installed app they usually start with sound; otherwise there's one **Tap for sound** button (**Click for sound** on desktop). Twitch starts muted on phones and the sound comes on a moment later, or the button appears when the phone won't allow it. |
 | More room for the stream | No top bar. The player starts at the top of the screen, with a short tab row under it and the ⋮ button at the end of the row. |
@@ -42,6 +42,8 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 | Feature | What it does |
 | --- | --- |
 | Favorites | ★ in the ⋮ row pins the current stream to the front of the tab row (after Destiny), with a star on its tab. |
+| More from destiny.gg | Settings link to the rest of the site, as destiny.gg's own menu does: Subscribe, Donate, Merch, VODs, Events, Schedule, TTS queue, The Vault and the Wiki. |
+| Pop out chat | On desktop, Settings → Chat account has **Pop out chat**, which opens destiny.gg's chat in its own small window (the bigscreen's Popout). |
 | Hidden banned embeds | Embeds destiny.gg's mods have banned stay off the list, as on the bigscreen. |
 | Hosted stream | When destiny.gg hosts someone, the hosted stream is a tab right after Destiny's. |
 | Stream ended | When the stream you're watching leaves the live list, a notice offers the most-embedded live stream. |
@@ -74,11 +76,23 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 
 Tap a tab to watch it. To watch more than one stream, press and hold a tab, or choose **Add a stream to multi-view** in the ⋮ menu and then tap a tab. In multi-view, tapping a tab replaces the stream that has the sound.
 
-When an update is ready, a bar at the top offers to refresh into it. The ⋮ button at the end of the tab row slides out a row of icons: Refresh app, Picture-in-picture, Add a stream to multi-view, Cast to TV, Reload chat, Install (when available) and the gear for settings. ✕ puts them away; a one-time tip points it out, and settings list the same actions with their names. Settings has the toggles (keep the screen on, show chat, chat on the left, play Kick in the app's own player, error reports), the sleep timer, a Chat account section (**Sign in** and **Sign out**, which open destiny.gg), a **Share link** button, **Suggest an idea** and **Report a problem** buttons, the app's version and what changed in it; older versions are folded under **Earlier versions**. The full history is in `CHANGELOG.md`.
+When an update is ready, a bar at the top offers to refresh into it. The ⋮ button at the end of the tab row slides out a row of icons: Refresh app, Picture-in-picture, Add a stream to multi-view, Cast to TV, Reload chat, Install (when available) and the gear for settings. ✕ puts them away; a one-time tip points it out, and settings list the same actions with their names. Settings has the toggles (keep the screen on, show chat, chat on the left, play Kick in the app's own player, error reports), the sleep timer, a Chat account section (**Sign in** and **Sign out**, which open destiny.gg; **Pop out chat** on desktop), a **Share link** button, **Get the app** (install steps for your browser), **More from destiny.gg** (links to the rest of the site), **Suggest an idea** and **Report a problem** buttons, the app's version and what changed in it; older versions are folded under **Earlier versions**. The full history is in `CHANGELOG.md`.
 
 ## Installing
 
-Android (Chrome): use the Install button in the bar at the top, or open Chrome's menu (⋮ at the top right) and tap **Add to home screen → Install**. iPhone and iPad (Safari): tap Share, then **Add to Home Screen**. Desktop Chrome and Edge show an install icon in the address bar.
+The app tells you how on whatever you open it in: the bar at the top installs in one tap in Chrome and Edge, and elsewhere its **How** button (or ⋮ → Install app, or Settings → **Get the app**) shows the steps for your browser. In short:
+
+| Where | How |
+| --- | --- |
+| Chrome on Android | **Install** in the bar at the top, or ⋮ → Add to Home screen → Install |
+| Samsung Internet | The install icon in the address bar, or ☰ → Add page to → Home screen |
+| Firefox on Android | ⋮ → Install |
+| Edge on Android | ⋯ → Add to phone → Install |
+| An app's built-in browser (Discord, Reddit, X…) | Open the link in Chrome first (⋮ → Open in Chrome) |
+| Safari on iPhone and iPad | Share → **Add to Home Screen** → Add (other iOS browsers: the same under Share or ⋮, or do it in Safari) |
+| Chrome and Edge on a computer | The install icon at the right end of the address bar, or ⋮ → Cast, save and share → Install page as app (Edge: ⋯ → Apps → Install this site as an app) |
+| Safari on a Mac | File → Add to Dock |
+| Firefox on a computer | No app install; pin the tab or bookmark it, or install from Chrome, Edge or Safari |
 
 For sound with the screen locked on Android, Chrome has to be allowed to run in the background. On Samsung phones, check **Settings → Battery → Background usage limits** and make sure Chrome isn't a sleeping app.
 

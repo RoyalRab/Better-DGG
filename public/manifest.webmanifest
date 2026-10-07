@@ -9,6 +9,9 @@
   "orientation": "any",
   "background_color": "#11151d",
   "theme_color": "#11151d",
+  "categories": ["entertainment"],
+  "prefer_related_applications": false,
+  "related_applications": [{ "platform": "webapp", "url": "https://mobile-dgg.com/manifest.webmanifest" }],
   "icons": [
     {
       "src": "icons/icon-192.png?v=5",

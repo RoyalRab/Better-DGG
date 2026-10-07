@@ -2,6 +2,12 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.9.0 (2026-10-07)
+
+- Everyone gets told how to install the app, whatever the browser: the bar at the top installs in one tap where the browser allows it and otherwise has a How button; ⋮ has an Install button; and Settings → Get the app gives the steps for your browser (Chrome, Samsung Internet, Firefox and Edge on Android, Safari and other browsers on iPhone and iPad, Chrome, Edge, Opera and Safari on a computer, and Firefox, which can't install), with every other browser folded underneath. Once the app is installed, the bar stays away.
+- Settings → More from destiny.gg links to the rest of the site, as destiny.gg's own menu does: Subscribe, Donate, Merch, VODs, Events, Schedule, TTS queue, The Vault and the Wiki.
+- On a computer, Settings → Chat account has Pop out chat, which opens chat in its own small window.
+
 ## 1.8.0 (2026-10-05)
 
 - For whoever runs the server: it can now press a real button through a SwitchBot Bot whenever someone donates in chat (or subscribes, or gifts subs). Set up with a few variables on the server; see README → Development.

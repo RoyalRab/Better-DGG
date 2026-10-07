@@ -139,6 +139,7 @@ document.addEventListener('livelist', () => {
 export function openSheet(scrollTo) {
   renderSheetActions();
   renderLatest();
+  renderInstall();
   // The installed app's window geometry (main.js), for debugging the
   // Android button-bar padding from a screenshot.
   const insets = document.documentElement.dataset.insets;
@@ -632,22 +633,147 @@ $('#cast-btn').addEventListener('click', () => {
 });
 $('#cast-close').addEventListener('click', () => closeSheet($('#cast-sheet')));
 
-if (isIOS && !standalone) $('#ios-install').hidden = false;
-if (isAndroid) $('#android-tip').hidden = false;
-
 // ---------- Install ----------
-// A bar at the top offers to install the app. Chrome and Edge get a one-tap
-// install; iPhones and in-app browsers get instructions instead.
+// Everyone gets told how to install, whatever the browser: a bar at the top
+// (one-tap Install where the browser offers a prompt, otherwise a How button
+// that opens the steps), the Install button in the ⋮ row, and a "Get the app"
+// section in settings with the steps for this browser and, folded, for every
+// other one. Chrome tells the page when the app is already installed
+// (getInstalledRelatedApps, through the manifest's related_applications), so
+// the bar stays away then.
 
 let installPrompt = null;
+let installedHere = false;
 const INSTALL_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
-
 const installSnoozed = () => Date.now() - store.get('installDismissedAt', 0) < INSTALL_SNOOZE_MS;
 
-function showInstallBar(text, withButton) {
-  if (standalone || installSnoozed()) return;
-  $('#install-text').textContent = text;
-  $('#install-yes').hidden = !withButton;
+const ua = navigator.userAgent;
+const has = (re) => re.test(ua);
+const iosSafari = isIOS && has(/Safari/) && !has(/CriOS|FxiOS|EdgiOS|OPT\/|DuckDuckGo/);
+const inAppBrowser = has(/\bwv\b|FBAN|FBAV|Instagram|Line\/|Twitter|Snapchat|TikTok|Reddit\//);
+const androidChrome = isAndroid && has(/\bChrome\//) && !has(/Edg|OPR|SamsungBrowser|Firefox/) && !inAppBrowser;
+const desktop = !isIOS && !isAndroid;
+const SITE = location.host;
+
+// The steps, per browser. The first one whose test passes is this browser;
+// the rest are listed under "Other browsers and devices".
+const INSTALL_GUIDES = [
+  {
+    name: 'Safari on iPhone or iPad',
+    test: () => iosSafari,
+    steps:
+      'Tap the Share button (the square with an arrow pointing up), scroll down and tap Add to Home Screen, then Add. The app opens from its icon, full screen.',
+  },
+  {
+    name: 'Other browsers on iPhone or iPad',
+    test: () => isIOS,
+    steps: `Tap the browser's Share or ⋮ button and look for Add to Home Screen. If it isn't there, open ${SITE} in Safari: Share → Add to Home Screen → Add.`,
+  },
+  {
+    name: 'Chrome on Android',
+    test: () => androidChrome,
+    steps:
+      'Tap Install when the bar at the top offers it; otherwise ⋮ at the top right → Add to Home screen → Install.',
+  },
+  {
+    name: 'Samsung Internet',
+    test: () => isAndroid && has(/SamsungBrowser/),
+    steps:
+      'Tap the install icon (a down arrow) in the address bar when it shows, or ☰ at the bottom right → Add page to → Home screen.',
+  },
+  {
+    name: 'Firefox on Android',
+    test: () => isAndroid && has(/Firefox/),
+    steps: '⋮ at the top right → Install (older versions: Add to Home screen).',
+  },
+  {
+    name: 'Edge on Android',
+    test: () => isAndroid && has(/Edg/),
+    steps: '⋯ at the bottom → Add to phone → Install.',
+  },
+  {
+    name: 'Opera on Android',
+    test: () => isAndroid && has(/OPR/),
+    steps: '⋮ → Add to… → Home screen.',
+  },
+  {
+    name: "Android, from another app's browser",
+    test: () => isAndroid,
+    steps: `This browser can't install apps. Open ${SITE} in Chrome (⋮ → Open in Chrome, or type the address), then ⋮ → Add to Home screen → Install.`,
+  },
+  {
+    name: 'Chrome on a computer',
+    test: () => desktop && has(/Chrome\//) && !has(/Edg|OPR/),
+    steps:
+      'Click the install icon at the right end of the address bar (a screen with a down arrow), or ⋮ → Cast, save and share → Install page as app. The app gets its own window and a place in the Dock, taskbar or Start menu.',
+  },
+  {
+    name: 'Edge on a computer',
+    test: () => desktop && has(/Edg\//),
+    steps: 'Click the install icon at the right end of the address bar, or ⋯ → Apps → Install this site as an app.',
+  },
+  {
+    name: 'Opera on a computer',
+    test: () => desktop && has(/OPR\//),
+    steps: 'Click the install icon in the address bar, or open the Opera menu → Install DGG Remix.',
+  },
+  {
+    name: 'Safari on a Mac',
+    test: () => desktop && has(/Mac/) && has(/Safari/) && !has(/Chrome|Firefox/),
+    steps: 'File → Add to Dock (macOS Sonoma or later). The app gets its own window and Dock icon.',
+  },
+  {
+    name: 'Firefox on a computer',
+    test: () => desktop && has(/Firefox/),
+    steps: `Firefox doesn't install web apps. Pin the tab (right-click it → Pin Tab) or put a bookmark on the toolbar; everything works the same in the tab. To install, open ${SITE} in Chrome, Edge or Safari.`,
+  },
+];
+const FALLBACK_GUIDE = {
+  name: 'Your browser',
+  steps: `Look for Install, Install app or Add to Home screen in the browser's menu. If there's nothing like it, open ${SITE} in Chrome, Edge or Safari.`,
+};
+const thisGuide = () => INSTALL_GUIDES.find((g) => g.test()) || FALLBACK_GUIDE;
+
+function renderInstall() {
+  const guide = thisGuide();
+  const status = $('#install-status');
+  if (standalone) {
+    status.textContent = "You're using the installed app. It opens full screen from its icon, and updates itself.";
+  } else if (installedHere) {
+    status.textContent =
+      'DGG Remix is installed on this device: open it from your home screen or app list for full screen and quick access.';
+  } else {
+    status.textContent = desktop
+      ? 'Installed, DGG Remix opens in its own window from the Dock, taskbar or Start menu, without browser bars.'
+      : 'Installed, DGG Remix opens full screen from its own icon, starts with sound, and keeps playing when you lock the phone.';
+  }
+  $('#install-links').hidden = !installPrompt || standalone;
+  $('#install-steps').hidden = standalone;
+  $('#install-steps').replaceChildren();
+  if (!standalone) {
+    const b = document.createElement('b');
+    b.textContent = `${guide.name}: `;
+    $('#install-steps').append(b, guide.steps);
+  }
+  $('#install-all').replaceChildren(
+    ...INSTALL_GUIDES.filter((g) => g !== guide).map((g) => {
+      const p = document.createElement('p');
+      const b = document.createElement('b');
+      b.textContent = `${g.name}: `;
+      p.append(b, g.steps);
+      return p;
+    }),
+  );
+  $('#android-tip').hidden = !isAndroid;
+}
+
+function showInstallBar() {
+  if (standalone || installedHere || installSnoozed()) return;
+  $('#install-text').textContent = installPrompt
+    ? 'Install DGG Remix for full screen and quick access'
+    : 'Get DGG Remix as an app: full screen, quick access';
+  $('#install-yes').hidden = !installPrompt;
+  $('#install-how').hidden = !!installPrompt;
   $('#install-bar').hidden = false;
   layoutTiles();
 }
@@ -660,35 +786,89 @@ function hideInstallBar() {
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   installPrompt = e;
-  $('#install-btn').hidden = false;
-  showInstallBar('Install DGG Remix for full screen and quick access', true);
+  showInstallBar();
 });
 
 async function runInstall() {
-  if (!installPrompt) return;
+  if (!installPrompt) {
+    openSheet('#install-head');
+    return;
+  }
   installPrompt.prompt();
   const choice = await installPrompt.userChoice.catch(() => null);
   installPrompt = null;
-  $('#install-btn').hidden = true;
   hideInstallBar();
   if (choice && choice.outcome === 'dismissed') store.set('installDismissedAt', Date.now());
 }
 
 $('#install-yes').addEventListener('click', runInstall);
+$('#install-now').addEventListener('click', () => {
+  $('#sheet').close();
+  runInstall();
+});
+$('#install-how').addEventListener('click', () => openSheet('#install-head'));
 $('#install-btn').addEventListener('click', runInstall);
 $('#install-no').addEventListener('click', () => {
   store.set('installDismissedAt', Date.now());
   hideInstallBar();
 });
-window.addEventListener('appinstalled', hideInstallBar);
+window.addEventListener('appinstalled', () => {
+  installedHere = true;
+  hideInstallBar();
+});
 
-// No install prompt from the browser: explain how instead. On Android that
-// means a browser other than Chrome (Firefox, Samsung Internet, or an app's
-// built-in browser); Chrome either offers the prompt or already has the app.
-const ua = navigator.userAgent;
-const androidChrome = isAndroid && /\bChrome\//.test(ua) && !/\bwv\b|Edg|OPR|SamsungBrowser|Firefox/.test(ua);
+// The Install button in the ⋮ row is for everyone who isn't in the installed
+// app: it installs in one tap where the browser offers that, and opens the
+// steps otherwise.
+$('#install-btn').hidden = standalone;
+if (!standalone && navigator.getInstalledRelatedApps) {
+  navigator
+    .getInstalledRelatedApps()
+    .then((apps) => {
+      if (apps && apps.length) {
+        installedHere = true;
+        hideInstallBar();
+      }
+    })
+    .catch(() => {});
+}
+// No prompt from the browser within a few seconds: show the bar with How.
 setTimeout(() => {
-  if (installPrompt || standalone) return;
-  if (isIOS) showInstallBar('Install: tap Share, then Add to Home Screen', false);
-  else if (isAndroid && !androidChrome) showInstallBar('To install the app, open this page in Chrome', false);
+  if (!installPrompt) showInstallBar();
 }, 3000);
+
+// ---------- More from destiny.gg ----------
+// Everything the site offers beyond the stream and chat, so nothing needs a
+// trip to a bookmark: the same links destiny.gg's own menu has.
+const DGG_LINKS = [
+  ['Subscribe', 'https://www.destiny.gg/subscribe'],
+  ['Donate', 'https://www.destiny.gg/donate'],
+  ['Merch', 'https://www.destiny.gg/merch'],
+  ['VODs', 'https://www.destiny.gg/vods'],
+  ['Events', 'https://www.destiny.gg/events'],
+  [
+    'Schedule',
+    'https://calendar.google.com/calendar/u/0/embed?src=i54j4cu9pl4270asok3mqgdrhk@group.calendar.google.com',
+  ],
+  ['TTS queue', 'https://www.destiny.gg/tts'],
+  ['The Vault', 'https://www.destiny.gg/vault'],
+  ['Wiki', 'https://wiki.destiny.gg/view/Main_Page'],
+  ['destiny.gg', 'https://www.destiny.gg/'],
+];
+$('#dgg-links').replaceChildren(
+  ...DGG_LINKS.map(([label, url]) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = label;
+    b.addEventListener('click', () => window.open(url, '_blank', 'noopener'));
+    return b;
+  }),
+);
+
+// Chat in its own window, on desktop (destiny.gg's bigscreen has the same).
+if (!isTouch) {
+  $('#chat-popout').hidden = false;
+  $('#chat-popout').addEventListener('click', () => {
+    window.open('https://www.destiny.gg/embed/chat', 'dgg-chat', 'popup,width=420,height=760,noopener');
+  });
+}

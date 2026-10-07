@@ -98,6 +98,21 @@ async function open(opts, url = '/') {
   });
   check(order.chatLeft && order.chatBeforePlayer, 'chat on the left moves chat before the player');
   await page.uncheck('#opt-chat-left');
+  // Get the app: steps for this browser, the others folded, destiny.gg links, chat pop-out on desktop.
+  const install = await page.evaluate(() => ({
+    steps: document.querySelector('#install-steps').textContent,
+    others: document.querySelectorAll('#install-all p').length,
+    links: [...document.querySelectorAll('#dgg-links button')].map((b) => b.textContent),
+    popout: !document.querySelector('#chat-popout').hidden,
+    installBtn: !document.querySelector('#install-btn').hidden,
+  }));
+  check(
+    /^Chrome on a computer: /.test(install.steps),
+    `settings give the install steps for this browser (${install.steps.slice(0, 40)}…)`,
+  );
+  check(install.others >= 10, `and fold the other browsers' steps (${install.others})`);
+  check(install.links.includes('Subscribe') && install.links.includes('Donate'), 'destiny.gg links are listed');
+  check(install.popout && install.installBtn, 'desktop gets Pop out chat and the Install button');
   // Sleep timer: set 15 min, then make it expire.
   await page.click('#sleep-buttons button[data-sleep="15"]');
   const status = await page.$eval('#sleep-status', (e) => e.textContent);
