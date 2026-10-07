@@ -21,6 +21,7 @@
 
 /* Themes (Settings → Theme). Chat is destiny.gg's page and keeps its own look. */
 html[data-theme='purple'] {
+  --chat-tint: #1a1030;
   --bg: #0e0a1a;
   --panel: #171028;
   --line: #2c2147;
@@ -31,6 +32,7 @@ html[data-theme='purple'] {
   --raised: #271d45;
 }
 html[data-theme='synthwave'] {
+  --chat-tint: #2a1050;
   --bg: #150c2a;
   --panel: #1d1140;
   --line: #3a2470;
@@ -41,6 +43,9 @@ html[data-theme='synthwave'] {
   --raised: #2f1b66;
 }
 html[data-theme='glitchwave'] {
+  --chat-tint:
+    repeating-linear-gradient(0deg, #555 0 1px, #fff 1px 3px), linear-gradient(160deg, #3a0a3a, #120a2a 50%, #06243a);
+  --chat-tint-blend: multiply; /* scanlines */
   /* Blood Dragon: magenta on near-black blue, cyan-tinted lines and text */
   --bg: #05070f;
   --panel: #0b1020;
@@ -61,6 +66,7 @@ html[data-theme='oled'] {
   --raised: #161616;
 }
 html[data-theme='green'] {
+  --chat-tint: #061a08;
   --bg: #070b08;
   --panel: #0c130e;
   --line: #1f2d22;
@@ -72,6 +78,7 @@ html[data-theme='green'] {
   --raised: #192719;
 }
 html[data-theme='nord'] {
+  --chat-tint: #2e3440;
   --bg: #2e3440;
   --panel: #3b4252;
   --line: #4c566a;
@@ -83,6 +90,7 @@ html[data-theme='nord'] {
   --raised: #434c5e;
 }
 html[data-theme='dracula'] {
+  --chat-tint: #282a36;
   --bg: #1e1f29;
   --panel: #282a36;
   --line: #44475a;
@@ -94,6 +102,7 @@ html[data-theme='dracula'] {
   --raised: #3b3e52;
 }
 html[data-theme='catppuccin'] {
+  --chat-tint: #1e1e2e;
   --bg: #181825;
   --panel: #1e1e2e;
   --line: #313244;
@@ -105,6 +114,7 @@ html[data-theme='catppuccin'] {
   --raised: #45475a;
 }
 html[data-theme='gruvbox'] {
+  --chat-tint: #282828;
   --bg: #1d2021;
   --panel: #282828;
   --line: #3c3836;
@@ -116,6 +126,7 @@ html[data-theme='gruvbox'] {
   --raised: #3c3836;
 }
 html[data-theme='tokyonight'] {
+  --chat-tint: #1a1b26;
   --bg: #16161e;
   --panel: #1a1b26;
   --line: #292e42;
@@ -127,6 +138,7 @@ html[data-theme='tokyonight'] {
   --raised: #292e42;
 }
 html[data-theme='cyberpunk'] {
+  --chat-tint: #1c1a00;
   --bg: #0a0a0a;
   --panel: #111111;
   --line: #2a2a1a;
@@ -138,6 +150,7 @@ html[data-theme='cyberpunk'] {
   --raised: #202016;
 }
 html[data-theme='vaporwave'] {
+  --chat-tint: #2b1d3a;
   --bg: #2b1d3a;
   --panel: #34254a;
   --line: #4b3a66;
@@ -149,6 +162,7 @@ html[data-theme='vaporwave'] {
   --raised: #46335f;
 }
 html[data-theme='matrix'] {
+  --chat-tint: #001a04;
   --bg: #000;
   --panel: #050a05;
   --line: #0f2f0f;
@@ -160,6 +174,7 @@ html[data-theme='matrix'] {
   --raised: #0a1e0a;
 }
 html[data-theme='dgg'] {
+  --chat-tint: #141620;
   /* destiny.gg's own blue on its dark grey-blue */
   --bg: #141620;
   --panel: #1b1e2b;
@@ -172,6 +187,7 @@ html[data-theme='dgg'] {
   --raised: #2a2f42;
 }
 html[data-theme='custom'] {
+  --chat-tint: var(--c-bg);
   /* --c-bg, --c-accent and --on-accent are set on <html> from the picked colours (util.js). */
   --bg: var(--c-bg);
   --panel: color-mix(in srgb, var(--c-bg) 88%, white);
@@ -567,6 +583,19 @@ body.multi .tile.has-sound {
 }
 #chat iframe:not(.loaded) {
   visibility: hidden;
+}
+/* The theme's tint over chat. destiny.gg's page can't be restyled from here,
+   but a screen-blended layer lifts its near-black background to the theme's
+   colour and leaves the text and emotes alone. Themes set --chat-tint (a
+   colour or gradients; Dark leaves chat as it is). */
+#chat::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--chat-tint, transparent);
+  background-blend-mode: var(--chat-tint-blend, normal);
+  mix-blend-mode: screen;
 }
 #chat:has(iframe:not(.loaded))::before {
   content: 'Loading chat…';

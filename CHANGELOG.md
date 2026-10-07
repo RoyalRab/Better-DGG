@@ -2,6 +2,10 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.12.0 (2026-10-07)
+
+- Themes now reach chat: every theme except Dark tints chat's background to match, and Glitchwave adds scanlines. Chat's text and emotes stay as destiny.gg draws them.
+
 ## 1.11.0 (2026-10-07)
 
 - Nine more themes: destiny.gg (the site's own blue), Nord, Dracula, Catppuccin, Gruvbox, Tokyo Night, Cyberpunk, Vaporwave and Matrix.

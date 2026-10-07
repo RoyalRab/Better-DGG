@@ -42,7 +42,7 @@ Chat is destiny.gg's own chat, and the list of live embeds comes from the same f
 | Feature | What it does |
 | --- | --- |
 | Favorites | ★ in the ⋮ row pins the current stream to the front of the tab row (after Destiny), with a star on its tab. |
-| Themes | Settings → Theme: Dark, Purple, Synthwave, Glitchwave (Blood Dragon neon), OLED black, Kick green, destiny.gg, Nord, Dracula, Catppuccin, Gruvbox, Tokyo Night, Cyberpunk, Vaporwave, Matrix, or Custom with your own background and accent colours. Chat is destiny.gg's page and keeps its own look. |
+| Themes | Settings → Theme: Dark, Purple, Synthwave, Glitchwave (Blood Dragon neon), OLED black, Kick green, destiny.gg, Nord, Dracula, Catppuccin, Gruvbox, Tokyo Night, Cyberpunk, Vaporwave, Matrix, or Custom with your own background and accent colours. Chat is destiny.gg's page, so its text and emotes stay as they are, but every theme except Dark tints its background to match (Glitchwave adds scanlines). |
 | More from destiny.gg | Settings link to the rest of the site, as destiny.gg's own menu does: Subscribe, Donate, Merch, VODs, Events, Schedule, TTS queue, The Vault and the Wiki. |
 | Pop out chat | On desktop, Settings → Chat account has **Pop out chat**, which opens destiny.gg's chat in its own small window (the bigscreen's Popout). |
 | Hidden banned embeds | Embeds destiny.gg's mods have banned stay off the list, as on the bigscreen. |
