@@ -187,174 +187,292 @@
     </main>
 
     <dialog id="sheet" aria-labelledby="sheet-title">
-      <div class="sheet-handle" aria-hidden="true"></div>
       <form method="dialog">
-        <h2 id="sheet-title">Settings</h2>
-        <p class="hint tagline">Improved mobile experience.</p>
-        <div id="sheet-actions" class="links" aria-label="Actions (also under ⋮)"></div>
-        <label class="toggle"><input type="checkbox" id="opt-awake" /> Keep the screen on while the app is open</label>
-        <label class="toggle"><input type="checkbox" id="opt-chat" /> Show chat</label>
-        <label class="toggle"
-          ><input type="checkbox" id="opt-own" /> Play Kick streams in the app's own player, so they keep playing when
-          the screen locks and can pop out or be cast</label
-        >
-        <label class="toggle"
-          ><input type="checkbox" id="opt-audio" /> Audio only for Kick: no picture, less data and battery (needs the
-          app's own player)</label
-        >
-        <label class="select-row"
-          ><span>Kick quality (the app's own player)</span>
-          <select id="opt-quality">
-            <option value="auto">Auto</option>
-            <option value="1080">Up to 1080p</option>
-            <option value="720">Up to 720p</option>
-            <option value="480">Up to 480p</option>
-            <option value="360">Up to 360p</option>
-          </select></label
-        >
-        <label class="toggle"
-          ><input type="checkbox" id="opt-datasaver" /> Data saver: Kick at 480p at most on mobile data (when the
-          browser can tell)</label
-        >
-        <label class="toggle"
-          ><input type="checkbox" id="opt-chat-left" /> Chat on the left (landscape and desktop)</label
-        >
-        <label class="toggle"
-          ><input type="checkbox" id="opt-landscape" /> Phones: sideways fills the screen with the stream, chat
-          see-through on the right (tap the stream or the handle at the bottom for the tabs)</label
-        >
-        <h3 class="sheet-subhead">Theme</h3>
-        <p class="hint">
-          Colours for the app. Chat is destiny.gg's own page, so only its background follows the theme.
-        </p>
-        <div class="links theme-row" id="theme-row" role="radiogroup" aria-label="Theme"></div>
-        <div class="theme-custom" id="theme-custom" hidden>
-          <label>Background <input type="color" id="theme-bg" /></label>
-          <label>Accent <input type="color" id="theme-accent" /></label>
-        </div>
-        <h3 class="sheet-subhead">Sleep timer</h3>
-        <p class="hint">
-          Pauses the stream after a while, for falling asleep listening. <span id="sleep-status"></span>
-        </p>
-        <div class="links" id="sleep-buttons">
-          <button type="button" data-sleep="15">15 min</button>
-          <button type="button" data-sleep="30">30 min</button>
-          <button type="button" data-sleep="60">60 min</button>
-          <button type="button" data-sleep="0">Off</button>
-        </div>
-        <h3 class="sheet-subhead">Chat account</h3>
-        <p class="hint">
-          Chat uses your destiny.gg account. Both open destiny.gg (to sign out, use the account menu there), and chat
-          reloads when you come back. Tick <b>Remember me</b> when you sign in, or destiny.gg forgets you whenever the
-          phone restarts Chrome in the background and chat asks you to sign in again.
-        </p>
-        <div class="links">
-          <button type="button" id="sign-in">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                d="M11 7 9.6 8.4l2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5-5-5zm9 12h-8v2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-8v2h8v14z"
-              /></svg
-            ><span>Sign in</span>
+        <header class="sheet-head">
+          <div class="sheet-handle" aria-hidden="true"></div>
+          <button type="button" class="icon-btn" id="sheet-back" aria-label="Back" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z" /></svg>
           </button>
-          <button type="button" id="sign-out">
+          <h2 id="sheet-title">Settings</h2>
+          <button type="button" class="icon-btn" id="sheet-close" aria-label="Close">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path
-                d="m17 7-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"
-              /></svg
-            ><span>Sign out</span>
-          </button>
-          <button type="button" id="chat-popout" hidden>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"
-              /></svg
-            ><span>Pop out chat</span>
-          </button>
-        </div>
-        <details id="cookie-help" class="hint">
-          <summary>Chat still shows you signed out?</summary>
-          <p>
-            Your browser is keeping destiny.gg's login away from chat while it's inside another site ("third-party
-            cookies"). To allow it:
-          </p>
-          <p id="cookie-steps"></p>
-          <p>Then use <b>Reload chat</b>. A private or incognito window always stays signed out.</p>
-        </details>
-        <h3 class="sheet-subhead">Share</h3>
-        <p class="hint">Send DGG Remix to someone: <span id="app-address">mobile-dgg.com</span></p>
-        <div class="links">
-          <button type="button" id="share-btn">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11A2.99 2.99 0 0 0 21 5a3 3 0 1 0-5.91.7L8.04 9.81A2.99 2.99 0 0 0 3 12a3 3 0 0 0 5.04 2.19l7.12 4.16a2.82 2.82 0 0 0-.08.65 2.92 2.92 0 1 0 2.92-2.92z"
+                d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
               />
             </svg>
-            <span>Share link</span>
           </button>
+        </header>
+
+        <div class="page" id="page-main">
+          <section class="group">
+            <h3>Appearance</h3>
+            <div class="card">
+              <button type="button" class="row-btn" id="theme-open">
+                <span class="row-main"
+                  ><span class="row-title">Theme</span><span class="row-sub" id="theme-current">Dark</span></span
+                >
+                <span class="swatch" id="theme-current-swatch" aria-hidden="true"></span>
+                <svg class="chev" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+                </svg>
+              </button>
+              <label class="toggle"
+                ><span class="row-main"
+                  ><span class="row-title">Chat on the left</span
+                  ><span class="row-sub">In landscape and on a computer</span></span
+                ><input type="checkbox" id="opt-chat-left"
+              /></label>
+              <label class="toggle"
+                ><span class="row-main"
+                  ><span class="row-title">Fullscreen when sideways</span
+                  ><span class="row-sub"
+                    >Phones: the stream fills the screen with chat see-through on the right; tap the stream or the
+                    handle at the bottom for the tabs</span
+                  ></span
+                ><input type="checkbox" id="opt-landscape"
+              /></label>
+            </div>
+          </section>
+
+          <section class="group">
+            <h3>Playback</h3>
+            <div class="card">
+              <label class="toggle"
+                ><span class="row-main"
+                  ><span class="row-title">App's own player for Kick</span
+                  ><span class="row-sub">Keeps playing when the screen locks; pop-out and casting</span></span
+                ><input type="checkbox" id="opt-own"
+              /></label>
+              <label class="toggle"
+                ><span class="row-main"
+                  ><span class="row-title">Audio only</span
+                  ><span class="row-sub"
+                    >Kick as sound only: less data and battery (needs the app's own player)</span
+                  ></span
+                ><input type="checkbox" id="opt-audio"
+              /></label>
+              <label class="select-row"
+                ><span class="row-main"
+                  ><span class="row-title">Kick quality</span><span class="row-sub">The app's own player</span></span
+                >
+                <select id="opt-quality">
+                  <option value="auto">Auto</option>
+                  <option value="1080">Up to 1080p</option>
+                  <option value="720">Up to 720p</option>
+                  <option value="480">Up to 480p</option>
+                  <option value="360">Up to 360p</option>
+                </select></label
+              >
+              <label class="toggle"
+                ><span class="row-main"
+                  ><span class="row-title">Data saver</span
+                  ><span class="row-sub">Kick at 480p at most on mobile data, when the browser can tell</span></span
+                ><input type="checkbox" id="opt-datasaver"
+              /></label>
+              <label class="toggle"
+                ><span class="row-main"
+                  ><span class="row-title">Keep the screen on</span
+                  ><span class="row-sub">While the app is open</span></span
+                ><input type="checkbox" id="opt-awake"
+              /></label>
+              <div class="row-plain">
+                <span class="row-main"
+                  ><span class="row-title">Sleep timer</span
+                  ><span class="row-sub"
+                    >Pauses the stream after a while, for falling asleep listening.
+                    <span id="sleep-status"></span></span
+                ></span>
+                <div class="seg" id="sleep-buttons">
+                  <button type="button" data-sleep="15">15 min</button>
+                  <button type="button" data-sleep="30">30 min</button>
+                  <button type="button" data-sleep="60">60 min</button>
+                  <button type="button" data-sleep="0">Off</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="group">
+            <h3>Chat</h3>
+            <div class="card">
+              <label class="toggle"
+                ><span class="row-main"><span class="row-title">Show chat</span></span
+                ><input type="checkbox" id="opt-chat"
+              /></label>
+              <div class="row-plain">
+                <span class="row-main"
+                  ><span class="row-title">Account</span
+                  ><span class="row-sub"
+                    >Chat uses your destiny.gg account. Both buttons open destiny.gg (to sign out, use the account menu
+                    there), and chat reloads when you come back. Tick <b>Remember me</b> when you sign in, or destiny.gg
+                    forgets you whenever the phone restarts Chrome in the background.</span
+                  ></span
+                >
+                <div class="links">
+                  <button type="button" id="sign-in">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M11 7 9.6 8.4l2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5-5-5zm9 12h-8v2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-8v2h8v14z"
+                      /></svg
+                    ><span>Sign in</span>
+                  </button>
+                  <button type="button" id="sign-out">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="m17 7-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"
+                      /></svg
+                    ><span>Sign out</span>
+                  </button>
+                  <button type="button" id="chat-popout" hidden>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"
+                      /></svg
+                    ><span>Pop out chat</span>
+                  </button>
+                </div>
+              </div>
+              <details id="cookie-help" class="hint">
+                <summary>Chat still shows you signed out?</summary>
+                <p>
+                  Your browser is keeping destiny.gg's login away from chat while it's inside another site ("third-party
+                  cookies"). To allow it:
+                </p>
+                <p id="cookie-steps"></p>
+                <p>Then use <b>Reload chat</b>. A private or incognito window always stays signed out.</p>
+              </details>
+            </div>
+          </section>
+
+          <section class="group">
+            <h3 id="push-head">Notifications</h3>
+            <div class="card">
+              <label class="toggle" id="push-row"
+                ><span class="row-main"
+                  ><span class="row-title">Tell me when Destiny goes live</span
+                  ><span class="row-sub">A notification from this app, even when it's closed</span></span
+                ><input type="checkbox" id="opt-push"
+              /></label>
+              <p class="hint" id="push-hint" hidden></p>
+            </div>
+          </section>
+
+          <section class="group">
+            <h3 id="install-head">Get the app</h3>
+            <div class="card">
+              <p class="hint" id="install-status"></p>
+              <div class="links" id="install-links" hidden>
+                <button type="button" id="install-now">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z" /></svg
+                  ><span>Install now</span>
+                </button>
+              </div>
+              <p class="hint" id="install-steps"></p>
+              <details class="hint" id="install-others">
+                <summary>Other browsers and devices</summary>
+                <div id="install-all"></div>
+              </details>
+              <p class="hint" id="android-tip" hidden>
+                <b>Android:</b> don't let Chrome sleep (Android Settings → Battery) so sound keeps playing when locked.
+              </p>
+            </div>
+          </section>
+
+          <section class="group">
+            <h3>More from destiny.gg</h3>
+            <div class="card">
+              <div class="row-plain">
+                <span class="row-main"><span class="row-sub">The rest of the site, in your browser.</span></span>
+                <div class="links" id="dgg-links"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="group">
+            <h3>Share and feedback</h3>
+            <div class="card">
+              <div class="row-plain">
+                <span class="row-main"
+                  ><span class="row-title">Share DGG Remix</span
+                  ><span class="row-sub"><span id="app-address">mobile-dgg.com</span></span></span
+                >
+                <div class="links">
+                  <button type="button" id="share-btn">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11A2.99 2.99 0 0 0 21 5a3 3 0 1 0-5.91.7L8.04 9.81A2.99 2.99 0 0 0 3 12a3 3 0 0 0 5.04 2.19l7.12 4.16a2.82 2.82 0 0 0-.08.65 2.92 2.92 0 1 0 2.92-2.92z"
+                      />
+                    </svg>
+                    <span>Share link</span>
+                  </button>
+                </div>
+              </div>
+              <label class="toggle"
+                ><span class="row-main"
+                  ><span class="row-title">Send error reports</span
+                  ><span class="row-sub"
+                    >What failed, the app version and the kind of browser; nothing about you</span
+                  ></span
+                ><input type="checkbox" id="opt-reports"
+              /></label>
+              <div class="row-plain">
+                <span class="row-main"
+                  ><span class="row-title">Ideas and problems</span
+                  ><span class="row-sub"
+                    >Both go to the project's page on GitHub (you need a GitHub account to post).</span
+                  ></span
+                >
+                <div class="links">
+                  <button type="button" id="idea-btn">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1-.85.6V16h-4v-2.3l-.85-.6A4.997 4.997 0 0 1 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1z"
+                      /></svg
+                    ><span>Suggest an idea</span>
+                  </button>
+                  <button type="button" id="bug-btn">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M20 8h-2.81a5.985 5.985 0 0 0-1.82-1.96L17 4.41 15.59 3l-2.17 2.17a6.002 6.002 0 0 0-2.84 0L8.41 3 7 4.41l1.62 1.63C7.88 6.55 7.26 7.22 6.81 8H4v2h2.09c-.05.33-.09.66-.09 1v1H4v2h2v1c0 .34.04.67.09 1H4v2h2.81c1.04 1.79 2.97 3 5.19 3s4.15-1.21 5.19-3H20v-2h-2.09c.05-.33.09-.66.09-1v-1h2v-2h-2v-1c0-.34-.04-.67-.09-1H20V8zm-6 8h-4v-2h4v2zm0-4h-4v-2h4v2z"
+                      /></svg
+                    ><span>Report a problem</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="group">
+            <h3>About</h3>
+            <div class="card">
+              <p class="hint">
+                DGG Remix is an unofficial fan-made app and isn't affiliated with destiny.gg. The code is open source on
+                <a id="repo-link" href="https://github.com/RoyalRab/Better-DGG" target="_blank" rel="noopener">GitHub</a
+                >.
+              </p>
+              <p class="hint" id="version"></p>
+              <p class="hint" id="display-info"></p>
+            </div>
+          </section>
+          <section id="latest" hidden>
+            <h3 class="sheet-subhead">Latest from Destiny</h3>
+            <p class="hint">Nothing of his is live right now. His newest videos and Kick VODs:</p>
+            <div id="latest-list"></div>
+          </section>
+          <section id="changelog" aria-labelledby="changelog-title" hidden></section>
         </div>
-        <h3 class="sheet-subhead" id="install-head">Get the app</h3>
-        <p class="hint" id="install-status"></p>
-        <div class="links" id="install-links" hidden>
-          <button type="button" id="install-now">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z" /></svg
-            ><span>Install now</span>
-          </button>
+
+        <div class="page" id="page-theme" hidden>
+          <p class="hint">
+            Colours for the app. Chat is destiny.gg's own page, so only its background follows the theme.
+          </p>
+          <div class="theme-grid" id="theme-row" role="radiogroup" aria-label="Theme"></div>
+          <div class="theme-custom" id="theme-custom" hidden>
+            <label>Background <input type="color" id="theme-bg" /></label>
+            <label>Accent <input type="color" id="theme-accent" /></label>
+          </div>
         </div>
-        <p class="hint" id="install-steps"></p>
-        <details class="hint" id="install-others">
-          <summary>Other browsers and devices</summary>
-          <div id="install-all"></div>
-        </details>
-        <p class="hint" id="android-tip" hidden>
-          <b>Android:</b> don't let Chrome sleep (Android Settings → Battery) so sound keeps playing when locked.
-        </p>
-        <h3 class="sheet-subhead">More from destiny.gg</h3>
-        <p class="hint">The rest of the site, in your browser.</p>
-        <div class="links" id="dgg-links"></div>
-        <h3 class="sheet-subhead" id="push-head">Notifications</h3>
-        <label class="toggle" id="push-row"
-          ><input type="checkbox" id="opt-push" /> Tell me when Destiny goes live (a notification from this app, even
-          when it's closed)</label
-        >
-        <p class="hint" id="push-hint" hidden></p>
-        <h3 class="sheet-subhead">Ideas and problems</h3>
-        <label class="toggle"
-          ><input type="checkbox" id="opt-reports" /> Send error reports (what failed, the app version and the kind of
-          browser; nothing about you)</label
-        >
-        <p class="hint">
-          Have an idea, or did something break? Both go to the project's page on GitHub (you need a GitHub account to
-          post).
-        </p>
-        <div class="links">
-          <button type="button" id="idea-btn">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1-.85.6V16h-4v-2.3l-.85-.6A4.997 4.997 0 0 1 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1z"
-              /></svg
-            ><span>Suggest an idea</span>
-          </button>
-          <button type="button" id="bug-btn">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                d="M20 8h-2.81a5.985 5.985 0 0 0-1.82-1.96L17 4.41 15.59 3l-2.17 2.17a6.002 6.002 0 0 0-2.84 0L8.41 3 7 4.41l1.62 1.63C7.88 6.55 7.26 7.22 6.81 8H4v2h2.09c-.05.33-.09.66-.09 1v1H4v2h2v1c0 .34.04.67.09 1H4v2h2.81c1.04 1.79 2.97 3 5.19 3s4.15-1.21 5.19-3H20v-2h-2.09c.05-.33.09-.66.09-1v-1h2v-2h-2v-1c0-.34-.04-.67-.09-1H20V8zm-6 8h-4v-2h4v2zm0-4h-4v-2h4v2z"
-              /></svg
-            ><span>Report a problem</span>
-          </button>
-        </div>
-        <p class="hint">
-          DGG Remix is an unofficial fan-made app and isn't affiliated with destiny.gg. The code is open source on
-          <a id="repo-link" href="https://github.com/RoyalRab/Better-DGG" target="_blank" rel="noopener">GitHub</a>.
-        </p>
-        <p class="hint" id="version"></p>
-        <p class="hint" id="display-info"></p>
-        <section id="latest" hidden>
-          <h3 class="sheet-subhead">Latest from Destiny</h3>
-          <p class="hint">Nothing of his is live right now. His newest videos and Kick VODs:</p>
-          <div id="latest-list"></div>
-        </section>
-        <section id="changelog" aria-labelledby="changelog-title" hidden></section>
-        <div class="row end"><button type="button" id="sheet-close">Close</button></div>
       </form>
     </dialog>
 
@@ -373,7 +491,7 @@
     <div id="toast" role="status" aria-live="polite"></div>
     <div id="sr-status" class="sr-only" aria-live="polite"></div>
     <div id="menu-tip" role="status" hidden>
-      <span id="menu-tip-verb">Tap</span> <b>⋮</b> for refresh, picture-in-picture, multi-view, cast and settings.
+      <span id="menu-tip-verb">Tap</span> <b>⋮</b> for the menu: multi-view, pop-out, casting, themes and settings.
     </div>
 
     <script type="module" src="js/main.js"></script>

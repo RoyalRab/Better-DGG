@@ -2,6 +2,11 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.13.0 (2026-10-07)
+
+- A real menu: ⋮ now drops down a list with names (Refresh app, Picture-in-picture, Add a stream to multi-view, Favorite, Cast to TV, Reload chat, Install app, Settings) instead of a row of bare icons.
+- Settings redesigned: grouped sections (Appearance, Playback, Chat, Notifications, Get the app, More from destiny.gg, Share and feedback, About), each setting a row with a switch and a short explanation, and Theme on its own page with a preview tile for every theme.
+
 ## 1.12.1 (2026-10-07)
 
 - Glitchwave's scanlines now run over the stream as well as chat.

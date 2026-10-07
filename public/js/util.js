@@ -59,11 +59,9 @@ export function applyTheme() {
     for (const v of ['--c-bg', '--c-accent', '--on-accent']) root.style.removeProperty(v);
     if (id === 'custom') root.dataset.theme = 'dark';
   }
-  requestAnimationFrame(() => {
-    const panel = getComputedStyle(document.body).getPropertyValue('--panel').trim();
-    const meta = document.querySelector('meta[name=theme-color]');
-    if (meta && panel) meta.setAttribute('content', panel);
-  });
+  const panel = getComputedStyle(root).getPropertyValue('--panel').trim();
+  const meta = document.querySelector('meta[name=theme-color]');
+  if (meta && panel) meta.setAttribute('content', panel);
 }
 applyTheme();
 

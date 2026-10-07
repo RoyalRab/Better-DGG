@@ -114,6 +114,8 @@ async function open(opts, url = '/') {
   check(install.links.includes('Subscribe') && install.links.includes('Donate'), 'destiny.gg links are listed');
   check(install.popout && install.installBtn, 'desktop gets Pop out chat and the Install button');
   // Themes: a preset recolours the app, Custom takes two colours, and the choice is kept.
+  await page.click('#theme-open');
+  check(await page.isVisible('#theme-row button[data-theme="synthwave"]'), 'Theme opens its own page in settings');
   await page.click('#theme-row button[data-theme="synthwave"]');
   const theme = await page.evaluate(() => ({
     id: document.documentElement.dataset.theme,
@@ -137,6 +139,8 @@ async function open(opts, url = '/') {
   }));
   check(!custom.hidden && custom.onAccent === '#000', 'Custom shows the colour pickers and picks readable button text');
   await page.click('#theme-row button[data-theme="dark"]');
+  await page.click('#sheet-back');
+  check(await page.isVisible('#sleep-buttons'), 'Back returns to the main settings page');
   // Sleep timer: set 15 min, then make it expire.
   await page.click('#sleep-buttons button[data-sleep="15"]');
   const status = await page.$eval('#sleep-status', (e) => e.textContent);

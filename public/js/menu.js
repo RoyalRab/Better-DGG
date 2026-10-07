@@ -79,23 +79,36 @@ for (const d of document.querySelectorAll('dialog')) swipeToClose(d);
 
 // The same actions as the ⋮ row, listed with their names so each icon is
 // explained. Each one runs the row's button.
-function renderSheetActions() {
-  const rows = [...$('#actions').querySelectorAll('button')]
-    .filter((b) => b.id !== 'settings-btn' && !b.hidden)
-    .map((b) => {
-      const row = document.createElement('button');
-      row.type = 'button';
-      const label = document.createElement('span');
-      label.textContent = b.getAttribute('aria-label');
-      row.append(b.querySelector('svg').cloneNode(true), label);
-      row.addEventListener('click', () => {
-        $('#sheet').close();
-        b.click();
-      });
-      return row;
-    });
-  $('#sheet-actions').replaceChildren(...rows);
+// The ⋮ menu's buttons carry their names in aria-label (pip.js changes
+// one as it goes); the dropdown shows them as text as well.
+function labelActions() {
+  for (const b of $('#actions').querySelectorAll('button')) {
+    let span = b.querySelector('.label');
+    if (!span) {
+      span = document.createElement('span');
+      span.className = 'label';
+      b.append(span);
+    }
+    span.textContent = b.getAttribute('aria-label');
+  }
 }
+labelActions();
+new MutationObserver(labelActions).observe($('#actions'), {
+  attributes: true,
+  attributeFilter: ['aria-label'],
+  subtree: true,
+});
+
+// Settings has two pages: the main one and Theme.
+function showPage(name) {
+  $('#page-main').hidden = name !== 'main';
+  $('#page-theme').hidden = name !== 'theme';
+  $('#sheet-back').hidden = name === 'main';
+  $('#sheet-title').textContent = name === 'theme' ? 'Theme' : 'Settings';
+  $('#sheet').scrollTop = 0;
+}
+$('#theme-open').addEventListener('click', () => showPage('theme'));
+$('#sheet-back').addEventListener('click', () => showPage('main'));
 
 // Destiny's latest videos and Kick VODs (from the live snapshot), shown in
 // settings only while none of his streams is live. Tapping one plays it in
@@ -137,7 +150,7 @@ document.addEventListener('livelist', () => {
 });
 
 export function openSheet(scrollTo) {
-  renderSheetActions();
+  showPage('main');
   renderLatest();
   renderInstall();
   renderThemes();
@@ -863,20 +876,24 @@ const THEMES = [
 function renderThemes() {
   const current = THEMES.some((t) => t.id === settings.theme) ? settings.theme : 'dark';
   const custom = settings.themeCustom;
+  const colors = (t) => [t.bg || custom.bg, t.accent || custom.accent];
   $('#theme-row').replaceChildren(
     ...THEMES.map((t) => {
       const b = document.createElement('button');
       b.type = 'button';
+      b.className = 'theme-card';
       b.setAttribute('role', 'radio');
       b.setAttribute('aria-checked', String(t.id === current));
       b.dataset.theme = t.id;
-      const sw = document.createElement('span');
-      sw.className = 'swatch';
-      sw.style.setProperty('--sw-bg', t.bg || custom.bg);
-      sw.style.setProperty('--sw-accent', t.accent || custom.accent);
-      const label = document.createElement('span');
-      label.textContent = t.name;
-      b.append(sw, label);
+      const [bg, accent] = colors(t);
+      const preview = document.createElement('span');
+      preview.className = 'tc-preview';
+      preview.style.setProperty('--sw-bg', bg);
+      preview.style.setProperty('--sw-accent', accent);
+      const name = document.createElement('span');
+      name.className = 'tc-name';
+      name.textContent = t.name;
+      b.append(preview, name);
       b.addEventListener('click', () => {
         saveSetting('theme', t.id);
         applyTheme();
@@ -885,6 +902,11 @@ function renderThemes() {
       return b;
     }),
   );
+  const now = THEMES.find((t) => t.id === current);
+  $('#theme-current').textContent = now.name;
+  const [bg, accent] = colors(now);
+  $('#theme-current-swatch').style.setProperty('--sw-bg', bg);
+  $('#theme-current-swatch').style.setProperty('--sw-accent', accent);
   $('#theme-custom').hidden = current !== 'custom';
   $('#theme-bg').value = custom.bg;
   $('#theme-accent').value = custom.accent;
