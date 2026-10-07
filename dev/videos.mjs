@@ -97,7 +97,12 @@ async function open(opts, url = '/') {
 // Phone: holding a tab shows the preview, which goes when the hold adds the stream.
 {
   const { ctx, page, errors } = await open({ viewport: { width: 412, height: 915 }, isMobile: true, hasTouch: true });
+  // The Menu pill covers the end of the tab row, so bring the tab fully into view first.
   const tab = await page.$('#tabs .tab:has-text("bingsamaa")');
+  await page.$eval('#tabs .tab:has-text("bingsamaa")', (t) => {
+    t.parentElement.scrollLeft = t.offsetLeft - 8;
+  });
+  await page.waitForTimeout(100);
   const box = await tab.boundingBox();
   const cdp = await ctx.newCDPSession(page);
   await cdp.send('Input.dispatchTouchEvent', {

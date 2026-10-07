@@ -2,6 +2,12 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.15.1 (2026-10-07)
+
+- OLED black is the default theme. A theme you already picked stays.
+- Settings buttons are tidy list rows now (Sign in, Sign out, Install, the destiny.gg links, Share, ideas and problems) instead of loose pill buttons.
+- Latest from Destiny shows his three newest videos.
+
 ## 1.15.0 (2026-10-07)
 
 - The menu is easy to find: the button at the end of the tab row is now a **Menu** pill in your theme's colour, instead of a small ⋮.

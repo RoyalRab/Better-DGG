@@ -1283,13 +1283,8 @@ dialog button.primary {
   padding: 12px 14px;
 }
 .card > .hint[hidden],
-.card > .links[hidden] {
+.card > .row-btn[hidden] {
   display: none;
-}
-.card > .links {
-  margin: 0;
-  padding: 0 14px 12px;
-  border-top: 0;
 }
 .row-main {
   flex: 1;
@@ -1307,9 +1302,6 @@ dialog button.primary {
   line-height: 1.35;
   color: var(--muted);
 }
-.row-plain .links {
-  margin-top: 10px;
-}
 .row-btn {
   width: 100%;
   min-height: 56px;
@@ -1323,11 +1315,20 @@ dialog button.primary {
   text-align: left;
   cursor: pointer;
 }
-.card > .row-btn + .row-btn {
+.card > * + .row-btn {
   border-top: 1px solid var(--line);
 }
 .row-btn:hover {
   background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+.row-btn.slim {
+  min-height: 48px;
+}
+.row-btn .row-icon {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  fill: var(--accent);
 }
 .row-btn .chev {
   flex: none;
@@ -1414,15 +1415,6 @@ dialog button.primary {
   background: var(--panel);
   color: var(--text);
   font: inherit;
-}
-.links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-}
-.links button {
-  gap: 8px;
 }
 .swatch {
   flex: none;
@@ -1592,13 +1584,6 @@ dialog button.primary {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
-}
-.links button svg {
-  flex: none;
-  width: 18px;
-  height: 18px;
-  fill: currentColor;
-  opacity: 0.85;
 }
 .hint details,
 details.hint {

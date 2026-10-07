@@ -112,9 +112,21 @@ $('#sheet-back').addEventListener('click', () => showPage('main'));
 
 // Destiny's latest videos and Kick VODs (from the live snapshot), shown in
 // settings only while none of his streams is live. Tapping one plays it in
-// the app (YouTube's player, or the app's own player for a Kick VOD).
+// the app (YouTube's player, or the app's own player for a Kick VOD). The
+// feed has no dates, so the list takes the newest of each kind in turn and
+// stops at three.
+function latestThree(all) {
+  const yt = all.filter((v) => v.platform === 'youtube');
+  const vods = all.filter((v) => v.platform !== 'youtube');
+  const out = [];
+  for (let i = 0; out.length < 3 && (i < yt.length || i < vods.length); i++) {
+    if (yt[i]) out.push(yt[i]);
+    if (vods[i] && out.length < 3) out.push(vods[i]);
+  }
+  return out;
+}
 function renderLatest() {
-  const videos = (state.live && state.live.videos) || [];
+  const videos = latestThree((state.live && state.live.videos) || []);
   const destinyLive = state.tabItems.some((i) => i.destiny);
   const show = !destinyLive && videos.length > 0;
   $('#latest').hidden = !show;
@@ -766,7 +778,7 @@ function renderInstall() {
       ? 'Installed, DGG Remix opens in its own window from the Dock, taskbar or Start menu, without browser bars.'
       : 'Installed, DGG Remix opens full screen from its own icon, starts with sound, and keeps playing when you lock the phone.';
   }
-  $('#install-links').hidden = !installPrompt || standalone;
+  $('#install-now').hidden = !installPrompt || standalone;
   $('#install-steps').hidden = standalone;
   $('#install-steps').replaceChildren();
   if (!standalone) {
@@ -879,7 +891,7 @@ const THEMES = [
   { id: 'custom', name: 'Custom', bg: null, accent: null },
 ];
 function renderThemes() {
-  const current = THEMES.some((t) => t.id === settings.theme) ? settings.theme : 'dark';
+  const current = THEMES.some((t) => t.id === settings.theme) ? settings.theme : 'oled';
   const custom = settings.themeCustom;
   const colors = (t) => [t.bg || custom.bg, t.accent || custom.accent];
   $('#theme-row').replaceChildren(
@@ -947,11 +959,29 @@ const DGG_LINKS = [
   ["Destiny's notes", 'https://publish.obsidian.md/destiny/About'],
   ['destiny.gg', 'https://www.destiny.gg/'],
 ];
+const SVG = 'http://www.w3.org/2000/svg';
 $('#dgg-links').replaceChildren(
   ...DGG_LINKS.map(([label, url]) => {
     const b = document.createElement('button');
     b.type = 'button';
-    b.textContent = label;
+    b.className = 'row-btn slim';
+    const main = document.createElement('span');
+    main.className = 'row-main';
+    const title = document.createElement('span');
+    title.className = 'row-title';
+    title.textContent = label;
+    main.append(title);
+    const icon = document.createElementNS(SVG, 'svg');
+    icon.setAttribute('viewBox', '0 0 24 24');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.classList.add('chev');
+    const path = document.createElementNS(SVG, 'path');
+    path.setAttribute(
+      'd',
+      'M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z',
+    );
+    icon.append(path);
+    b.append(main, icon);
     b.addEventListener('click', () => window.open(url, '_blank', 'noopener'));
     return b;
   }),

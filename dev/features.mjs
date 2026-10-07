@@ -113,6 +113,10 @@ async function open(opts, url = '/') {
   check(install.others >= 10, `and fold the other browsers' steps (${install.others})`);
   check(install.links.includes('Subscribe') && install.links.includes('Donate'), 'destiny.gg links are listed');
   check(install.popout && install.installBtn, 'desktop gets Pop out chat and the Install button');
+  check(
+    (await page.evaluate(() => document.documentElement.dataset.theme)) === 'oled',
+    'OLED black is the default theme',
+  );
   // Themes: a preset recolours the app, Custom takes two colours, and the choice is kept.
   await page.click('#theme-open');
   check(await page.isVisible('#theme-row button[data-theme="synthwave"]'), 'Theme opens its own page in settings');
