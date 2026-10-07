@@ -2,6 +2,10 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.11.0 (2026-10-07)
+
+- Nine more themes: destiny.gg (the site's own blue), Nord, Dracula, Catppuccin, Gruvbox, Tokyo Night, Cyberpunk, Vaporwave and Matrix.
+
 ## 1.10.0 (2026-10-07)
 
 - Themes: Settings → Theme recolours the app. Dark (as before), Purple, Synthwave, Glitchwave (Blood Dragon neon), OLED black, Kick green, or Custom with your own background and accent colours. The phone's status bar follows the theme. Chat is destiny.gg's own page and keeps its look.

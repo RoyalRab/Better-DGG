@@ -71,6 +71,106 @@ html[data-theme='green'] {
   --bar: #142016;
   --raised: #192719;
 }
+html[data-theme='nord'] {
+  --bg: #2e3440;
+  --panel: #3b4252;
+  --line: #4c566a;
+  --text: #eceff4;
+  --muted: #9aa5be;
+  --accent: #88c0d0;
+  --on-accent: #000;
+  --bar: #3b4252;
+  --raised: #434c5e;
+}
+html[data-theme='dracula'] {
+  --bg: #1e1f29;
+  --panel: #282a36;
+  --line: #44475a;
+  --text: #f8f8f2;
+  --muted: #8f95b2;
+  --accent: #bd93f9;
+  --on-accent: #000;
+  --bar: #343746;
+  --raised: #3b3e52;
+}
+html[data-theme='catppuccin'] {
+  --bg: #181825;
+  --panel: #1e1e2e;
+  --line: #313244;
+  --text: #cdd6f4;
+  --muted: #a6adc8;
+  --accent: #cba6f7;
+  --on-accent: #000;
+  --bar: #313244;
+  --raised: #45475a;
+}
+html[data-theme='gruvbox'] {
+  --bg: #1d2021;
+  --panel: #282828;
+  --line: #3c3836;
+  --text: #ebdbb2;
+  --muted: #a89984;
+  --accent: #fe8019;
+  --on-accent: #000;
+  --bar: #32302f;
+  --raised: #3c3836;
+}
+html[data-theme='tokyonight'] {
+  --bg: #16161e;
+  --panel: #1a1b26;
+  --line: #292e42;
+  --text: #c0caf5;
+  --muted: #8089b3;
+  --accent: #7aa2f7;
+  --on-accent: #000;
+  --bar: #1f2335;
+  --raised: #292e42;
+}
+html[data-theme='cyberpunk'] {
+  --bg: #0a0a0a;
+  --panel: #111111;
+  --line: #2a2a1a;
+  --text: #f3f3e6;
+  --muted: #9a9a7a;
+  --accent: #fcee0a;
+  --on-accent: #000;
+  --bar: #181810;
+  --raised: #202016;
+}
+html[data-theme='vaporwave'] {
+  --bg: #2b1d3a;
+  --panel: #34254a;
+  --line: #4b3a66;
+  --text: #fbe9ff;
+  --muted: #c1a6d6;
+  --accent: #ff71ce;
+  --on-accent: #000;
+  --bar: #3d2c56;
+  --raised: #46335f;
+}
+html[data-theme='matrix'] {
+  --bg: #000;
+  --panel: #050a05;
+  --line: #0f2f0f;
+  --text: #c8ffc8;
+  --muted: #4fa84f;
+  --accent: #00ff41;
+  --on-accent: #000;
+  --bar: #061406;
+  --raised: #0a1e0a;
+}
+html[data-theme='dgg'] {
+  /* destiny.gg's own blue on its dark grey-blue */
+  --bg: #141620;
+  --panel: #1b1e2b;
+  --line: #2a2f40;
+  --text: #e8ebf2;
+  --muted: #929ab0;
+  --accent: #59aeea;
+  --on-accent: #000;
+  --bar: #222637;
+  --raised: #2a2f42;
+}
 html[data-theme='custom'] {
   /* --c-bg, --c-accent and --on-accent are set on <html> from the picked colours (util.js). */
   --bg: var(--c-bg);

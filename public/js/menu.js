@@ -849,6 +849,15 @@ const THEMES = [
   { id: 'glitchwave', name: 'Glitchwave', bg: '#05070f', accent: '#ff2bd6' },
   { id: 'oled', name: 'OLED black', bg: '#000000', accent: '#2f7cf6' },
   { id: 'green', name: 'Kick green', bg: '#070b08', accent: '#53fc18' },
+  { id: 'dgg', name: 'destiny.gg', bg: '#141620', accent: '#59aeea' },
+  { id: 'nord', name: 'Nord', bg: '#2e3440', accent: '#88c0d0' },
+  { id: 'dracula', name: 'Dracula', bg: '#1e1f29', accent: '#bd93f9' },
+  { id: 'catppuccin', name: 'Catppuccin', bg: '#181825', accent: '#cba6f7' },
+  { id: 'gruvbox', name: 'Gruvbox', bg: '#1d2021', accent: '#fe8019' },
+  { id: 'tokyonight', name: 'Tokyo Night', bg: '#16161e', accent: '#7aa2f7' },
+  { id: 'cyberpunk', name: 'Cyberpunk', bg: '#0a0a0a', accent: '#fcee0a' },
+  { id: 'vaporwave', name: 'Vaporwave', bg: '#2b1d3a', accent: '#ff71ce' },
+  { id: 'matrix', name: 'Matrix', bg: '#000000', accent: '#00ff41' },
   { id: 'custom', name: 'Custom', bg: null, accent: null },
 ];
 function renderThemes() {
