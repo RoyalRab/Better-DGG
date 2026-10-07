@@ -12,4 +12,5 @@ The owner's backlog. Ideas from users arrive as GitHub issues labelled `idea` (S
 
 | Idea | Why | Effort |
 | --- | --- | --- |
+| Ask Brave to add mobile-dgg.com to `brave-lists/brave-checks.txt` in brave/adblock-lists (as PR 2794 did for holodex.net), so Twitch plays with Shields up | Twitch works in Brave without a tip | S |
 | Delete the `dgg-probe` Railway Function when it's no longer needed (the owner kept it for now) | Tidier project | S |

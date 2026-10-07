@@ -1318,6 +1318,9 @@ dialog button.primary {
   text-align: left;
   cursor: pointer;
 }
+.card > .row-btn + .row-btn {
+  border-top: 1px solid var(--line);
+}
 .row-btn:hover {
   background: color-mix(in srgb, var(--text) 5%, transparent);
 }
@@ -1423,6 +1426,95 @@ dialog button.primary {
   border-radius: 50%;
   border: 1px solid var(--line);
   background: linear-gradient(135deg, var(--sw-bg) 50%, var(--sw-accent) 50%);
+}
+/* Community panel */
+#hub {
+  width: min(560px, calc(100vw - 32px));
+}
+#hub[open].viewing {
+  width: min(1100px, calc(100vw - 32px));
+  height: calc(100dvh - 32px);
+  display: flex;
+  flex-direction: column;
+}
+#hub[open].viewing form {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+#hub-view {
+  flex: 1;
+  min-height: 0;
+  margin: 0 -16px -16px;
+}
+#hub-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+}
+#hub-open {
+  text-decoration: none;
+}
+#hub .row-btn .row-main {
+  gap: 3px;
+}
+.search {
+  width: 100%;
+  height: 44px;
+  margin-top: 12px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+.wiki-results {
+  margin-top: 10px;
+}
+.wiki-results .row-btn {
+  min-height: 46px;
+}
+.wiki-card {
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg);
+  line-height: 1.45;
+}
+.wiki-card p {
+  margin: 8px 0 0;
+}
+.wiki-label {
+  margin: 0 0 8px !important;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.wiki-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.wiki-head img {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+.wiki-head h3 {
+  margin: 0;
+  font-size: 18px;
+}
+.brave-tip {
+  margin: 10px 4px 0;
 }
 .theme-grid {
   display: grid;
@@ -1632,6 +1724,18 @@ details.hint p {
   }
   dialog[open] {
     animation: sheet-up 0.2s ease-out;
+  }
+  #hub,
+  #hub[open].viewing {
+    width: 100%;
+  }
+  #hub[open].viewing {
+    height: 94dvh;
+    max-height: 94dvh;
+    padding-bottom: 0;
+  }
+  #hub-view {
+    margin-bottom: 0;
   }
   .sheet-handle {
     display: block;

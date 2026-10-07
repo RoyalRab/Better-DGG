@@ -230,13 +230,16 @@ const CSP = [
   "default-src 'self'",
   "script-src 'self' https://www.youtube.com https://s.ytimg.com https://player.twitch.tv",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: https://images.kick.com https://clips.kick.com https://i.ytimg.com https://static-cdn.jtvnw.net https://thumbnail.angelthump.com",
+  "img-src 'self' data: https://images.kick.com https://clips.kick.com https://i.ytimg.com https://static-cdn.jtvnw.net https://thumbnail.angelthump.com https://wikicdn.destiny.gg",
   "media-src 'self' blob: data: https://*.live-video.net https://stream.kick.com https://clips.kick.com",
-  "connect-src 'self' https://*.live-video.net https://stream.kick.com https://clips.kick.com",
+  "connect-src 'self' https://*.live-video.net https://stream.kick.com https://clips.kick.com https://wiki.destiny.gg",
   "worker-src 'self' blob:",
   'frame-src https://www.destiny.gg/embed/ https://player.kick.com https://player.twitch.tv https://clips.twitch.tv ' +
     'https://www.youtube.com https://www.youtube-nocookie.com https://rumble.com https://player.vimeo.com ' +
-    'https://player.angelthump.com',
+    'https://player.angelthump.com ' +
+    // The Community panel's tools (public/js/hub.js), each one checked to allow framing.
+    'https://linkers.ooo https://emotes.linkers.ooo https://rustlesearch.dev https://vyneer.me https://dggvods.dev ' +
+    'https://mitchdev.net https://queup.net https://wiki.destiny.gg https://publish.obsidian.md',
   "manifest-src 'self'",
   "object-src 'none'",
   "base-uri 'none'",

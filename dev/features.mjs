@@ -152,6 +152,59 @@ async function open(opts, url = '/') {
   await ctx.close();
 }
 
+// The Community panel: the tool list, a tool in the frame, and the wiki search and summary card.
+{
+  const { ctx, page, errors } = await open({ viewport: { width: 412, height: 915 }, isMobile: true, hasTouch: true });
+  await page.route(/^https:\/\/wiki\.destiny\.gg\/api\.php/, (r) => {
+    const u = new URL(r.request().url());
+    const body =
+      u.searchParams.get('action') === 'opensearch'
+        ? ['mou', ['MrMouton', 'Mouton'], [], []]
+        : {
+            query: {
+              pages: { 1: { pageid: 1, title: u.searchParams.get('titles'), extract: 'A test summary of the page.' } },
+            },
+          };
+    r.fulfill({
+      contentType: 'application/json',
+      headers: { 'access-control-allow-origin': '*' },
+      body: JSON.stringify(body),
+    });
+  });
+  await page.click('#menu-btn');
+  await page.click('#hub-btn');
+  const groups = await page.$$eval('#hub-home .group h3', (h) => h.map((x) => x.textContent));
+  check(
+    groups.includes('Listen') && groups.includes('Chat history'),
+    `⋮ → Community lists the tools (${groups.join(', ')})`,
+  );
+  await page.click('#hub-home [data-tool="logs"]');
+  check(
+    (await page.$eval('#hub-frame', (f) => f.getAttribute('src'))) === 'https://linkers.ooo/logs' &&
+      (await page.isVisible('#hub-frame')),
+    'Log search opens linkers.ooo inside the app',
+  );
+  await page.click('#hub-back');
+  await page.click('#hub-home [data-tool="wiki"]');
+  await page.fill('#wiki-q', 'mou');
+  await page.waitForSelector('#wiki-results:not([hidden]) .row-btn');
+  await page.click('#wiki-results .row-btn');
+  await page.waitForSelector('#wiki-card:not([hidden])');
+  check(
+    /test summary/.test(await page.$eval('#wiki-card', (c) => c.textContent)),
+    'the wiki search shows a summary card',
+  );
+  await page.click('#wiki-card .primary');
+  check(
+    (await page.$eval('#hub-frame', (f) => f.getAttribute('src'))) === 'https://wiki.destiny.gg/view/MrMouton',
+    'Read the full page opens the wiki page in the frame',
+  );
+  await page.click('#hub-close');
+  check(!(await page.evaluate(() => document.querySelector('#hub').open)), 'the panel closes');
+  check(errors.length === 0, 'Community: no page errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
+  await ctx.close();
+}
+
 // Share target and the restore shortcut.
 {
   const { ctx, page } = await open(

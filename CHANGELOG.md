@@ -2,6 +2,13 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.14.0 (2026-10-07)
+
+- New: ⋮ → Community. DGG Radio (the dggjams channel) plays in the app with one tap, and its QueUp lobby is next to it.
+- The Destiny wiki is built in: search it inside the app, see a summary of whoever is on screen, and open the full page without leaving.
+- Chat log search, the media feed, emote stats and leaderboards from linkers.ooo, plus RustleSearch, chat stats, VODs with chat replay, the stream archive and the YEE vs PEPE poll history, all in the same panel.
+- Destiny's notes are in Settings → More from destiny.gg, and Brave users get a tip when Shields stop Twitch.
+
 ## 1.13.0 (2026-10-07)
 
 - A real menu: ⋮ now drops down a list with names (Refresh app, Picture-in-picture, Add a stream to multi-view, Favorite, Cast to TV, Reload chat, Install app, Settings) instead of a row of bare icons.

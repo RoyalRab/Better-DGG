@@ -9,6 +9,7 @@
 //   pip.js      picture-in-picture
 //   menu.js     the ⋮ action row, settings sheet, change log, cast and install
 //   bars.js     update, what's new, offline and restore bars
+//   hub.js      the Community panel: DGG Radio, the wiki, community tools
 
 import { DEFAULT_SOURCE, key, parseHashList, parseSource, validate } from './sources.js';
 import { state } from './state.js';
@@ -19,6 +20,7 @@ import { startTabs } from './tabs.js';
 import { renderChat, loadChat } from './chat.js';
 import { maybeShowMenuTip } from './menu.js';
 import { registerServiceWorker, loadChangelog, offerRestore } from './bars.js';
+import './hub.js';
 
 // Open what a shared link asks for. Otherwise wait briefly for the live list
 // and open the last stream watched if it's live, then Destiny, then the first

@@ -919,6 +919,10 @@ for (const id of ['#theme-bg', '#theme-accent']) {
   });
 }
 
+// Brave's Shields can stop Twitch's player inside other sites (Brave fixes
+// this per site in its brave-checks list; mobile-dgg.com isn't on it yet).
+if (navigator.brave) $('#brave-tip').hidden = false;
+
 // ---------- More from destiny.gg ----------
 // Everything the site offers beyond the stream and chat, so nothing needs a
 // trip to a bookmark: the same links destiny.gg's own menu has.
@@ -935,6 +939,7 @@ const DGG_LINKS = [
   ['TTS queue', 'https://www.destiny.gg/tts'],
   ['The Vault', 'https://www.destiny.gg/vault'],
   ['Wiki', 'https://wiki.destiny.gg/view/Main_Page'],
+  ["Destiny's notes", 'https://publish.obsidian.md/destiny/About'],
   ['destiny.gg', 'https://www.destiny.gg/'],
 ];
 $('#dgg-links').replaceChildren(
