@@ -186,6 +186,16 @@ html[data-theme='dgg'] {
   --bar: #222637;
   --raised: #2a2f42;
 }
+/* Glitchwave's scanlines over the stream too (chat gets its own, above).
+   A see-through layer, so every tap still reaches the player. */
+html[data-theme='glitchwave'] #player::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.22) 0 1px, transparent 1px 3px);
+}
 html[data-theme='custom'] {
   --chat-tint: var(--c-bg);
   /* --c-bg, --c-accent and --on-accent are set on <html> from the picked colours (util.js). */
