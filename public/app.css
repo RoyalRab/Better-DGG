@@ -698,23 +698,32 @@ body.no-chat #player[data-count='2'] {
 #menu-btn {
   flex: none;
   position: relative;
-  width: 40px;
   height: 44px;
   margin: -8px 0;
+  padding: 0 6px 0 8px;
   display: grid;
   place-items: center;
   border: 0;
   background: none;
-  color: var(--muted);
   cursor: pointer;
 }
-#menu-btn::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 8px;
-  bottom: 8px;
-  border-left: 1px solid var(--line);
+/* The menu button: a pill in the theme's accent, with its name on it, so
+   nobody has to guess that the app has a menu. */
+.menu-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 23px;
+  padding: 0 10px 0 7px;
+  border-radius: 12px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+}
+#menu-btn:hover .menu-pill {
+  filter: brightness(1.1);
 }
 #menu-btn .icon-close,
 #menu-btn[aria-expanded='true'] .icon-more {
@@ -723,8 +732,7 @@ body.no-chat #player[data-count='2'] {
 #menu-btn[aria-expanded='true'] .icon-close {
   display: block;
 }
-
-/* The ⋮ menu: a panel that drops down from the tab row, with labels */
+/* The menu: a panel that drops down from the tab row, with labels */
 #actions {
   position: absolute;
   top: calc(100% + 6px);
@@ -800,12 +808,9 @@ body.no-chat #player[data-count='2'] {
   outline-offset: -2px;
 }
 
-#menu-btn:hover {
-  color: var(--text);
-}
 #menu-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   fill: currentColor;
 }
 #tabs::-webkit-scrollbar {
@@ -1761,8 +1766,11 @@ details.hint p {
 #menu-btn:focus-visible {
   outline: none;
 }
-#tabs .tab:focus-visible::before,
-#menu-btn:focus-visible::after {
+#menu-btn:focus-visible .menu-pill {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+#tabs .tab:focus-visible::before {
   content: '';
   position: absolute;
   inset: 9px 1px;

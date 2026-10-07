@@ -185,8 +185,9 @@ function setActions(open) {
   if (open) hideMenuTip();
   $('#actions').hidden = !open;
   $('#menu-btn').setAttribute('aria-expanded', String(open));
-  $('#menu-btn').setAttribute('aria-label', open ? 'Close' : 'More');
-  $('#menu-btn').title = open ? 'Close' : 'More';
+  $('#menu-btn').setAttribute('aria-label', open ? 'Close the menu' : 'Menu');
+  $('#menu-btn').title = open ? 'Close the menu' : 'Menu';
+  $('#menu-btn .menu-word').textContent = open ? 'Close' : 'Menu';
 }
 
 $('#menu-btn').addEventListener('click', () => setActions($('#actions').hidden));
@@ -238,6 +239,10 @@ $('#actions').addEventListener('click', (e) => {
   if (e.target.closest('button')) setActions(false);
 });
 $('#settings-btn').addEventListener('click', () => openSheet());
+$('#theme-btn').addEventListener('click', () => {
+  openSheet();
+  showPage('theme');
+});
 // A tap anywhere else, or Escape, puts the row away.
 document.addEventListener(
   'pointerdown',

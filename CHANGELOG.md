@@ -2,6 +2,11 @@
 
 What changed in each version of DGG Remix. The newest version is listed in the app's settings, with older ones folded underneath. Add an entry here with every version bump.
 
+## 1.15.0 (2026-10-07)
+
+- The menu is easy to find: the button at the end of the tab row is now a **Menu** pill in your theme's colour, instead of a small ⋮.
+- **Theme** is in the menu, and opens the theme picker directly.
+
 ## 1.14.0 (2026-10-07)
 
 - New: ⋮ → Community. DGG Radio (the dggjams channel) plays in the app with one tap, and its QueUp lobby is next to it.
